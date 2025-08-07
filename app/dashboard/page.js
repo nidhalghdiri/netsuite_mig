@@ -1,117 +1,96 @@
+// src/app/dashboard/page.js
 "use client";
-import { useState } from "react";
-import Sidebar from "@/components/ui/Sidebar";
-import Header from "@/components/ui/Header";
-import StatusCard from "@/components/ui/StatusCard";
+import { useState, useEffect } from "react";
+import { getSession, withValidSession } from "@/lib/auth";
+import { FaSync, FaChartBar, FaDatabase, FaCogs } from "react-icons/fa";
+import { FiLogOut } from "react-icons/fi";
 
 export default function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [stats, setStats] = useState(null);
+  const [session, setSession] = useState(null);
 
-  const stats = [
-    { title: "Customers", oldCount: 245, newCount: 245, status: "complete" },
-    { title: "Items", oldCount: 1200, newCount: 1198, status: "pending" },
-    {
-      title: "Sales Orders",
-      oldCount: 45000,
-      newCount: 32000,
-      status: "in-progress",
-    },
-    {
-      title: "Invoices",
-      oldCount: 42000,
-      newCount: 31000,
-      status: "in-progress",
-    },
-    {
-      title: "Payments",
-      oldCount: 40000,
-      newCount: 30000,
-      status: "in-progress",
-    },
-    {
-      title: "Inventory Adjustments",
-      oldCount: 1500,
-      newCount: 1200,
-      status: "in-progress",
-    },
-  ];
+  // Load session and data
+  useEffect(() => {
+    const sessionData = getSession();
+
+    setSession(sessionData);
+
+    if (sessionData) {
+      // Fetch data using the access token
+      withValidSession(sessionData, (validSession) => {
+        fetchData(validSession);
+      });
+    }
+  }, []);
+
+  // Fetch data from NetSuite using the access token
+  const fetchData = async (session) => {
+    try {
+      // Example API call to NetSuite REST API
+      const response = await fetch(
+        `https://${session.accountId}.rest.api.netsuite.com/rest/record/v1/customer`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch data from NetSuite");
+      }
+
+      const data = await response.json();
+
+      // Process data and set stats
+      setStats({
+        customers: {
+          old: data.totalRecords,
+          new: 0, // Will come from second instance
+          migrated: Math.floor(data.totalRecords * 0.75),
+        },
+        // Other stats...
+      });
+    } catch (error) {
+      console.error("Data fetch error:", error);
+    }
+  };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* Fixed sidebar */}
-      <div className="hidden md:flex md:flex-shrink-0">
-        <Sidebar />
-      </div>
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header setSidebarOpen={setSidebarOpen} />
-        <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Migration Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Overview of data migration status between NetSuite instances
-            </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold">NetSuite Migration Dashboard</h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <StatusCard key={index} {...stat} />
-            ))}
-          </div>
+          <div className="flex items-center gap-4">
+            {session && (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-blue-600">1</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Account ID</p>
+                    <p className="text-sm font-medium">{session.accountId}</p>
+                  </div>
+                </div>
 
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Migration Progress
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">
-                    Sales Orders
-                  </span>
-                  <span className="text-sm font-medium text-gray-700">71%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full"
-                    style={{ width: "71%" }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">
-                    Invoices
-                  </span>
-                  <span className="text-sm font-medium text-gray-700">74%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full"
-                    style={{ width: "74%" }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">
-                    Payments
-                  </span>
-                  <span className="text-sm font-medium text-gray-700">75%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full"
-                    style={{ width: "75%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
+                <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                  <FiLogOut className="text-lg" />
+                  <span>Disconnect</span>
+                </button>
+              </>
+            )}
           </div>
-        </main>
-      </div>
+        </div>
+      </header>
+
+      {/* ... rest of the dashboard ... */}
     </div>
   );
 }
