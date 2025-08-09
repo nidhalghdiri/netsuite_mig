@@ -54,7 +54,7 @@ async function exchangeCodeForToken(code, instanceType) {
   const tokenUrl = process.env.OLD_NS_TOKEN_URL;
   const clientId = process.env.NEXT_PUBLIC_OLD_NS_CLIENT_ID;
   const clientSecret = process.env.OLD_NS_CLIENT_SECRET;
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback`;
+  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`;
   const accountId = process.env.NEXT_PUBLIC_OLD_NS_ACCOUNT_ID;
 
   const response = await fetch(tokenUrl, {
