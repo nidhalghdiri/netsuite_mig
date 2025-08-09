@@ -1,6 +1,6 @@
 // src/app/api/auth/callback/route.js
 import { NextResponse } from "next/server";
-import { setSession } from "@/lib/auth";
+import { setSession } from "@/lib/storage";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -35,13 +35,14 @@ export async function GET(request) {
     );
 
     // Set session cookie
-    response.cookies.set("netsuiteSessionOLD", JSON.stringify(session), {
-      path: "/",
-      httpOnly: false,
-      secure: true,
-      sameSite: "lax",
-      maxAge: tokenData.expires_in,
-    });
+    // response.cookies.set("netsuiteSessionOLD", JSON.stringify(session), {
+    //   path: "/",
+    //   httpOnly: false,
+    //   secure: true,
+    //   sameSite: "lax",
+    //   maxAge: tokenData.expires_in,
+    // });
+    setSession("old", session);
 
     return response;
   } catch (error) {

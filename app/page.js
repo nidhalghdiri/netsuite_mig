@@ -1,7 +1,12 @@
 // src/app/page.js
 "use client";
 import { useState, useEffect } from "react";
-import { getSession, isSessionValid, clearSession } from "@/lib/auth";
+import {
+  getSession,
+  setSession,
+  isSessionValid,
+  clearSession,
+} from "@/lib/storage";
 import { FiArrowRight } from "react-icons/fi";
 import Cookies from "js-cookie";
 
@@ -12,25 +17,36 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   // Check sessions on load
+  // useEffect(() => {
+  //   const checkSessions = async () => {
+  //     const oldSession = getSession("old");
+  //     console.log("[Page] oldSession", oldSession);
+  //     const newSession = getSession("netsuiteSessionNEW");
+
+  //     // Validate sessions
+  //     const oldValid = oldSession && isSessionValid(oldSession);
+  //     console.log("[Page] oldValid", oldValid);
+  //     const newValid = newSession && isSessionValid(newSession);
+
+  //     setOldInstanceSession(oldValid ? oldSession : null);
+  //     setNewInstanceSession(newValid ? newSession : null);
+  //   };
+
+  //   checkSessions();
+  // }, []);
+
+  // Periodic check
   useEffect(() => {
-    const checkSessions = async () => {
-      const oldSession = getSession("netsuiteSessionOLD");
-      console.log("[Page] oldSession", oldSession);
-      const newSession = getSession("netsuiteSessionNEW");
+    const interval = setInterval(() => {
+      const oldSession = getSession("old");
+      if (oldSession && !isSessionValid(oldSession)) {
+        clearSession("old");
+        setOldInstanceSession(null);
+      }
+      // Repeat for new instance
+    }, 60000); // Check every minute
 
-      // Validate sessions
-      const oldValid = oldSession && isSessionValid(oldSession);
-      console.log("[Page] oldValid", oldValid);
-      const newValid = newSession && isSessionValid(newSession);
-
-      setOldInstanceSession(oldValid ? oldSession : null);
-      setNewInstanceSession(newValid ? newSession : null);
-    };
-
-    checkSessions();
-    console.log("All Cookies:", document.cookie);
-    console.log("OLD Session Cookie:", Cookies.get("netsuiteSessionOLD"));
-    console.log("NEW Session Cookie:", Cookies.get("netsuiteSessionNEW"));
+    return () => clearInterval(interval);
   }, []);
 
   // Connect to NetSuite instance
@@ -68,10 +84,10 @@ export default function Home() {
   const disconnectInstance = (instanceType) => {
     if (instanceType === "old") {
       setOldInstanceSession(null);
-      clearSession("netsuiteSessionOLD");
+      clearSession("old");
     } else {
       setNewInstanceSession(null);
-      clearSession("netsuiteSessionNEW");
+      clearSession("new");
     }
   };
 
