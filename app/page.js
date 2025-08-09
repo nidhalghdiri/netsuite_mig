@@ -48,11 +48,11 @@ export default function Home() {
         : process.env.NEXT_PUBLIC_NEW_NS_ACCOUNT_ID;
 
     const redirectUri = encodeURIComponent(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback`
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`
     );
 
     // Build authorization URL
-    const authUrlWithParams = `${authUrl}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=rest_webservices&account=${accountId}&state=${instanceType}`;
+    const authUrlWithParams = `${authUrl}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=rest_webservices&account=${accountId}&state=ykv2XLx1BpT5Q0F3MRPHb94j`;
 
     // Redirect to NetSuite login
     window.location.href = authUrlWithParams;
