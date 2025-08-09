@@ -27,6 +27,9 @@ export default function Home() {
     };
 
     checkSessions();
+    console.log("All Cookies:", document.cookie);
+    console.log("OLD Session Cookie:", Cookies.get("netsuiteSessionOLD"));
+    console.log("NEW Session Cookie:", Cookies.get("netsuiteSessionNEW"));
   }, []);
 
   // Connect to NetSuite instance
