@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getSession, isSessionValid, clearSession } from "@/lib/auth";
 import { FiArrowRight } from "react-icons/fi";
+import Cookies from "js-cookie";
 
 export default function Home() {
   const [oldInstanceSession, setOldInstanceSession] = useState(null);
