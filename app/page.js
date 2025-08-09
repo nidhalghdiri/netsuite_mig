@@ -13,11 +13,13 @@ export default function Home() {
   // Check sessions on load
   useEffect(() => {
     const checkSessions = async () => {
-      const oldSession = getSession("old");
-      const newSession = getSession("new");
+      const oldSession = getSession("netsuiteSessionOLD");
+      console.log("[Page] oldSession", oldSession);
+      const newSession = getSession("netsuiteSessionNEW");
 
       // Validate sessions
       const oldValid = oldSession && isSessionValid(oldSession);
+      console.log("[Page] oldValid", oldValid);
       const newValid = newSession && isSessionValid(newSession);
 
       setOldInstanceSession(oldValid ? oldSession : null);
@@ -62,12 +64,14 @@ export default function Home() {
   const disconnectInstance = (instanceType) => {
     if (instanceType === "old") {
       setOldInstanceSession(null);
-      clearSession("old");
+      clearSession("netsuiteSessionOLD");
     } else {
       setNewInstanceSession(null);
-      clearSession("new");
+      clearSession("netsuiteSessionNEW");
     }
   };
+
+  console.log("Old Session", oldInstanceSession);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-6">
