@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: "",
-  assetPrefix: "/netsuite-mig/",
+  basePath: "/netsuite-mig",
+  // Remove assetPrefix completely
   trailingSlash: true,
 };
 
