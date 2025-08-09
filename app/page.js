@@ -17,37 +17,38 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   // Check sessions on load
-  // useEffect(() => {
-  //   const checkSessions = async () => {
-  //     const oldSession = getSession("old");
-  //     console.log("[Page] oldSession", oldSession);
-  //     const newSession = getSession("netsuiteSessionNEW");
+  useEffect(() => {
+    const checkSessions = async () => {
+      const oldSession = getSession("old");
+      console.log("[Page] oldSession", oldSession);
+      const newSession = getSession("new");
 
-  //     // Validate sessions
-  //     const oldValid = oldSession && isSessionValid(oldSession);
-  //     console.log("[Page] oldValid", oldValid);
-  //     const newValid = newSession && isSessionValid(newSession);
+      // Validate sessions
+      const oldValid = oldSession && isSessionValid(oldSession);
+      console.log("[Page] oldValid", oldValid);
+      const newValid = newSession && isSessionValid(newSession);
 
-  //     setOldInstanceSession(oldValid ? oldSession : null);
-  //     setNewInstanceSession(newValid ? newSession : null);
-  //   };
+      setOldInstanceSession(oldValid ? oldSession : null);
+      setNewInstanceSession(newValid ? newSession : null);
+    };
 
-  //   checkSessions();
-  // }, []);
+    checkSessions();
+  }, []);
 
   // Periodic check
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const oldSession = getSession("old");
-      if (oldSession && !isSessionValid(oldSession)) {
-        clearSession("old");
-        setOldInstanceSession(null);
-      }
-      // Repeat for new instance
-    }, 60000); // Check every minute
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     const oldSession = getSession("old");
 
-    return () => clearInterval(interval);
-  }, []);
+  //     if (oldSession && !isSessionValid(oldSession)) {
+  //       clearSession("old");
+  //       setOldInstanceSession(null);
+  //     }
+  //     // Repeat for new instance
+  //   }, 60000); // Check every minute
+
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // Connect to NetSuite instance
   const connectInstance = (instanceType) => {
