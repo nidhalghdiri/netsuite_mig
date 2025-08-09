@@ -5,7 +5,8 @@ import { setSession } from "@/lib/auth";
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const instanceType = searchParams.get("state") || "old";
+  console.log("We Got Code: ", code);
+  const instanceType = searchParams.get("state") || "ykv2XLx1BpT5Q0F3MRPHb94j";
 
   // Validate we have a valid code
   if (!code) {
@@ -17,6 +18,7 @@ export async function GET(request) {
   try {
     // Exchange the code for an access token
     const tokenData = await exchangeCodeForToken(code, instanceType);
+    console.log("Token Data: ", tokenData);
 
     // Create session object
     const session = {
@@ -70,6 +72,7 @@ async function exchangeCodeForToken(code, instanceType) {
       client_secret: clientSecret,
     }),
   });
+  console.log("exchangeCodeForToken Response: ", response);
 
   if (!response.ok) {
     const errorData = await response.json();
