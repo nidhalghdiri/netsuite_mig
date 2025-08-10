@@ -4,10 +4,10 @@ export async function POST(request) {
   const { code } = await request.json();
 
   const config = {
-    tokenUrl: process.env.OLD_NS_TOKEN_URL,
-    clientId: process.env.OLD_NS_CLIENT_ID,
-    clientSecret: process.env.OLD_NS_CLIENT_SECRET,
-    accountId: process.env.OLD_NS_ACCOUNT_ID,
+    tokenUrl: process.env.NEW_NS_TOKEN_URL,
+    clientId: process.env.NEW_NS_CLIENT_ID,
+    clientSecret: process.env.NEW_NS_CLIENT_SECRET,
+    accountId: process.env.NEW_NS_ACCOUNT_ID,
   };
 
   const { tokenUrl, clientId, clientSecret, accountId } = config;
@@ -21,7 +21,7 @@ export async function POST(request) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`,
+        redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth2/callback`,
         client_id: clientId,
         client_secret: clientSecret,
       }).toString(),

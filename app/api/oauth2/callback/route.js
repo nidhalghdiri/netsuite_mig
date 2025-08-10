@@ -1,11 +1,11 @@
-// src/app/api/oauth/callback/route.js
+// src/app/api/auth/callback/route.js
 import { NextResponse } from "next/server";
 import { setSession } from "@/lib/storage";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  console.log("We Got Code: ", code);
+  console.log("We Got Code (New Instance): ", code);
   const instanceType = searchParams.get("state") || "ykv2XLx1BpT5Q0F3MRPHb94j";
 
   // Validate we have a valid code
@@ -35,14 +35,13 @@ export async function GET(request) {
     );
 
     // Set session cookie
-    response.cookies.set("netsuiteSessionOLD", JSON.stringify(session), {
+    response.cookies.set("netsuiteSessionNEW", JSON.stringify(session), {
       path: "/",
       httpOnly: false, // Changed from true to false
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: tokenData.expires_in,
     });
-    // setSession("old", session);
 
     return response;
   } catch (error) {
@@ -54,11 +53,11 @@ export async function GET(request) {
 }
 
 async function exchangeCodeForToken(code, instanceType) {
-  const tokenUrl = process.env.OLD_NS_TOKEN_URL;
-  const clientId = process.env.NEXT_PUBLIC_OLD_NS_CLIENT_ID;
-  const clientSecret = process.env.OLD_NS_CLIENT_SECRET;
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`;
-  const accountId = process.env.NEXT_PUBLIC_OLD_NS_ACCOUNT_ID;
+  const tokenUrl = process.env.NEW_NS_TOKEN_URL;
+  const clientId = process.env.NEXT_PUBLIC_NEW_NS_CLIENT_ID;
+  const clientSecret = process.env.NEW_NS_CLIENT_SECRET;
+  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth2/callback`;
+  const accountId = process.env.NEXT_PUBLIC_NEW_NS_ACCOUNT_ID;
 
   const response = await fetch(tokenUrl, {
     method: "POST",
