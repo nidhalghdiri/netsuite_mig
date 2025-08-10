@@ -59,6 +59,12 @@ async function exchangeCodeForToken(code, instanceType) {
   const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth2/callback`;
   const accountId = process.env.NEXT_PUBLIC_NEW_NS_ACCOUNT_ID;
 
+  console.log("tokenUrl: ", tokenUrl);
+  console.log("clientId: ", clientId);
+  console.log("clientSecret: ", clientSecret);
+  console.log("redirectUri: ", redirectUri);
+  console.log("accountId: ", accountId);
+
   const response = await fetch(tokenUrl, {
     method: "POST",
     headers: {
