@@ -9,7 +9,10 @@ import {
 } from "@/lib/storage";
 import { FiArrowRight } from "react-icons/fi";
 import Cookies from "js-cookie";
-
+const SESSION_KEYS = {
+  old: "netsuiteSessionOLD",
+  new: "netsuiteSessionNEW",
+};
 export default function Home() {
   const [oldInstanceSession, setOldInstanceSession] = useState(null);
   const [newInstanceSession, setNewInstanceSession] = useState(null);
