@@ -21,15 +21,21 @@ export default function Home() {
     const checkSessions = async () => {
       const oldSession = getSession("old");
       console.log("[Page] oldSession", oldSession);
-      const newSession = getSession("new");
+      // Check if we need to migrate from cookie to localStorage
+      if (oldSession) {
+        const cookieExists = Cookies.get(SESSION_KEYS.old);
+        if (cookieExists) {
+          // Migrate to localStorage and remove cookie
+          setSession("old", oldSession);
+          Cookies.remove(SESSION_KEYS.old);
+        }
+      }
 
       // Validate sessions
       const oldValid = oldSession && isSessionValid(oldSession);
       console.log("[Page] oldValid", oldValid);
-      const newValid = newSession && isSessionValid(newSession);
 
       setOldInstanceSession(oldValid ? oldSession : null);
-      setNewInstanceSession(newValid ? newSession : null);
     };
 
     checkSessions();

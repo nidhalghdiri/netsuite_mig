@@ -37,7 +37,7 @@ export async function GET(request) {
     // Set session cookie
     response.cookies.set("netsuiteSessionOLD", JSON.stringify(session), {
       path: "/",
-      httpOnly: true,
+      httpOnly: false, // Changed from true to false
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: tokenData.expires_in,
