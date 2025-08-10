@@ -25,10 +25,10 @@ export default function Home() {
       const oldSession = getSession("old");
       console.log("[Page] oldSession", oldSession);
       const newSession = getSession("new");
-      console.log("[Page] oldSession", oldSession);
+      console.log("[Page] newSession", newSession);
       // Check if we need to migrate from cookie to localStorage
       if (oldSession) {
-        const cookieExists = Cookies.get(SESSION_KEYS.old);
+        var cookieExists = Cookies.get(SESSION_KEYS.old);
         if (cookieExists) {
           // Migrate to localStorage and remove cookie
           setSession("old", oldSession);
@@ -36,7 +36,7 @@ export default function Home() {
         }
       }
       if (newSession) {
-        const cookieExists = Cookies.get(SESSION_KEYS.new);
+        var cookieExists = Cookies.get(SESSION_KEYS.new);
         if (cookieExists) {
           setSession("new", newSession);
           Cookies.remove(SESSION_KEYS.new);
@@ -244,7 +244,7 @@ export default function Home() {
               {/* New Instance Connection - Placeholder */}
               <div
                 className={`border rounded-xl p-5 transition-all duration-300 ${
-                  oldInstanceSession
+                  newInstanceSession
                     ? "border-green-500 bg-green-50"
                     : "border-gray-300"
                 }`}
@@ -267,7 +267,7 @@ export default function Home() {
                       <p className="text-sm text-gray-600">
                         {newInstanceSession
                           ? "Connected successfully"
-                          : "Production environment"}
+                          : "Sandbox environment"}
                       </p>
                       {newInstanceSession && (
                         <p className="text-xs text-gray-500 mt-1">

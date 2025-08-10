@@ -1,4 +1,4 @@
-// src/app/api/auth/callback/route.js
+// src/app/api/oauth/callback/route.js
 import { NextResponse } from "next/server";
 import { setSession } from "@/lib/storage";
 
