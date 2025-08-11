@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
-  const { signedJWT } = await request.json();
+  const { accountID, signedJWT } = await request.json();
 
   try {
     const response = await fetch(
