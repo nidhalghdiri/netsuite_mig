@@ -9,6 +9,8 @@ import {
 } from "@/lib/storage";
 import { FiArrowRight } from "react-icons/fi";
 import Cookies from "js-cookie";
+import { getClientCredentialsToken } from "@/lib/netsuiteM2M";
+
 const SESSION_KEYS = {
   old: "netsuiteSessionOLD",
   new: "netsuiteSessionNEW",
@@ -24,9 +26,6 @@ export default function Home() {
     const checkSessions = async () => {
       const oldSession = getSession("old");
       console.log("[Page] oldSession", oldSession);
-      const newSession = getSession("new");
-      console.log("[Page] newSession", newSession);
-      // Check if we need to migrate from cookie to localStorage
       if (oldSession) {
         var cookieExists = Cookies.get(SESSION_KEYS.old);
         if (cookieExists) {
@@ -35,20 +34,16 @@ export default function Home() {
           Cookies.remove(SESSION_KEYS.old);
         }
       }
-      if (newSession) {
-        var cookieExists = Cookies.get(SESSION_KEYS.new);
-        if (cookieExists) {
-          setSession("new", newSession);
-          Cookies.remove(SESSION_KEYS.new);
-        }
-      }
-
-      // Validate sessions
       const oldValid = oldSession && isSessionValid(oldSession);
-      const newValid = newSession && isSessionValid(newSession);
-
       setOldInstanceSession(oldValid ? oldSession : null);
-      setNewInstanceSession(newValid ? newSession : null);
+
+      try {
+        // Test connection
+        var newAccessToken = await getClientCredentialsToken();
+        console.log("New Access Token: ", newAccessToken);
+      } catch (error) {
+        console.error("New instance connection check failed:", error);
+      }
     };
 
     checkSessions();
