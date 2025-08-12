@@ -34,6 +34,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       access_token: data.access_token,
+      expires_in: data.expires_in,
     });
   } catch (error) {
     return NextResponse.json(
