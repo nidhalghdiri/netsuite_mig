@@ -220,94 +220,96 @@ export default function Home() {
     );
   };
 
-  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-6">
-    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
-      <div className="flex flex-col md:flex-row">
-        <div className="p-8 md:w-3/5">
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-red-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="flex flex-col md:flex-row">
+          <div className="p-8 md:w-3/5">
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center mb-10">
+              <h1 className="text-2xl font-bold text-gray-800">
+                Connect to NetSuite Instances
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Authenticate with both instances to access migration tools
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <InstanceConnectionCard instanceType="old" />
+              <InstanceConnectionCard instanceType="new" />
+
+              <div
+                className={`mt-10 pt-6 border-t ${
+                  sessions.old && sessions.new
+                    ? "opacity-100"
+                    : "opacity-40 pointer-events-none"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-800 text-white flex items-center justify-center">
+                      <FiArrowRight className="text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-800">
+                        Access Migration Dashboard
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {sessions.old && sessions.new
+                          ? "Instances connected - ready to migrate"
+                          : "Connect both instances to continue"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href="/dashboard"
+                    className={`px-4 py-2 rounded-lg transition flex items-center gap-2 ${
+                      sessions.old && sessions.new
+                        ? "bg-gray-800 text-white hover:bg-gray-900"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                    Go to Dashboard
+                    <FiArrowRight className="text-lg" />
+                  </a>
                 </div>
               </div>
             </div>
-          )}
 
-          <div className="text-center mb-10">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Connect to NetSuite Instances
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Authenticate with both instances to access migration tools
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            <InstanceConnectionCard instanceType="old" />
-            <InstanceConnectionCard instanceType="new" />
-
-            <div
-              className={`mt-10 pt-6 border-t ${
-                sessions.old && sessions.new
-                  ? "opacity-100"
-                  : "opacity-40 pointer-events-none"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-800 text-white flex items-center justify-center">
-                    <FiArrowRight className="text-xl" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-800">
-                      Access Migration Dashboard
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {sessions.old && sessions.new
-                        ? "Instances connected - ready to migrate"
-                        : "Connect both instances to continue"}
-                    </p>
-                  </div>
-                </div>
-
-                <a
-                  href="/dashboard"
-                  className={`px-4 py-2 rounded-lg transition flex items-center gap-2 ${
-                    sessions.old && sessions.new
-                      ? "bg-gray-800 text-white hover:bg-gray-900"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  Go to Dashboard
-                  <FiArrowRight className="text-lg" />
-                </a>
-              </div>
+            <div className="mt-8 text-center text-sm text-gray-500">
+              <p>
+                You need to connect to both instances before accessing all
+                migration tools
+              </p>
             </div>
-          </div>
-
-          <div className="mt-8 text-center text-sm text-gray-500">
-            <p>
-              You need to connect to both instances before accessing all
-              migration tools
-            </p>
           </div>
         </div>
       </div>
     </div>
-  </div>;
+  );
 }
