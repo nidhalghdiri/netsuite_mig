@@ -61,11 +61,11 @@ export default function Home() {
           setIsLoading((prev) => ({ ...prev, old: true }));
           var oldAccessToken = await getOldClientCredentialsToken();
           var oldAccessTokenExp = oldAccessToken.expiresAt;
-          oldAccessToken = oldAccessToken.accessToken;
+          var oldAccessTokenTxt = oldAccessToken.accessToken;
           console.log("Old Access Token: ", oldAccessToken);
           if (oldAccessToken) {
             const sessionData = {
-              token: oldAccessToken,
+              token: oldAccessTokenTxt,
               expiresAt: oldAccessTokenExp,
               timestamp: Date.now(),
             };
@@ -78,11 +78,11 @@ export default function Home() {
           setIsLoading((prev) => ({ ...prev, new: true }));
           var newAccessToken = await getNewClientCredentialsToken();
           var newAccessTokenExp = newAccessToken.expiresAt;
-          newAccessToken = newAccessToken.accessToken;
+          var newAccessTokenTxt = newAccessToken.accessToken;
           console.log("New Access Token: ", newAccessToken);
           if (newAccessToken) {
             const sessionData = {
-              token: newAccessToken,
+              token: newAccessTokenTxt,
               expiresAt: newAccessTokenExp,
               timestamp: Date.now(),
             };
