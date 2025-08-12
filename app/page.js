@@ -46,6 +46,8 @@ export default function Home() {
         // Check existing sessions first
         const oldSession = getSession("old");
         const newSession = getSession("new");
+        console.log("1. Check oldSession: ", oldSession);
+        console.log("1. Check newSession: ", newSession);
 
         if (oldSession && isSessionValid(oldSession)) {
           setSessions((prev) => ({ ...prev, old: oldSession }));

@@ -5,7 +5,7 @@ export async function POST(request) {
 
   try {
     const response = await fetch(
-      "https://11661334-sb1.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token",
+      `https://${accountID}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token`,
       {
         method: "POST",
         headers: {
@@ -21,7 +21,7 @@ export async function POST(request) {
     );
 
     const data = await response.json();
-    console.log("Response data", data);
+    console.log("Token Response data", data);
     if (data.error) {
       return NextResponse.json(
         { error: data.error_description },
