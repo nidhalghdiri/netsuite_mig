@@ -59,11 +59,14 @@ export default function Home() {
         // Fetch new tokens if needed
         if (!oldSession || !isSessionValid(oldSession)) {
           setIsLoading((prev) => ({ ...prev, old: true }));
-          const oldAccessToken = await getOldClientCredentialsToken();
+          var oldAccessToken = await getOldClientCredentialsToken();
+          var oldAccessTokenExp = oldAccessToken.expiresAt;
+          oldAccessToken = oldAccessToken.accessToken;
           console.log("Old Access Token: ", oldAccessToken);
           if (oldAccessToken) {
             const sessionData = {
               token: oldAccessToken,
+              expiresAt: oldAccessTokenExp,
               timestamp: Date.now(),
             };
             setSession("old", sessionData);
@@ -73,11 +76,14 @@ export default function Home() {
 
         if (!newSession || !isSessionValid(newSession)) {
           setIsLoading((prev) => ({ ...prev, new: true }));
-          const newAccessToken = await getNewClientCredentialsToken();
+          var newAccessToken = await getNewClientCredentialsToken();
+          var newAccessTokenExp = newAccessToken.expiresAt;
+          newAccessToken = newAccessToken.accessToken;
           console.log("New Access Token: ", newAccessToken);
           if (newAccessToken) {
             const sessionData = {
               token: newAccessToken,
+              expiresAt: newAccessTokenExp,
               timestamp: Date.now(),
             };
             setSession("new", sessionData);
