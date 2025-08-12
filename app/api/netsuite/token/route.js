@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 export async function POST(request) {
   const { accountID, signedJWT } = await request.json();
 
+  console.log("API TOKEN : accountID: ", accountID);
+  console.log("API TOKEN : signedJWT: ", signedJWT);
+
   try {
     const response = await fetch(
       `https://${accountID}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token`,
