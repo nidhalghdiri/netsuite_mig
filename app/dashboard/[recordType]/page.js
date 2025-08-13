@@ -27,6 +27,7 @@ export default function RecordTypePage({ params }) {
 
         const oldSession = getSession("old");
         const newSession = getSession("new");
+        console.log("Page: oldSession: ", oldSession);
 
         if (
           !oldSession ||

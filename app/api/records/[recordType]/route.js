@@ -18,6 +18,7 @@ export async function GET(request, { params }) {
 
   // Get token from Authorization header
   const authHeader = request.headers.get("Authorization");
+  console.log("GET authHeader: ", authHeader);
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return Response.json(
       { error: "Missing or invalid Authorization header" },
@@ -26,6 +27,8 @@ export async function GET(request, { params }) {
   }
 
   const token = authHeader.split(" ")[1];
+
+  console.log("GET token: ", token);
 
   try {
     const data = await fetchRecordData(recordType, instance, token);
