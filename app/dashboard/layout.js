@@ -13,7 +13,7 @@ import {
 import { clearSession } from "@/lib/storage";
 
 const RECORD_TYPES = [
-  { id: "overview", name: "Overview", icon: FiHome },
+  { id: "", name: "Overview", icon: FiHome },
   { id: "sales-orders", name: "Sales Orders", icon: FiShoppingCart },
   { id: "purchases", name: "Purchases", icon: FiShoppingBag },
   { id: "invoices", name: "Invoices", icon: FiFileText },
@@ -22,7 +22,7 @@ const RECORD_TYPES = [
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
-  const activeRecordType = pathname.split("/").pop() || "overview";
+  const activeRecordType = pathname.split("/").pop() || "";
 
   const handleLogout = () => {
     clearSession("old");
@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }) {
           {RECORD_TYPES.map((record) => (
             <a
               key={record.id}
-              href={`/dashboard/${record.id}`}
+              href={`/netsuite-mig/dashboard/${record.id}`}
               className={`flex items-center px-4 py-3 mb-1 rounded-lg transition ${
                 activeRecordType === record.id
                   ? "bg-blue-50 text-blue-600"
