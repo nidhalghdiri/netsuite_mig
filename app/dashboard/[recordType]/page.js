@@ -38,13 +38,13 @@ export default function RecordTypePage({ params }) {
         }
 
         // Fetch data from both instances in parallel
-        const [oldRecords, newRecords] = await Promise.all([
-          fetchRecordData(recordType, "old", oldSession.token),
-          fetchRecordData(recordType, "new", newSession.token),
-        ]);
-
-        setOldData(oldRecords);
-        setNewData(newRecords);
+        try {
+          const res = await fetch("/api/records/customer?instance=old");
+          const data = await res.json();
+          console.log("Customers:", data);
+        } catch (error) {
+          console.error("Fetch error:", error);
+        }
       } catch (err) {
         console.error(`Error fetching ${recordType} data:`, err);
         setError(err.message);
