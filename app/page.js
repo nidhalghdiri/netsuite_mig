@@ -287,7 +287,7 @@ export default function Home() {
                   </div>
 
                   <a
-                    href="/dashboard/overview"
+                    href="netsuite-mig/dashboard"
                     className={`px-4 py-2 rounded-lg transition flex items-center gap-2 ${
                       sessions.old && sessions.new
                         ? "bg-gray-800 text-white hover:bg-gray-900"
