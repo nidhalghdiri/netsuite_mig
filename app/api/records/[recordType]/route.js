@@ -16,8 +16,19 @@ export async function GET(request, { params }) {
     );
   }
 
+  // Get token from Authorization header
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return Response.json(
+      { error: "Missing or invalid Authorization header" },
+      { status: 401 }
+    );
+  }
+
+  const token = authHeader.split(" ")[1];
+
   try {
-    const data = await fetchRecordData(recordType, instance);
+    const data = await fetchRecordData(recordType, instance, token);
     return Response.json(data);
   } catch (error) {
     console.error(`API Error [${recordType}]:`, error);

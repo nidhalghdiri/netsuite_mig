@@ -40,7 +40,12 @@ export default function RecordTypePage({ params }) {
         // Fetch data from both instances in parallel
         try {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/api/records/customer?instance=old`
+            `${process.env.NEXT_PUBLIC_BASE_URL}/api/records/customer?instance=old`,
+            {
+              headers: {
+                Authorization: `Bearer ${oldSession.token}`,
+              },
+            }
           );
           const data = await res.json();
           console.log("Customers:", data);
