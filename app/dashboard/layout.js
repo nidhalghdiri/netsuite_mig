@@ -9,11 +9,13 @@ import {
   FiFileText,
   FiUser,
   FiLogOut,
+  FiMove,
 } from "react-icons/fi";
 import { clearSession } from "@/lib/storage";
 
 const RECORD_TYPES = [
   { id: "", name: "Overview", icon: FiHome },
+  { id: "inventory-adjustment", name: "Inventory Adjustment", icon: FiMove },
   { id: "sales-orders", name: "Sales Orders", icon: FiShoppingCart },
   { id: "purchases", name: "Purchases", icon: FiShoppingBag },
   { id: "invoices", name: "Invoices", icon: FiFileText },

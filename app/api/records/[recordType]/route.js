@@ -2,11 +2,11 @@ import { fetchRecordData } from "@/lib/netsuiteAPI";
 
 export async function GET(request, { params }) {
   const { recordType } = params;
-  console.log("GET recordType: ", recordType);
+  // console.log("GET recordType: ", recordType);
   const { searchParams } = new URL(request.url);
-  console.log("GET searchParams: ", searchParams);
+  // console.log("GET searchParams: ", searchParams);
   const instance = searchParams.get("instance");
-  console.log("GET instance: ", instance);
+  // console.log("GET instance: ", instance);
 
   // Validate instance parameter
   if (!["old", "new"].includes(instance)) {
@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
 
   // Get token from Authorization header
   const authHeader = request.headers.get("Authorization");
-  console.log("GET authHeader: ", authHeader);
+  // console.log("GET authHeader: ", authHeader);
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return Response.json(
       { error: "Missing or invalid Authorization header" },
@@ -28,7 +28,7 @@ export async function GET(request, { params }) {
 
   const token = authHeader.split(" ")[1];
 
-  console.log("GET token: ", token);
+  // console.log("GET token: ", token);
 
   try {
     const data = await fetchRecordData(recordType, instance, token);

@@ -1,7 +1,7 @@
 // app/dashboard/[recordType]/page.js
 "use client";
 import { useState, useEffect } from "react";
-import { getSession } from "@/lib/storage";
+import { getSession, isSessionValid } from "@/lib/storage";
 import { fetchRecordData } from "@/lib/netsuiteAPI";
 
 export default function RecordTypePage({ params }) {
@@ -30,10 +30,10 @@ export default function RecordTypePage({ params }) {
         console.log("Page: oldSession: ", oldSession);
 
         if (
-          !oldSession ||
-          !oldSession.token ||
-          !newSession ||
-          !newSession.token
+          !isSessionValid(oldSession) ||
+          !isSessionValid(oldSession).token ||
+          !isSessionValid(newSession) ||
+          !isSessionValid(newSession).token
         ) {
           throw new Error("Both instances must be connected to fetch data");
         }
@@ -49,9 +49,23 @@ export default function RecordTypePage({ params }) {
             }
           );
           const data = await res.json();
-          console.log("Customers:", data);
+          console.log("Old Customers:", data);
         } catch (error) {
-          console.error("Fetch error:", error);
+          console.error("Fetch Old Customers error:", error);
+        }
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_BASE_URL}/api/records/customer?instance=new`,
+            {
+              headers: {
+                Authorization: `Bearer ${oldSession.token}`,
+              },
+            }
+          );
+          const data = await res.json();
+          console.log("New Customers:", data);
+        } catch (error) {
+          console.error("Fetch Old Customers error:", error);
         }
       } catch (err) {
         console.error(`Error fetching ${recordType} data:`, err);
