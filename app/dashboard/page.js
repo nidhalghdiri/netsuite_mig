@@ -12,58 +12,114 @@ import {
   FiDatabase,
   FiLink,
   FiCheckSquare,
-  FiBarChart2,
+  FiFilter,
+  FiSearch,
 } from "react-icons/fi";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
-// Mock data service (replace with real API calls)
-const fetchMigrationData = async (startDate, endDate) => {
-  // In real implementation, fetch from your backend API
+// Mock data service
+const fetchMigrationData = async () => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
-        days: [
+        statistics: {
+          totalTransactions: 12450,
+          processed: 8420,
+          remaining: 4030,
+          successRate: 98.7,
+          byType: {
+            salesOrders: 4520,
+            invoices: 2870,
+            purchases: 1860,
+            creditMemos: 920,
+            others: 1280,
+          },
+        },
+        transactions: [
           {
-            date: "2020-01-01",
+            id: "TRX-1001",
+            oldId: "OLD-78901",
+            newId: "NEW-45601",
+            type: "Sales Order",
+            date: "2020-01-15",
+            entity: "John Doe Inc.",
+            amount: 2450.75,
             status: "completed",
-            tasks: {
-              fetch: { count: 142, status: "completed" },
-              create: { count: 140, status: "completed", errors: 2 },
-              relate: { count: 138, status: "completed", errors: 4 },
-              compare: { count: 140, status: "completed", mismatches: 7 },
+            steps: {
+              fetch: { status: "completed", timestamp: "2020-01-15 09:30:22" },
+              create: { status: "completed", timestamp: "2020-01-15 09:32:45" },
+              relate: { status: "completed", timestamp: "2020-01-15 09:35:18" },
+              compare: {
+                status: "completed",
+                timestamp: "2020-01-15 09:38:02",
+                mismatches: 2,
+              },
             },
-            transactionTypes: {
-              salesOrders: 45,
-              invoices: 32,
-              purchases: 28,
-              others: 37,
+            details: {
+              createdFrom: "Quote-QT-789",
+              relatedRecords: [
+                { id: "INV-1001", type: "Invoice", status: "linked" },
+                { id: "FUL-1001", type: "Fulfillment", status: "linked" },
+              ],
+              files: 3,
+              fields: [
+                {
+                  name: "Amount",
+                  oldValue: "2450.75",
+                  newValue: "2450.75",
+                  status: "match",
+                },
+                {
+                  name: "Customer",
+                  oldValue: "John Doe Inc.",
+                  newValue: "John Doe Inc.",
+                  status: "match",
+                },
+                {
+                  name: "Item",
+                  oldValue: "SKU-1001",
+                  newValue: "SKU-1001",
+                  status: "match",
+                },
+                {
+                  name: "Quantity",
+                  oldValue: "10",
+                  newValue: "8",
+                  status: "mismatch",
+                },
+                {
+                  name: "Discount",
+                  oldValue: "5%",
+                  newValue: "0%",
+                  status: "mismatch",
+                },
+              ],
             },
           },
           {
-            date: "2020-01-02",
+            id: "TRX-1002",
+            oldId: "OLD-78902",
+            newId: "NEW-45602",
+            type: "Invoice",
+            date: "2020-01-15",
+            entity: "Smith & Co.",
+            amount: 1200.5,
             status: "in-progress",
-            tasks: {
-              fetch: { count: 167, status: "completed" },
-              create: { count: 165, status: "in-progress", errors: 2 },
-              relate: { count: 0, status: "pending" },
-              compare: { count: 0, status: "pending" },
+            steps: {
+              fetch: { status: "completed", timestamp: "2020-01-15 10:15:33" },
+              create: { status: "completed", timestamp: "2020-01-15 10:18:21" },
+              relate: { status: "pending", timestamp: "" },
+              compare: { status: "pending", timestamp: "", mismatches: 0 },
             },
-            transactionTypes: {
-              salesOrders: 52,
-              invoices: 41,
-              purchases: 35,
-              others: 39,
+            details: {
+              createdFrom: "Sales Order-SO-1002",
+              relatedRecords: [
+                { id: "PAY-1002", type: "Payment", status: "pending" },
+              ],
+              files: 1,
+              fields: [],
             },
           },
         ],
-        summary: {
-          totalDays: 731,
-          completedDays: 1,
-          totalTransactions: 11042,
-          migratedTransactions: 309,
-          successRate: 99.2,
-        },
       });
     }, 800);
   });
@@ -82,7 +138,7 @@ const StatusBadge = ({ status }) => {
 
   return (
     <span
-      className={`px-3 py-1 rounded-full text-xs font-medium ${
+      className={`px-2 py-1 rounded text-xs font-medium ${
         statusConfig[status]?.color || ""
       }`}
     >
@@ -91,53 +147,27 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const TaskCard = ({ task, count, status, errors, mismatches }) => {
+const StepIcon = ({ step, status }) => {
   const icons = {
-    fetch: <FiDatabase className="text-blue-500" />,
-    create: <FiFileText className="text-purple-500" />,
-    relate: <FiLink className="text-teal-500" />,
-    compare: <FiCheckSquare className="text-amber-500" />,
+    fetch: <FiDatabase size={16} />,
+    create: <FiFileText size={16} />,
+    relate: <FiLink size={16} />,
+    compare: <FiCheckSquare size={16} />,
   };
 
-  const statusIcons = {
-    completed: <FiCheckCircle className="text-green-500" />,
-    "in-progress": <FiRefreshCw className="text-yellow-500 animate-spin" />,
-    pending: <div className="w-5 h-5 rounded-full bg-gray-200" />,
-    failed: <FiAlertCircle className="text-red-500" />,
+  const statusColors = {
+    completed: "text-green-500 bg-green-100",
+    "in-progress": "text-yellow-500 bg-yellow-100",
+    pending: "text-gray-400 bg-gray-100",
+    failed: "text-red-500 bg-red-100",
   };
 
   return (
-    <div className="border rounded-lg p-4 bg-white shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          {icons[task]}
-          <div>
-            <h4 className="font-medium capitalize">{task}</h4>
-            <p className="text-2xl font-bold mt-1">{count || 0}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          {statusIcons[status]}
-          <span className="text-sm capitalize">{status}</span>
-        </div>
-      </div>
-
-      {(errors || mismatches) && (
-        <div className="mt-3 pt-3 border-t">
-          {errors > 0 && (
-            <p className="text-red-600 text-sm flex items-center">
-              <FiAlertCircle className="mr-1" />
-              {errors} migration errors
-            </p>
-          )}
-          {mismatches > 0 && (
-            <p className="text-amber-600 text-sm flex items-center">
-              <FiAlertCircle className="mr-1" />
-              {mismatches} field mismatches
-            </p>
-          )}
-        </div>
-      )}
+    <div
+      className={`w-8 h-8 rounded-full flex items-center justify-center ${statusColors[status]}`}
+      title={`${step}: ${status}`}
+    >
+      {icons[step]}
     </div>
   );
 };
@@ -145,36 +175,23 @@ const TaskCard = ({ task, count, status, errors, mismatches }) => {
 export default function DashboardOverview() {
   const [migrationData, setMigrationData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expandedDays, setExpandedDays] = useState({});
-  const [startDate, setStartDate] = useState(new Date(2020, 0, 1));
-  const [endDate, setEndDate] = useState(new Date());
+  const [expandedTransaction, setExpandedTransaction] = useState(null);
+  const [filters, setFilters] = useState({
+    status: "all",
+    type: "all",
+    search: "",
+  });
 
   const oldSession = getSession("old");
   const newSession = getSession("new");
   const isOldConnected = isSessionValid(oldSession) && oldSession.token;
   const isNewConnected = isSessionValid(newSession) && newSession.token;
 
-  const toggleDayExpansion = (date) => {
-    setExpandedDays((prev) => ({
-      ...prev,
-      [date]: !prev[date],
-    }));
-  };
-
   const loadMigrationData = async () => {
     setLoading(true);
     try {
-      const data = await fetchMigrationData(startDate, endDate);
+      const data = await fetchMigrationData();
       setMigrationData(data);
-
-      // Auto-expand in-progress days
-      const expansionState = {};
-      data.days.forEach((day) => {
-        if (day.status === "in-progress" || day.status === "failed") {
-          expansionState[day.date] = true;
-        }
-      });
-      setExpandedDays(expansionState);
     } catch (error) {
       console.error("Failed to load migration data:", error);
     } finally {
@@ -187,6 +204,26 @@ export default function DashboardOverview() {
       loadMigrationData();
     }
   }, [isOldConnected, isNewConnected]);
+
+  const toggleTransactionDetails = (id) => {
+    setExpandedTransaction(expandedTransaction === id ? null : id);
+  };
+
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const filteredTransactions = migrationData?.transactions.filter((trx) => {
+    const matchesStatus =
+      filters.status === "all" || trx.status === filters.status;
+    const matchesType = filters.type === "all" || trx.type === filters.type;
+    const matchesSearch =
+      filters.search === "" ||
+      trx.id.toLowerCase().includes(filters.search.toLowerCase()) ||
+      trx.entity.toLowerCase().includes(filters.search.toLowerCase());
+
+    return matchesStatus && matchesType && matchesSearch;
+  });
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -251,96 +288,68 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Migration Controls */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Migration Timeline</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Start Date</label>
-            <DatePicker
-              selected={startDate}
-              onChange={setStartDate}
-              selectsStart
-              startDate={startDate}
-              endDate={endDate}
-              className="w-full border rounded-md p-2"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">End Date</label>
-            <DatePicker
-              selected={endDate}
-              onChange={setEndDate}
-              selectsEnd
-              startDate={startDate}
-              endDate={endDate}
-              minDate={startDate}
-              className="w-full border rounded-md p-2"
-            />
-          </div>
-
-          <div>
-            <button
-              onClick={loadMigrationData}
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md disabled:opacity-50"
-            >
-              Load Timeline
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Migration Summary */}
+      {/* Migration Statistics */}
       {migrationData && (
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Migration Summary</h2>
+          <h2 className="text-xl font-semibold mb-4">Migration Statistics</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {migrationData.summary.completedDays}/
-                {migrationData.summary.totalDays}
+                {migrationData.statistics.totalTransactions.toLocaleString()}
               </div>
-              <p className="text-sm text-gray-600">Days Processed</p>
+              <p className="text-sm text-gray-600">Total Transactions</p>
             </div>
 
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-purple-600 mb-1">
-                {migrationData.summary.migratedTransactions.toLocaleString()}
+                {migrationData.statistics.processed.toLocaleString()}
               </div>
-              <p className="text-sm text-gray-600">Transactions Migrated</p>
+              <p className="text-sm text-gray-600">Processed</p>
+            </div>
+
+            <div className="border rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-amber-600 mb-1">
+                {migrationData.statistics.remaining.toLocaleString()}
+              </div>
+              <p className="text-sm text-gray-600">Remaining</p>
             </div>
 
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-600 mb-1">
-                {migrationData.summary.successRate}%
+                {migrationData.statistics.successRate}%
               </div>
               <p className="text-sm text-gray-600">Success Rate</p>
             </div>
 
             <div className="border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-amber-600 mb-1">
-                {(
-                  migrationData.summary.totalTransactions -
-                  migrationData.summary.migratedTransactions
-                ).toLocaleString()}
-              </div>
-              <p className="text-sm text-gray-600">Remaining Transactions</p>
-            </div>
-
-            <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-teal-600 mb-1">
                 {Math.round(
-                  (migrationData.summary.completedDays /
-                    migrationData.summary.totalDays) *
+                  (migrationData.statistics.processed /
+                    migrationData.statistics.totalTransactions) *
                     100
                 )}
                 %
               </div>
-              <p className="text-sm text-gray-600">Overall Progress</p>
+              <p className="text-sm text-gray-600">Completion</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h3 className="font-medium mb-3">Transactions by Type</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {Object.entries(migrationData.statistics.byType).map(
+                ([type, count]) => (
+                  <div key={type} className="border rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold text-blue-600 mb-1">
+                      {count.toLocaleString()}
+                    </div>
+                    <p className="text-sm text-gray-600 capitalize">
+                      {type.replace(/([A-Z])/g, " $1")}
+                    </p>
+                  </div>
+                )
+              )}
             </div>
           </div>
 
@@ -349,8 +358,8 @@ export default function DashboardOverview() {
               className="bg-blue-600 h-2.5 rounded-full"
               style={{
                 width: `${
-                  (migrationData.summary.completedDays /
-                    migrationData.summary.totalDays) *
+                  (migrationData.statistics.processed /
+                    migrationData.statistics.totalTransactions) *
                   100
                 }%`,
               }}
@@ -359,189 +368,279 @@ export default function DashboardOverview() {
         </div>
       )}
 
-      {/* Daily Migration Progress */}
+      {/* Transaction Processing */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Daily Migration Process</h2>
-          <span className="text-sm text-gray-500">
-            Processing from oldest to newest
-          </span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold mb-4 md:mb-0">
+            Transaction Processing
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="relative">
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                className="w-full border rounded-md pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="completed">Completed</option>
+                <option value="in-progress">In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Needs Attention</option>
+              </select>
+              <FiFilter className="absolute right-3 top-2.5 text-gray-400" />
+            </div>
+
+            <div className="relative">
+              <select
+                value={filters.type}
+                onChange={(e) => handleFilterChange("type", e.target.value)}
+                className="w-full border rounded-md pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Types</option>
+                <option value="Sales Order">Sales Orders</option>
+                <option value="Invoice">Invoices</option>
+                <option value="Purchase">Purchases</option>
+                <option value="Credit Memo">Credit Memos</option>
+                <option value="others">Others</option>
+              </select>
+              <FiFilter className="absolute right-3 top-2.5 text-gray-400" />
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
+                className="w-full border rounded-md pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <FiSearch className="absolute right-3 top-2.5 text-gray-400" />
+            </div>
+
+            <button
+              onClick={() =>
+                setFilters({ status: "all", type: "all", search: "" })
+              }
+              className="w-full bg-gray-100 hover:bg-gray-200 py-2 px-3 rounded-md text-sm"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <div className="text-center py-10">
             <FiRefreshCw className="animate-spin mx-auto text-3xl text-blue-500" />
-            <p className="mt-3">Loading migration data...</p>
+            <p className="mt-3">Loading transaction data...</p>
           </div>
         ) : migrationData ? (
-          <div className="space-y-4">
-            {migrationData.days.map((day) => (
-              <div key={day.date} className="border rounded-lg overflow-hidden">
-                <div
-                  className={`p-4 flex justify-between items-center cursor-pointer ${
-                    expandedDays[day.date] ? "bg-blue-50" : "bg-gray-50"
-                  }`}
-                  onClick={() => toggleDayExpansion(day.date)}
-                >
-                  <div className="flex items-center space-x-4">
-                    <StatusBadge status={day.status} />
-                    <div>
-                      <h3 className="font-medium">
-                        {new Date(day.date).toLocaleDateString("en-US", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </h3>
-                      <div className="flex space-x-3 text-sm text-gray-600 mt-1">
-                        <span>
-                          Sales Orders: {day.transactionTypes.salesOrders}
-                        </span>
-                        <span>Invoices: {day.transactionTypes.invoices}</span>
-                        <span>Purchases: {day.transactionTypes.purchases}</span>
-                        <span>Others: {day.transactionTypes.others}</span>
-                      </div>
+          <div className="border rounded-lg overflow-hidden">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-700">
+              <div className="col-span-1">Status</div>
+              <div className="col-span-2">ID</div>
+              <div className="col-span-2">Type</div>
+              <div className="col-span-2">Entity</div>
+              <div className="col-span-1">Amount</div>
+              <div className="col-span-2">Date</div>
+              <div className="col-span-2 text-center">Migration Steps</div>
+            </div>
+
+            {/* Transaction Rows */}
+            <div className="divide-y">
+              {filteredTransactions.map((trx) => (
+                <div key={trx.id}>
+                  <div
+                    className="grid grid-cols-12 gap-2 px-4 py-3 text-sm cursor-pointer hover:bg-blue-50"
+                    onClick={() => toggleTransactionDetails(trx.id)}
+                  >
+                    <div className="col-span-1 flex items-center">
+                      <StatusBadge status={trx.status} />
+                    </div>
+                    <div className="col-span-2 font-medium">{trx.id}</div>
+                    <div className="col-span-2">{trx.type}</div>
+                    <div className="col-span-2 truncate">{trx.entity}</div>
+                    <div className="col-span-1">
+                      ${trx.amount.toLocaleString()}
+                    </div>
+                    <div className="col-span-2">{trx.date}</div>
+                    <div className="col-span-2 flex justify-center space-x-1">
+                      <StepIcon step="fetch" status={trx.steps.fetch.status} />
+                      <StepIcon
+                        step="create"
+                        status={trx.steps.create.status}
+                      />
+                      <StepIcon
+                        step="relate"
+                        status={trx.steps.relate.status}
+                      />
+                      <StepIcon
+                        step="compare"
+                        status={trx.steps.compare.status}
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <span className="text-sm mr-2">
-                      {
-                        Object.values(day.tasks).filter(
-                          (t) => t.status === "completed"
-                        ).length
-                      }
-                      /4 tasks
-                    </span>
-                    {expandedDays[day.date] ? (
-                      <FiChevronUp />
-                    ) : (
-                      <FiChevronDown />
-                    )}
-                  </div>
-                </div>
 
-                {expandedDays[day.date] && (
-                  <div className="p-4 bg-white">
-                    <h4 className="font-medium mb-3">Migration Tasks</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <TaskCard
-                        task="fetch"
-                        count={day.tasks.fetch.count}
-                        status={day.tasks.fetch.status}
-                      />
-                      <TaskCard
-                        task="create"
-                        count={day.tasks.create.count}
-                        status={day.tasks.create.status}
-                        errors={day.tasks.create.errors}
-                      />
-                      <TaskCard
-                        task="relate"
-                        count={day.tasks.relate.count}
-                        status={day.tasks.relate.status}
-                        errors={day.tasks.relate.errors}
-                      />
-                      <TaskCard
-                        task="compare"
-                        count={day.tasks.compare.count}
-                        status={day.tasks.compare.status}
-                        mismatches={day.tasks.compare.mismatches}
-                      />
-                    </div>
-
-                    <div className="mt-6">
-                      <h4 className="font-medium mb-3">
-                        Transaction Comparison
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="border rounded-lg p-4">
-                          <div className="flex justify-between mb-3">
-                            <h5 className="font-medium text-gray-700">
-                              Field Accuracy
-                            </h5>
-                            <span className="text-sm font-medium text-green-600">
-                              {Math.round(
-                                ((day.tasks.compare.count -
-                                  (day.tasks.compare.mismatches || 0)) /
-                                  day.tasks.compare.count) *
-                                  100
-                              )}
-                              %
-                            </span>
-                          </div>
+                  {/* Transaction Details */}
+                  {expandedTransaction === trx.id && (
+                    <div className="bg-gray-50 p-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        {/* IDs */}
+                        <div className="border rounded-lg p-4 bg-white">
+                          <h4 className="font-medium mb-3">Transaction IDs</h4>
                           <div className="space-y-2">
-                            {[
-                              { field: "Amount", matched: 138, mismatched: 2 },
-                              { field: "Items", matched: 135, mismatched: 5 },
-                              { field: "Dates", matched: 139, mismatched: 1 },
-                              {
-                                field: "Partners",
-                                matched: 140,
-                                mismatched: 0,
-                              },
-                            ].map((item, idx) => (
-                              <div key={idx} className="text-sm">
-                                <div className="flex justify-between mb-1">
-                                  <span>{item.field}</span>
-                                  <span>
-                                    {item.matched}/
-                                    {item.matched + item.mismatched}
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Old ID:</span>
+                              <span className="font-medium">{trx.oldId}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">New ID:</span>
+                              <span className="font-medium">{trx.newId}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Created From:
+                              </span>
+                              <span className="font-medium">
+                                {trx.details.createdFrom}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Related Records */}
+                        <div className="border rounded-lg p-4 bg-white">
+                          <h4 className="font-medium mb-3">Related Records</h4>
+                          <div className="space-y-2">
+                            {trx.details.relatedRecords.map((record, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <div>
+                                  <span className="font-medium">
+                                    {record.type}:{" "}
+                                  </span>
+                                  <span className="text-gray-600">
+                                    {record.id}
                                   </span>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-green-600 h-2 rounded-full"
-                                    style={{
-                                      width: `${
-                                        (item.matched /
-                                          (item.matched + item.mismatched)) *
-                                        100
-                                      }%`,
-                                    }}
-                                  ></div>
-                                </div>
+                                <StatusBadge status={record.status} />
                               </div>
                             ))}
                           </div>
                         </div>
 
-                        <div className="border rounded-lg p-4">
-                          <h5 className="font-medium text-gray-700 mb-3">
-                            Relationships Status
-                          </h5>
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                              <span>Created From links</span>
-                              <span className="font-medium">132/140</span>
+                        {/* Attached Files */}
+                        <div className="border rounded-lg p-4 bg-white">
+                          <h4 className="font-medium mb-3">Attached Files</h4>
+                          <div className="flex items-center">
+                            <div className="bg-blue-100 text-blue-800 rounded-full w-10 h-10 flex items-center justify-center mr-3">
+                              <FiFileText />
                             </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Related Records</span>
-                              <span className="font-medium">126/140</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Attached Files</span>
-                              <span className="font-medium">89/140</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Inventory Details</span>
-                              <span className="font-medium">140/140</span>
+                            <div>
+                              <p className="font-medium">
+                                {trx.details.files} files attached
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Click to view/download
+                              </p>
                             </div>
                           </div>
                         </div>
                       </div>
+
+                      {/* Field Comparison */}
+                      <h4 className="font-medium mb-3">Field Comparison</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                Field
+                              </th>
+                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                Old Value
+                              </th>
+                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                New Value
+                              </th>
+                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 bg-white">
+                            {trx.details.fields.map((field, idx) => (
+                              <tr
+                                key={idx}
+                                className={
+                                  field.status === "mismatch" ? "bg-red-50" : ""
+                                }
+                              >
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                  {field.name}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-700">
+                                  {field.oldValue}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-700">
+                                  {field.newValue}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {field.status === "match" ? (
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                      Match
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                                      Mismatch
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {trx.details.fields.length === 0 && (
+                        <div className="text-center py-6 bg-gray-50 rounded-lg border">
+                          <p className="text-gray-500">
+                            No field comparison data available yet
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">1</span> to{" "}
+                <span className="font-medium">10</span> of{" "}
+                <span className="font-medium">
+                  {filteredTransactions.length}
+                </span>{" "}
+                results
               </div>
-            ))}
+              <div className="flex space-x-2">
+                <button className="px-3 py-1 border rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                  Previous
+                </button>
+                <button className="px-3 py-1 border rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="text-center py-10 border-2 border-dashed rounded-lg">
-            <FiBarChart2 className="mx-auto text-3xl text-gray-400" />
-            <h3 className="mt-2 font-medium">No Migration Data</h3>
+            <FiDatabase className="mx-auto text-3xl text-gray-400" />
+            <h3 className="mt-2 font-medium">No Transaction Data</h3>
             <p className="text-gray-600 mt-1">
-              Configure your date range and load migration timeline
+              Start migration process to see transactions
             </p>
           </div>
         )}
