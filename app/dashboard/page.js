@@ -45,11 +45,16 @@ const fetchMigrationData = async () => {
 
     const data = await response.json(); // Await the JSON parsing
     console.log("fetchMigrationData Response: ", data);
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid response format");
+    }
     // Transform transaction types to user-friendly names
-    const transactions = data.transactions.map((trx) => ({
-      ...trx,
-      type: mapRecordType(trx.type),
-    }));
+    const transactions = Array.isArray(data.transactions)
+      ? data.transactions.map((trx) => ({
+          ...trx,
+          type: mapRecordType(trx.type || "unknown"),
+        }))
+      : [];
 
     // Transform statistics to use friendly names
     const statistics = {
@@ -189,9 +194,24 @@ const fetchMigrationData = async () => {
     // });
   } catch (error) {
     console.error("Error in fetchMigrationData:", error);
-    throw error; // Re-throw to handle in the calling function
+    return {
+      statistics: getDefaultStatistics(),
+      transactions: [],
+      total: 0,
+      error: error.message,
+    };
   }
 };
+// Default statistics when no data is available
+function getDefaultStatistics() {
+  return {
+    totalTransactions: 0,
+    processed: 0,
+    remaining: 0,
+    successRate: 0,
+    byType: {},
+  };
+}
 
 // Map NetSuite internal types to user-friendly names
 function mapRecordType(type) {
@@ -254,7 +274,11 @@ const StepIcon = ({ step, status }) => {
 };
 
 export default function DashboardOverview() {
-  const [migrationData, setMigrationData] = useState(null);
+  const [migrationData, setMigrationData] = useState({
+    statistics: getDefaultStatistics(),
+    transactions: [],
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [expandedTransaction, setExpandedTransaction] = useState(null);
   const [filters, setFilters] = useState({
@@ -262,6 +286,7 @@ export default function DashboardOverview() {
     type: "all",
     search: "",
   });
+  const [error, setError] = useState(null);
 
   const oldSession = getSession("old");
   const newSession = getSession("new");
@@ -270,12 +295,16 @@ export default function DashboardOverview() {
 
   const loadMigrationData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchMigrationData();
-
       setMigrationData(data);
+      if (data.error) {
+        setError(data.error);
+      }
     } catch (error) {
-      console.error("Failed to load migration data:", error);
+      setError(err.message);
+      console.error("Failed to load migration data:", err);
     } finally {
       setLoading(false);
     }
@@ -378,7 +407,9 @@ export default function DashboardOverview() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {migrationData.statistics.totalTransactions}
+                {(
+                  migrationData.statistics.totalTransactions || 0
+                ).toLocaleString()}
               </div>
               <p className="text-sm text-gray-600">Total Transactions</p>
             </div>
@@ -420,15 +451,13 @@ export default function DashboardOverview() {
           <div className="mb-6">
             <h3 className="font-medium mb-3">Transactions by Type</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {Object.entries(migrationData.statistics.byType).map(
+              {Object.entries(migrationData.statistics.byType || {}).map(
                 ([type, count]) => (
                   <div key={type} className="border rounded-lg p-3 text-center">
                     <div className="text-lg font-bold text-blue-600 mb-1">
-                      {count}
+                      {count.toLocaleString()}
                     </div>
-                    <p className="text-sm text-gray-600 capitalize">
-                      {type.replace(/([A-Z])/g, " $1")}
-                    </p>
+                    <p className="text-sm text-gray-600 capitalize">{type}</p>
                   </div>
                 )
               )}
@@ -516,6 +545,8 @@ export default function DashboardOverview() {
             <FiRefreshCw className="animate-spin mx-auto text-3xl text-blue-500" />
             <p className="mt-3">Loading transaction data...</p>
           </div>
+        ) : error ? (
+          <div className="text-red-500">Error: {error}</div>
         ) : migrationData ? (
           <div className="border rounded-lg overflow-hidden">
             {/* Table Header */}
@@ -543,8 +574,8 @@ export default function DashboardOverview() {
                     <div className="col-span-2 font-medium">{trx.id}</div>
                     <div className="col-span-2">{trx.type}</div>
                     <div className="col-span-2 truncate">{trx.entity}</div>
-                    <div className="col-span-1">${trx.amount}</div>
-                    <div className="col-span-2">{trx.date}</div>
+                    <div className="col-span-1">${trx.foreigntotal}</div>
+                    <div className="col-span-2">{trx.trandate}</div>
                     <div className="col-span-2 flex justify-center space-x-1">
                       <StepIcon step="fetch" status={trx.steps.fetch.status} />
                       <StepIcon

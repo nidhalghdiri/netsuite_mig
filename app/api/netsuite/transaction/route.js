@@ -3,11 +3,25 @@ export async function POST(request) {
   try {
     const { accountID, token } = await request.json();
 
+    if (!accountID || !token) {
+      return NextResponse.json(
+        { error: "Missing required parameters" },
+        { status: 400 }
+      );
+    }
+
     console.log("POST fetchMigrationData Account: ", accountID);
     console.log("POST fetchMigrationData token: ", token);
 
     // Step 1: Fetch all transactions with pagination
     const allTransactions = await fetchAllTransactions(accountID, token);
+    if (!allTransactions || allTransactions.length === 0) {
+      return NextResponse.json({
+        statistics: getDefaultStatistics(),
+        transactions: [],
+        total: 0,
+      });
+    }
     // Calculate statistics
     const statistics = calculateStatistics(allTransactions);
 
@@ -23,6 +37,15 @@ export async function POST(request) {
       { status: 500 }
     );
   }
+}
+function getDefaultStatistics() {
+  return {
+    totalTransactions: 0,
+    processed: 0,
+    remaining: 0,
+    successRate: 0,
+    byType: {},
+  };
 }
 
 async function fetchAllTransactions(account, token) {
@@ -51,7 +74,9 @@ async function fetchAllTransactions(account, token) {
       offset,
       limit
     );
-
+    if (!response?.items) {
+      throw new Error("Invalid response format from NetSuite");
+    }
     allItems = [...allItems, ...response.items];
     hasMore = response.hasMore;
     offset += limit;
@@ -85,15 +110,15 @@ async function fetchNetSuiteData(account, token, query, offset, limit) {
 
 // Calculate statistics from all transactions
 function calculateStatistics(transactions) {
+  if (!transactions || !Array.isArray(transactions)) {
+    return getDefaultStatistics();
+  }
   const byType = {};
   let total = transactions.length;
 
   transactions.forEach((transaction) => {
-    const type = transaction.type;
-    if (!byType[type]) {
-      byType[type] = 0;
-    }
-    byType[type]++;
+    const type = transaction.type || "unknown";
+    byType[type] = (byType[type] || 0) + 1;
   });
 
   return {
