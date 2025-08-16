@@ -6,38 +6,23 @@ export async function POST(request) {
     console.log("POST fetchMigrationData Account: ", accountID);
     console.log("POST fetchMigrationData token: ", token);
 
+    // Step 1: Fetch all transactions with pagination
+    const allTransactions = await fetchAllTransactions(accountID, token);
+    // Calculate statistics
+    const statistics = calculateStatistics(allTransactions);
+
     const transactionsQuery = `
             SELECT  
-                transaction.id, 
-                transaction.entity as customer_id, 
-                transaction.tranid, 
-                transaction.trandate, 
-                transaction.currency, 
-                transaction.type, 
-                transaction.title as sub_type, 
-                transaction.memo, 
-                transaction.status, 
-                transaction.foreigntotal as total, 
-                transaction.foreignamountpaid as paid_amount, 
-                transaction.foreignamountunpaid as unpaid_amount, 
-                transaction.foreignpaymentamountused as used_amount, 
-                transaction.foreignpaymentamountunused as unused_amount, 
-                transaction.externalId as external_id 
+                transaction.*
             FROM 
                 transaction, 
-                transactionLine, 
-                customer  
+                transactionLine
             WHERE 
-                transaction.ID = transactionLine.transaction 
-                AND transaction.entity = customer.id 
-                AND transactionLine.subsidiary IN ('10', '12') 
-                AND transactionLine.mainline = 'T' 
-                AND transaction.type IN ('CashSale', 'CustCred', 'CustInvc', 'SalesOrd', 'RtnAuth', 'Estimate') 
-                AND NOT(transaction.type IN ('Estimate:B', 'Estimate:X')) 
-                AND (transaction.trandate BETWEEN BUILTIN.RELATIVE_RANGES('TYTD', 'START', 'DATE') 
-                AND BUILTIN.RELATIVE_RANGES('TYTD', 'END', 'DATE')) 
+                transaction.ID = transactionLine.transaction
+                AND transactionLine.mainline = 'T'
+                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS')
             ORDER BY 
-                transaction.trandate DESC`;
+                transaction.createddate DESC`;
 
     const transactionsResponse = await fetchNetSuiteData(
       accountID,
@@ -57,14 +42,46 @@ export async function POST(request) {
   }
 }
 
-async function fetchNetSuiteData(account, token, query) {
-  const url = `https://${account}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql`;
+async function fetchAllTransactions(account, token) {
+  let allItems = [];
+  let offset = 0;
+  const limit = 1000; // NetSuite's max per page
+  let hasMore = true;
 
-  const requestData = {
-    url,
-    method: "POST",
-  };
+  while (hasMore) {
+    const query = `
+            SELECT  
+                transaction.*
+            FROM 
+                transaction, 
+                transactionLine
+            WHERE 
+                transaction.ID = transactionLine.transaction
+                AND transactionLine.mainline = 'T'
+                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS')
+            ORDER BY 
+                transaction.createddate DESC`;
+    const response = await fetchNetSuiteData(
+      account,
+      token,
+      query,
+      offset,
+      limit
+    );
 
+    allItems = [...allItems, ...response.items];
+    hasMore = response.hasMore;
+    offset += limit;
+
+    // Optional: Add delay to avoid rate limiting
+    if (offset > 100000) break;
+  }
+
+  return allItems;
+}
+
+async function fetchNetSuiteData(account, token, query, offset, limit) {
+  const url = `https://${account}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=${limit}&offset=${offset}`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -83,51 +100,24 @@ async function fetchNetSuiteData(account, token, query) {
   return response.json();
 }
 
-function calculateStatistics(response) {
-  const byType = {
-    salesOrders: 0,
-    invoices: 0,
-    purchases: 0,
-    creditMemos: 0,
-    others: 0,
-  };
+// Calculate statistics from all transactions
+function calculateStatistics(transactions) {
+  const byType = {};
+  let total = transactions.length;
 
-  let totalTransactions = 0;
-  let processed = 0;
-
-  response.items.forEach((item) => {
-    totalTransactions += item.total;
-    processed += item.processed;
-
-    switch (item.type) {
-      case "SalesOrd":
-        byType.salesOrders = item.total;
-        break;
-      case "Invoice":
-        byType.invoices = item.total;
-        break;
-      case "PurchOrd":
-        byType.purchases = item.total;
-        break;
-      case "CustCred":
-        byType.creditMemos = item.total;
-        break;
-      default:
-        byType.others += item.total;
+  transactions.forEach((transaction) => {
+    const type = transaction.type;
+    if (!byType[type]) {
+      byType[type] = 0;
     }
+    byType[type]++;
   });
 
-  const remaining = totalTransactions - processed;
-  const successRate =
-    processed > 0
-      ? Math.round((processed / totalTransactions) * 10000) / 100
-      : 0;
-
   return {
-    totalTransactions,
-    processed,
-    remaining,
-    successRate,
+    totalTransactions: total,
+    processed: 0, // Will be updated during migration
+    remaining: total,
+    successRate: 0,
     byType,
   };
 }
