@@ -18,132 +18,158 @@ import {
 
 // Mock data service
 const fetchMigrationData = async () => {
-  var accountID = "5319757";
-  const oldSession = getSession("old");
-  console.log("fetchMigrationData oldSession", oldSession);
+  try {
+    const accountID = "5319757";
+    const oldSession = getSession("old");
+    console.log("fetchMigrationData oldSession", oldSession);
 
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ accountID, token: oldSession.token }),
+    if (!oldSession?.token) {
+      throw new Error("No valid session token found");
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Token request failed: ${response.status} - ${errorText}`);
-  }
-  console.log("fetchMigrationData Response: ", response.json());
-  // return response.json();
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        statistics: {
-          totalTransactions: 12450,
-          processed: 8420,
-          remaining: 4030,
-          successRate: 98.7,
-          byType: {
-            salesOrders: 4520,
-            invoices: 2870,
-            purchases: 1860,
-            creditMemos: 920,
-            others: 1280,
-          },
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        transactions: [
-          {
-            id: "TRX-1001",
-            oldId: "OLD-78901",
-            newId: "NEW-45601",
-            type: "Sales Order",
-            date: "2020-01-15",
-            entity: "John Doe Inc.",
-            amount: 2450.75,
-            status: "completed",
-            steps: {
-              fetch: { status: "completed", timestamp: "2020-01-15 09:30:22" },
-              create: { status: "completed", timestamp: "2020-01-15 09:32:45" },
-              relate: { status: "completed", timestamp: "2020-01-15 09:35:18" },
-              compare: {
-                status: "completed",
-                timestamp: "2020-01-15 09:38:02",
-                mismatches: 2,
+        body: JSON.stringify({ accountID, token: oldSession.token }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Request failed: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json(); // Await the JSON parsing
+    console.log("fetchMigrationData Response: ", data);
+    // return response.json();
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          statistics: {
+            totalTransactions: 12450,
+            processed: 8420,
+            remaining: 4030,
+            successRate: 98.7,
+            byType: {
+              salesOrders: 4520,
+              invoices: 2870,
+              purchases: 1860,
+              creditMemos: 920,
+              others: 1280,
+            },
+          },
+          transactions: [
+            {
+              id: "TRX-1001",
+              oldId: "OLD-78901",
+              newId: "NEW-45601",
+              type: "Sales Order",
+              date: "2020-01-15",
+              entity: "John Doe Inc.",
+              amount: 2450.75,
+              status: "completed",
+              steps: {
+                fetch: {
+                  status: "completed",
+                  timestamp: "2020-01-15 09:30:22",
+                },
+                create: {
+                  status: "completed",
+                  timestamp: "2020-01-15 09:32:45",
+                },
+                relate: {
+                  status: "completed",
+                  timestamp: "2020-01-15 09:35:18",
+                },
+                compare: {
+                  status: "completed",
+                  timestamp: "2020-01-15 09:38:02",
+                  mismatches: 2,
+                },
+              },
+              details: {
+                createdFrom: "Quote-QT-789",
+                relatedRecords: [
+                  { id: "INV-1001", type: "Invoice", status: "linked" },
+                  { id: "FUL-1001", type: "Fulfillment", status: "linked" },
+                ],
+                files: 3,
+                fields: [
+                  {
+                    name: "Amount",
+                    oldValue: "2450.75",
+                    newValue: "2450.75",
+                    status: "match",
+                  },
+                  {
+                    name: "Customer",
+                    oldValue: "John Doe Inc.",
+                    newValue: "John Doe Inc.",
+                    status: "match",
+                  },
+                  {
+                    name: "Item",
+                    oldValue: "SKU-1001",
+                    newValue: "SKU-1001",
+                    status: "match",
+                  },
+                  {
+                    name: "Quantity",
+                    oldValue: "10",
+                    newValue: "8",
+                    status: "mismatch",
+                  },
+                  {
+                    name: "Discount",
+                    oldValue: "5%",
+                    newValue: "0%",
+                    status: "mismatch",
+                  },
+                ],
               },
             },
-            details: {
-              createdFrom: "Quote-QT-789",
-              relatedRecords: [
-                { id: "INV-1001", type: "Invoice", status: "linked" },
-                { id: "FUL-1001", type: "Fulfillment", status: "linked" },
-              ],
-              files: 3,
-              fields: [
-                {
-                  name: "Amount",
-                  oldValue: "2450.75",
-                  newValue: "2450.75",
-                  status: "match",
+            {
+              id: "TRX-1002",
+              oldId: "OLD-78902",
+              newId: "NEW-45602",
+              type: "Invoice",
+              date: "2020-01-15",
+              entity: "Smith & Co.",
+              amount: 1200.5,
+              status: "in-progress",
+              steps: {
+                fetch: {
+                  status: "completed",
+                  timestamp: "2020-01-15 10:15:33",
                 },
-                {
-                  name: "Customer",
-                  oldValue: "John Doe Inc.",
-                  newValue: "John Doe Inc.",
-                  status: "match",
+                create: {
+                  status: "completed",
+                  timestamp: "2020-01-15 10:18:21",
                 },
-                {
-                  name: "Item",
-                  oldValue: "SKU-1001",
-                  newValue: "SKU-1001",
-                  status: "match",
-                },
-                {
-                  name: "Quantity",
-                  oldValue: "10",
-                  newValue: "8",
-                  status: "mismatch",
-                },
-                {
-                  name: "Discount",
-                  oldValue: "5%",
-                  newValue: "0%",
-                  status: "mismatch",
-                },
-              ],
+                relate: { status: "pending", timestamp: "" },
+                compare: { status: "pending", timestamp: "", mismatches: 0 },
+              },
+              details: {
+                createdFrom: "Sales Order-SO-1002",
+                relatedRecords: [
+                  { id: "PAY-1002", type: "Payment", status: "pending" },
+                ],
+                files: 1,
+                fields: [],
+              },
             },
-          },
-          {
-            id: "TRX-1002",
-            oldId: "OLD-78902",
-            newId: "NEW-45602",
-            type: "Invoice",
-            date: "2020-01-15",
-            entity: "Smith & Co.",
-            amount: 1200.5,
-            status: "in-progress",
-            steps: {
-              fetch: { status: "completed", timestamp: "2020-01-15 10:15:33" },
-              create: { status: "completed", timestamp: "2020-01-15 10:18:21" },
-              relate: { status: "pending", timestamp: "" },
-              compare: { status: "pending", timestamp: "", mismatches: 0 },
-            },
-            details: {
-              createdFrom: "Sales Order-SO-1002",
-              relatedRecords: [
-                { id: "PAY-1002", type: "Payment", status: "pending" },
-              ],
-              files: 1,
-              fields: [],
-            },
-          },
-        ],
-      });
-    }, 800);
-  });
+          ],
+        });
+      }, 800);
+    });
+  } catch (error) {
+    console.error("Error in fetchMigrationData:", error);
+    throw error; // Re-throw to handle in the calling function
+  }
 };
 
 const StatusBadge = ({ status }) => {
