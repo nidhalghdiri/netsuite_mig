@@ -576,7 +576,7 @@ export default function DashboardOverview() {
                     <div className="col-span-2 truncate">{trx.entity}</div>
                     <div className="col-span-1">${trx.foreigntotal}</div>
                     <div className="col-span-2">{trx.trandate}</div>
-                    <div className="col-span-2 flex justify-center space-x-1">
+                    {/* <div className="col-span-2 flex justify-center space-x-1">
                       <StepIcon step="fetch" status={trx.steps.fetch.status} />
                       <StepIcon
                         step="create"
@@ -590,7 +590,7 @@ export default function DashboardOverview() {
                         step="compare"
                         status={trx.steps.compare.status}
                       />
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Transaction Details */}
