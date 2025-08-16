@@ -18,8 +18,6 @@ import {
 
 // Mock data service
 const fetchMigrationData = async () => {
-  setLoading(true);
-
   var accountID = "5319757";
   const oldSession = getSession("old");
   console.log("fetchMigrationData oldSession", oldSession);
