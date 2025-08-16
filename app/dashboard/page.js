@@ -378,21 +378,21 @@ export default function DashboardOverview() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {migrationData.statistics.totalTransactions.toLocaleString()}
+                {migrationData.statistics.totalTransactions}
               </div>
               <p className="text-sm text-gray-600">Total Transactions</p>
             </div>
 
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-purple-600 mb-1">
-                {migrationData.statistics.processed.toLocaleString()}
+                {migrationData.statistics.processed}
               </div>
               <p className="text-sm text-gray-600">Processed</p>
             </div>
 
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-amber-600 mb-1">
-                {migrationData.statistics.remaining.toLocaleString()}
+                {migrationData.statistics.remaining}
               </div>
               <p className="text-sm text-gray-600">Remaining</p>
             </div>
@@ -424,7 +424,7 @@ export default function DashboardOverview() {
                 ([type, count]) => (
                   <div key={type} className="border rounded-lg p-3 text-center">
                     <div className="text-lg font-bold text-blue-600 mb-1">
-                      {count.toLocaleString()}
+                      {count}
                     </div>
                     <p className="text-sm text-gray-600 capitalize">
                       {type.replace(/([A-Z])/g, " $1")}
@@ -543,9 +543,7 @@ export default function DashboardOverview() {
                     <div className="col-span-2 font-medium">{trx.id}</div>
                     <div className="col-span-2">{trx.type}</div>
                     <div className="col-span-2 truncate">{trx.entity}</div>
-                    <div className="col-span-1">
-                      ${trx.amount.toLocaleString()}
-                    </div>
+                    <div className="col-span-1">${trx.amount}</div>
                     <div className="col-span-2">{trx.date}</div>
                     <div className="col-span-2 flex justify-center space-x-1">
                       <StepIcon step="fetch" status={trx.steps.fetch.status} />
