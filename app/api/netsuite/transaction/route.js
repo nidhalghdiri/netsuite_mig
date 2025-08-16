@@ -77,7 +77,72 @@ async function fetchAllTransactions(account, token) {
     if (!response?.items) {
       throw new Error("Invalid response format from NetSuite");
     }
-    allItems = [...allItems, ...response.items];
+
+    const transactions = response.items.map((trx) => ({
+      ...trx,
+      mig_status: "Pending",
+      steps: {
+        fetch: {
+          status: "completed",
+          timestamp: "2020-01-15 09:30:22",
+        },
+        create: {
+          status: "completed",
+          timestamp: "2020-01-15 09:32:45",
+        },
+        relate: {
+          status: "completed",
+          timestamp: "2020-01-15 09:35:18",
+        },
+        compare: {
+          status: "completed",
+          timestamp: "2020-01-15 09:38:02",
+          mismatches: 2,
+        },
+      },
+      details: {
+        createdFrom: "Quote-QT-789",
+        relatedRecords: [
+          { id: "INV-1001", type: "Invoice", status: "linked" },
+          { id: "FUL-1001", type: "Fulfillment", status: "linked" },
+        ],
+        files: 3,
+        fields: [
+          {
+            name: "Amount",
+            oldValue: "2450.75",
+            newValue: "2450.75",
+            status: "match",
+          },
+          {
+            name: "Customer",
+            oldValue: "John Doe Inc.",
+            newValue: "John Doe Inc.",
+            status: "match",
+          },
+          {
+            name: "Item",
+            oldValue: "SKU-1001",
+            newValue: "SKU-1001",
+            status: "match",
+          },
+          {
+            name: "Quantity",
+            oldValue: "10",
+            newValue: "8",
+            status: "mismatch",
+          },
+          {
+            name: "Discount",
+            oldValue: "5%",
+            newValue: "0%",
+            status: "mismatch",
+          },
+        ],
+      },
+    }));
+
+    allItems = [...allItems, ...transactions];
     hasMore = response.hasMore;
     offset += limit;
 
