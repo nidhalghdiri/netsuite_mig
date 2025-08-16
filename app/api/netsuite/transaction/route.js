@@ -11,27 +11,10 @@ export async function POST(request) {
     // Calculate statistics
     const statistics = calculateStatistics(allTransactions);
 
-    const transactionsQuery = `
-            SELECT  
-                transaction.*
-            FROM 
-                transaction, 
-                transactionLine
-            WHERE 
-                transaction.ID = transactionLine.transaction
-                AND transactionLine.mainline = 'T'
-                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS')
-            ORDER BY 
-                transaction.createddate DESC`;
-
-    const transactionsResponse = await fetchNetSuiteData(
-      accountID,
-      token,
-      transactionsQuery
-    );
-
     return NextResponse.json({
-      transactions: transactionsResponse,
+      statistics,
+      transactions: allTransactions,
+      total: allTransactions.length,
     });
   } catch (error) {
     console.error("NetSuite API error:", error);
