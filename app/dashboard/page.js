@@ -336,6 +336,40 @@ export default function DashboardOverview() {
     return matchesStatus && matchesType && matchesSearch;
   });
 
+  const processTransaction = async (internalId) => {
+    try {
+      const accountID = "5319757";
+      const oldSession = getSession("old");
+      console.log("fetchMigrationData oldSession", oldSession);
+
+      if (!oldSession?.token) {
+        throw new Error("No valid session token found");
+      }
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-record`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: accountID,
+            token: oldSession.token,
+            internalId: internalId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to process transaction");
+      }
+      const data = await response.json();
+      console.log("[InventoryAdjustment UI] data: ", data);
+    } catch (error) {
+      console.error("Processing error:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto text-black">
       {/* Connection Status */}
@@ -557,6 +591,7 @@ export default function DashboardOverview() {
               <div className="col-span-2">Entity</div>
               <div className="col-span-1">Amount</div>
               <div className="col-span-2">Date</div>
+              <div className="col-span-2">Action</div>
               <div className="col-span-2 text-center">Migration Steps</div>
             </div>
 
@@ -569,14 +604,23 @@ export default function DashboardOverview() {
                     onClick={() => toggleTransactionDetails(trx.id)}
                   >
                     <div className="col-span-1 flex items-center">
-                      <StatusBadge status={trx.status} />
+                      <StatusBadge status={trx.mig_status} />
                     </div>
                     <div className="col-span-2 font-medium">{trx.id}</div>
                     <div className="col-span-2">{trx.type}</div>
                     <div className="col-span-2 truncate">{trx.entity}</div>
                     <div className="col-span-1">${trx.foreigntotal}</div>
                     <div className="col-span-2">{trx.trandate}</div>
-                    {/* <div className="col-span-2 flex justify-center space-x-1">
+                    <div className="col-span-2">
+                      {" "}
+                      <button
+                        onClick={() => processTransaction(trx.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-70"
+                      >
+                        Process
+                      </button>
+                    </div>
+                    <div className="col-span-2 flex justify-center space-x-1">
                       <StepIcon step="fetch" status={trx.steps.fetch.status} />
                       <StepIcon
                         step="create"
@@ -590,7 +634,7 @@ export default function DashboardOverview() {
                         step="compare"
                         status={trx.steps.compare.status}
                       />
-                    </div> */}
+                    </div>
                   </div>
 
                   {/* Transaction Details */}
