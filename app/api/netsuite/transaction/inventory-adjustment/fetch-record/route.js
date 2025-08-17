@@ -8,7 +8,20 @@ const REFERENCE_FIELDS = [
   "department",
   "class",
   "item",
+  "adjLocation",
+  "customer",
 ];
+
+const REFERENCE_FIELD_NEW_ID = {
+  account: "custrecord_mig_sandbox_new_internal_id_a",
+  subsidiary: "custrecord_mig_sandbox_new_internal_id",
+  location: "custrecord_mig_sandbox_new_internal_id_l",
+  department: "custrecord_mig_sandbox_new_internal_id_d",
+  class: "custrecord_mig_sandbox_new_internal_id_c",
+  item: "custrecord_mig_sandbox_new_internal_id_i",
+  adjLocation: "custrecord_mig_sandbox_new_internal_id_l",
+  customer: "custrecord_mig_sandbox_new_internal_id_e",
+};
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
   console.log("[InventoryAdjustment] AccountId: ", accountId);
@@ -74,7 +87,20 @@ async function expandReferences(accountId, token, record) {
 
     try {
       // Determine record type from field name
-      const recordType = field === "item" ? "inventoryItem" : field;
+      var recordType = "";
+      var newIdField = "";
+      if (field === "item") {
+        recordType = "inventoryItem";
+        newIdField = REFERENCE_FIELD_NEW_ID[field];
+      } else if (field === "adjLocation") {
+        recordType = "location";
+        newIdField = REFERENCE_FIELD_NEW_ID["location"];
+      } else if (field === "inventory") {
+        recordType = "inventoryAdjustment-inventoryElement";
+      } else {
+        recordType = field;
+        newIdField = REFERENCE_FIELD_NEW_ID[field];
+      }
 
       // Fetch the referenced record
       const refRecord = await fetchRecord(
@@ -87,7 +113,8 @@ async function expandReferences(accountId, token, record) {
       // Add the full record data to our expanded record
       expanded[field] = {
         ...record[field],
-        ...refRecord,
+        // ...refRecord,
+        new_id: refRecord[newIdField],
         // Preserve the original reference structure
         links: record[field].links,
         refName: record[field].refName,
