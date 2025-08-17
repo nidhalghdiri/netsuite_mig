@@ -37,6 +37,7 @@ export async function POST(request) {
   console.log("[InventoryAdjustment] internalId: ", internalId);
 
   try {
+    // Fetch Inventory Adjustment Fields
     const record = await fetchRecord(
       accountId,
       token,
@@ -44,9 +45,7 @@ export async function POST(request) {
       internalId
     );
 
-    console.log("[InventoryAdjustment] RECORD: ", record);
-
-    // 2. Process inventory sublist if exists
+    // Fetch Inventory Items
     if (record.inventory?.links) {
       const sublistUrl = record.inventory.links.find(
         (l) => l.rel === "self"
@@ -188,19 +187,42 @@ async function processSingleInventoryItem(accountId, token, item) {
   try {
     // 1. Fetch full item details if self link exists
     const itemUrl = item.links?.find((l) => l.rel === "self")?.href;
-    if (itemUrl) {
-      const fullItem = await fetchSublistItem(accountId, token, itemUrl);
+    if (!itemUrl) return item;
 
-      // 2. Merge with original item data
-      const mergedItem = { ...item, ...fullItem };
-
-      // 3. Expand all references in the item
-      return await expandReferences(accountId, token, mergedItem);
+    const fullItem = await fetchSublistItem(accountId, token, itemUrl);
+    const mergedItem = { ...item, ...fullItem };
+    // Process inventoryDetail if it exists
+    if (mergedItem.inventoryDetail?.links) {
+      const detailUrl = mergedItem.inventoryDetail.links.find(
+        (l) => l.rel === "self"
+      )?.href;
+      if (detailUrl) {
+        mergedItem.inventoryDetail = await fetchAndExpandInventoryDetail(
+          accountId,
+          token,
+          detailUrl
+        );
+      }
     }
-    return item;
+
+    // 3. Expand all references in the item
+    return await expandReferences(accountId, token, mergedItem);
   } catch (error) {
     console.warn("Error processing inventory item:", error);
     return item; // Return original if processing fails
+  }
+}
+
+async function fetchAndExpandInventoryDetail(accountId, token, detailUrl) {
+  try {
+    // Fetch the inventory detail
+    const inventoryDetail = await fetchSublistItem(accountId, token, detailUrl);
+
+    // Process any nested references in the inventory detail
+    return await expandReferences(accountId, token, inventoryDetail);
+  } catch (error) {
+    console.warn("Error fetching inventory detail:", error);
+    return { error: "Failed to fetch inventory detail" };
   }
 }
 
