@@ -16,6 +16,8 @@ export async function POST(request) {
     // Transform inventory adjustment data for new instance
     const transformedData = transformInventoryAdjustment(recordData);
 
+    console.log("transformedData : ", JSON.stringify(transformedData));
+
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
 
@@ -30,8 +32,22 @@ export async function POST(request) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Failed to create record: ${error.error.message}`);
+      const responseText = await response.text();
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      try {
+        const errorResponse = JSON.parse(responseText);
+        // Handle NetSuite's error structure safely
+        if (errorResponse.error?.message) {
+          errorMessage = errorResponse.error.message;
+        } else {
+          errorMessage += ` - ${responseText.substring(0, 100)}`;
+        }
+      } catch (e) {
+        errorMessage += ` - ${responseText.substring(0, 100)}`;
+      }
+
+      throw new Error(`Failed to create record: ${errorMessage}`);
     }
 
     const result = await response.json();
@@ -54,33 +70,32 @@ function transformInventoryAdjustment(data) {
     subsidiary: { id: data.subsidiary.new_id },
     account: { id: data.account.new_id },
     adjLocation: { id: data.adjLocation.new_id },
-    postingPeriod: { id: data.postingPeriod.id },
+    // postingPeriod: { id: data.postingPeriod.id },
   };
 
   // Custom fields
-  const customFields = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key.startsWith("custbody") && !value?.id) {
-      customFields[key] = value;
-    }
-  }
-  if (Object.keys(customFields).length > 0) {
-    transformed.customFields = customFields;
-  }
+  //   const customFields = {};
+  //   for (const [key, value] of Object.entries(data)) {
+  //     if (key.startsWith("custbody") && !value?.id) {
+  //       customFields[key] = value;
+  //     }
+  //   }
+  //   if (Object.keys(customFields).length > 0) {
+  //     transformed.customFields = customFields;
+  //   }
 
   // Inventory items
   if (data.inventory?.items) {
-    transformed.items = data.inventory.items.map((item) => ({
+    transformed.inventory = data.inventory.items.map((item) => ({
       item: { id: item.item.new_id },
       location: { id: item.location.new_id },
       quantity: item.adjustQtyBy,
-      unitCost: item.unitCost,
+      //   unitCost: item.unitCost,
       description: item.description,
       memo: item.memo,
       inventoryDetail: transformInventoryDetail(item.inventoryDetail),
     }));
   }
-
   return transformed;
 }
 
@@ -101,6 +116,5 @@ function transformInventoryDetail(detail) {
       })),
     };
   }
-
   return transformed;
 }
