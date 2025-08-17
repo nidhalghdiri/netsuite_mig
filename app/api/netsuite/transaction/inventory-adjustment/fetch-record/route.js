@@ -22,6 +22,12 @@ const REFERENCE_FIELD_NEW_ID = {
   adjLocation: "custrecord_mig_sandbox_new_internal_id_l",
   customer: "custrecord_mig_sandbox_new_internal_id_e",
 };
+
+// List of sublists to fetch
+const SUBLISTS = [
+  "inventory", // The inventory sublist containing line items
+];
+
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
   console.log("[InventoryAdjustment] AccountId: ", accountId);
@@ -39,6 +45,23 @@ export async function POST(request) {
     console.log("[InventoryAdjustment] RECORD: ", record);
 
     const expandedRecord = await expandReferences(accountId, token, record);
+
+    // 2. Fetch and expand all sublists
+    for (const sublist of SUBLISTS) {
+      if (record[sublist]?.links) {
+        const sublistUrl = record[sublist].links.find(
+          (link) => link.rel === "self"
+        )?.href;
+        if (sublistUrl) {
+          const items = await fetchSublist(accountId, token, sublistUrl);
+
+          // Expand references for each item in the sublist
+          record[sublist].items = await Promise.all(
+            items.map((item) => expandReferences(accountId, token, item))
+          );
+        }
+      }
+    }
 
     // 3. Process inventory items if they exist
     if (expandedRecord.inventoryList?.items) {
@@ -77,6 +100,25 @@ async function fetchRecord(accountId, token, recordType, internalId) {
   }
 
   return response.json();
+}
+
+async function fetchSublist(accountId, token, sublistUrl) {
+  const response = await fetch(sublistUrl, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Prefer: "transient",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to fetch sublist: ${error.error.message}`);
+  }
+
+  const result = await response.json();
+  return result.items || [];
 }
 
 async function expandReferences(accountId, token, record) {
