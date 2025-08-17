@@ -364,6 +364,34 @@ export default function DashboardOverview() {
       }
       const data = await response.json();
       console.log("[InventoryAdjustment UI] data: ", data);
+
+      console.log("[InventoryAdjustment UI] Creating Record Start...");
+      const newAccountID = "11661334-sb1";
+      const newSession = getSession("new");
+      if (!newSession?.token) {
+        throw new Error("Not connected to new instance");
+      }
+
+      const newResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/create-record`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: newAccountID,
+            token: newSession.token,
+            recordType: "inventoryAdjustment",
+            recordData: data,
+          }),
+        }
+      );
+      if (!newResponse.ok) {
+        const errorText = await newResponse.text();
+        throw new Error(`Migration failed: ${errorText}`);
+      }
+
+      const result = await newResponse.json();
+      console.log("Creation successful:", result);
     } catch (error) {
       console.error("Processing error:", error);
       throw error;
