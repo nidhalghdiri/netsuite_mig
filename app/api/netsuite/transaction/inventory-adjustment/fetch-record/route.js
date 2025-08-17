@@ -28,6 +28,8 @@ const SUBLISTS = [
   "inventory", // The inventory sublist containing line items
 ];
 
+const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
+
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
   console.log("[InventoryAdjustment] AccountId: ", accountId);
@@ -44,33 +46,25 @@ export async function POST(request) {
 
     console.log("[InventoryAdjustment] RECORD: ", record);
 
-    const expandedRecord = await expandReferences(accountId, token, record);
+    // 2. Process inventory sublist if exists
+    if (record.inventory?.links) {
+      const sublistUrl = record.inventory.links.find(
+        (l) => l.rel === "self"
+      )?.href;
+      if (sublistUrl) {
+        // First fetch the list of inventory items
+        const items = await fetchSublist(accountId, token, sublistUrl);
 
-    // 2. Fetch and expand all sublists
-    for (const sublist of SUBLISTS) {
-      if (record[sublist]?.links) {
-        const sublistUrl = record[sublist].links.find(
-          (link) => link.rel === "self"
-        )?.href;
-        if (sublistUrl) {
-          const items = await fetchSublist(accountId, token, sublistUrl);
-
-          // Expand references for each item in the sublist
-          record[sublist].items = await Promise.all(
-            items.map((item) => expandReferences(accountId, token, item))
-          );
-        }
+        // Then fetch details for each inventory item
+        record.inventory.items = await processInventoryItems(
+          accountId,
+          token,
+          items
+        );
       }
     }
 
-    // 3. Process inventory items if they exist
-    if (expandedRecord.inventoryList?.items) {
-      expandedRecord.inventoryList.items = await Promise.all(
-        expandedRecord.inventoryList.items.map((item) =>
-          expandReferences(accountId, token, item)
-        )
-      );
-    }
+    const expandedRecord = await expandReferences(accountId, token, record);
 
     return NextResponse.json(expandedRecord);
   } catch (error) {
@@ -170,4 +164,60 @@ async function expandReferences(accountId, token, record) {
   }
 
   return expanded;
+}
+
+async function processInventoryItems(accountId, token, items) {
+  // Process items in batches to avoid rate limiting
+  const batches = [];
+  for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
+    batches.push(items.slice(i, i + MAX_PARALLEL_REQUESTS));
+  }
+
+  const processedItems = [];
+  for (const batch of batches) {
+    const batchResults = await Promise.all(
+      batch.map((item) => processSingleInventoryItem(accountId, token, item))
+    );
+    processedItems.push(...batchResults);
+  }
+
+  return processedItems;
+}
+
+async function processSingleInventoryItem(accountId, token, item) {
+  try {
+    // 1. Fetch full item details if self link exists
+    const itemUrl = item.links?.find((l) => l.rel === "self")?.href;
+    if (itemUrl) {
+      const fullItem = await fetchSublistItem(accountId, token, itemUrl);
+
+      // 2. Merge with original item data
+      const mergedItem = { ...item, ...fullItem };
+
+      // 3. Expand all references in the item
+      return await expandReferences(accountId, token, mergedItem);
+    }
+    return item;
+  } catch (error) {
+    console.warn("Error processing inventory item:", error);
+    return item; // Return original if processing fails
+  }
+}
+
+async function fetchSublistItem(accountId, token, itemUrl) {
+  const response = await fetch(itemUrl, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Prefer: "transient",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to fetch sublist item: ${error.error.message}`);
+  }
+
+  return response.json();
 }
