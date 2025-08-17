@@ -18,9 +18,9 @@ const REFERENCE_FIELD_NEW_ID = {
   location: "custrecord_mig_sandbox_new_internal_id_l",
   department: "custrecord_mig_sandbox_new_internal_id_d",
   class: "custrecord_mig_sandbox_new_internal_id_c",
-  item: "custrecord_mig_sandbox_new_internal_id_i",
+  item: "custitem_mig_sandbox_new_intenral_id_i",
   adjLocation: "custrecord_mig_sandbox_new_internal_id_l",
-  customer: "custrecord_mig_sandbox_new_internal_id_e",
+  customer: "custentity_mig_sandbox_new_internal_id_e",
 };
 
 // List of sublists to fetch
@@ -218,12 +218,16 @@ async function fetchAndExpandInventoryDetail(accountId, token, detailUrl) {
     // Fetch the inventory detail
     const inventoryDetail = await fetchSublistItem(accountId, token, detailUrl);
     if (inventoryDetail.inventoryAssignment?.links) {
-      const detailUrl = inventoryDetail.inventoryAssignment.links.find(
+      const assignmentUrl = inventoryDetail.inventoryAssignment.links.find(
         (l) => l.rel === "self"
       )?.href;
-      if (detailUrl) {
+      if (assignmentUrl) {
         inventoryDetail.inventoryAssignment =
-          await fetchAndExpandInventoryAssignment(accountId, token, detailUrl);
+          await fetchAndExpandInventoryAssignment(
+            accountId,
+            token,
+            assignmentUrl
+          );
       }
     }
     // Process any nested references in the inventory detail
@@ -233,19 +237,64 @@ async function fetchAndExpandInventoryDetail(accountId, token, detailUrl) {
     return { error: "Failed to fetch inventory detail" };
   }
 }
-async function fetchAndExpandInventoryAssignment(accountId, token, detailUrl) {
+async function fetchAndExpandInventoryAssignment(
+  accountId,
+  token,
+  assignmentUrl
+) {
   try {
-    // Fetch the inventory detail
-    const inventoryAssignment = await fetchSublistItem(
+    // Fetch the assignment list
+    const assignmentList = await fetchSublistItem(
       accountId,
       token,
-      detailUrl
+      assignmentUrl
     );
-    // Process any nested references in the inventory detail
-    return await expandReferences(accountId, token, inventoryAssignment);
+
+    // Process each assignment item
+    if (assignmentList.items && assignmentList.items.length > 0) {
+      assignmentList.items = await processAssignmentItems(
+        accountId,
+        token,
+        assignmentList.items
+      );
+    }
+
+    return assignmentList;
   } catch (error) {
     console.warn("Error fetching inventory assignment:", error);
     return { error: "Failed to fetch inventory assignment" };
+  }
+}
+
+async function processAssignmentItems(accountId, token, items) {
+  const batches = [];
+  for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
+    batches.push(items.slice(i, i + MAX_PARALLEL_REQUESTS));
+  }
+
+  const processedItems = [];
+  for (const batch of batches) {
+    const batchResults = await Promise.all(
+      batch.map((item) => processSingleAssignmentItem(accountId, token, item))
+    );
+    processedItems.push(...batchResults);
+  }
+
+  return processedItems;
+}
+
+async function processSingleAssignmentItem(accountId, token, item) {
+  try {
+    const itemUrl = item.links?.find((l) => l.rel === "self")?.href;
+    if (!itemUrl) return item;
+
+    const fullItem = await fetchSublistItem(accountId, token, itemUrl);
+    const mergedItem = { ...item, ...fullItem };
+
+    return await expandReferences(accountId, token, mergedItem);
+  } catch (error) {
+    console.warn("Error processing assignment item:", error);
+    return item;
   }
 }
 
