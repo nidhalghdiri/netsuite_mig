@@ -217,12 +217,35 @@ async function fetchAndExpandInventoryDetail(accountId, token, detailUrl) {
   try {
     // Fetch the inventory detail
     const inventoryDetail = await fetchSublistItem(accountId, token, detailUrl);
-
+    if (inventoryDetail.inventoryAssignment?.links) {
+      const detailUrl = inventoryDetail.inventoryAssignment.links.find(
+        (l) => l.rel === "self"
+      )?.href;
+      if (detailUrl) {
+        inventoryDetail.inventoryAssignment =
+          await fetchAndExpandInventoryAssignment(accountId, token, detailUrl);
+      }
+    }
     // Process any nested references in the inventory detail
     return await expandReferences(accountId, token, inventoryDetail);
   } catch (error) {
     console.warn("Error fetching inventory detail:", error);
     return { error: "Failed to fetch inventory detail" };
+  }
+}
+async function fetchAndExpandInventoryAssignment(accountId, token, detailUrl) {
+  try {
+    // Fetch the inventory detail
+    const inventoryAssignment = await fetchSublistItem(
+      accountId,
+      token,
+      detailUrl
+    );
+    // Process any nested references in the inventory detail
+    return await expandReferences(accountId, token, inventoryAssignment);
+  } catch (error) {
+    console.warn("Error fetching inventory assignment:", error);
+    return { error: "Failed to fetch inventory assignment" };
   }
 }
 
