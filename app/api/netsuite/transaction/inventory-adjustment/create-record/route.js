@@ -14,9 +14,42 @@ export async function POST(request) {
     }
 
     // Transform inventory adjustment data for new instance
-    const transformedData = transformInventoryAdjustment(recordData);
+    // const transformedData = transformInventoryAdjustment(recordData);
+    // Transform data using NetSuite's structure
+    const transformedData = {
+      externalId: recordData.externalId,
+      tranDate: recordData.tranDate,
+      memo: recordData.memo,
+      subsidiary: { id: recordData.subsidiary.id },
+      account: { id: recordData.account.id },
+      adjLocation: { id: recordData.adjLocation.id },
+      //   postingPeriod: { id: recordData.postingPeriod.id },
+      inventory: {
+        items: recordData.inventory.map((item) => ({
+          item: { id: item.item.id },
+          location: { id: item.location.id },
+          adjustQtyBy: item.quantity,
+          description: item.description,
+          memo: item.memo,
+          inventoryDetail: item.inventoryDetail
+            ? {
+                quantity: item.inventoryDetail.quantity,
+                unit: { id: item.inventoryDetail.unit },
+                inventoryAssignment: {
+                  items: item.inventoryDetail.inventoryAssignment.items.map(
+                    (ass) => ({
+                      quantity: ass.quantity,
+                      receiptInventoryNumber: ass.receiptInventoryNumber,
+                    })
+                  ),
+                },
+              }
+            : null,
+        })),
+      },
+    };
 
-    console.log("transformedData : ", JSON.stringify(transformedData));
+    console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
 
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
@@ -41,14 +74,17 @@ export async function POST(request) {
 
       try {
         const errorResponse = JSON.parse(responseText);
-        // Handle NetSuite's error structure safely
-        if (errorResponse.error?.message) {
-          errorMessage = errorResponse.error.message;
-        } else {
-          errorMessage += ` - ${responseText.substring(0, 100)}`;
+        errorMessage += ` - ${errorResponse.title || "No error title"}`;
+        if (errorResponse.detail) {
+          errorMessage += `: ${errorResponse.detail}`;
+        }
+        if (errorResponse["o:errorDetails"]) {
+          errorMessage += ` | Details: ${JSON.stringify(
+            errorResponse["o:errorDetails"]
+          )}`;
         }
       } catch (e) {
-        errorMessage += ` - ${responseText.substring(0, 100)}`;
+        errorMessage += ` - ${responseText.substring(0, 200)}`;
       }
 
       throw new Error(`Failed to create record: ${errorMessage}`);
@@ -88,16 +124,26 @@ function transformInventoryAdjustment(data) {
   //     transformed.customFields = customFields;
   //   }
 
-  // Inventory items
-  if (data.inventory?.items) {
-    transformed.inventory = data.inventory.items.map((item) => ({
-      item: { id: item.item.new_id },
-      location: { id: item.location.new_id },
-      quantity: item.adjustQtyBy,
-      //   unitCost: item.unitCost,
+  // Transform items - handle both structures
+  let items = [];
+  if (Array.isArray(data.items)) {
+    items = data.items;
+  } else if (Array.isArray(data.inventory)) {
+    items = data.inventory;
+  } else if (data.inventory?.items && Array.isArray(data.inventory.items)) {
+    items = data.inventory.items;
+  }
+
+  if (items.length > 0) {
+    transformed.inventory = items.map((item) => ({
+      item: { id: item.item.id },
+      location: { id: item.location.id },
+      quantity: item.quantity || item.adjustQtyBy,
       description: item.description,
       memo: item.memo,
-      inventoryDetail: transformInventoryDetail(item.inventoryDetail),
+      inventoryDetail: item.inventoryDetail
+        ? transformInventoryDetail(item.inventoryDetail)
+        : null,
     }));
   }
   return transformed;
