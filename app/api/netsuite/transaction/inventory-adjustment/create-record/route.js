@@ -1,6 +1,6 @@
 // app/api/netsuite/create-record/route.js
 import { NextResponse } from "next/server";
-
+import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
     const { accountId, token, recordType, recordData } = await request.json();
@@ -20,13 +20,17 @@ export async function POST(request) {
 
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
+    const idempotencyKey = randomUUID();
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-        Prefer: "transient",
+        Prefer: "respond-async",
+        "X-NetSuite-Idempotency-Key": idempotencyKey,
+        "X-NetSuite-PropertyNameValidation": "Warning",
+        "X-NetSuite-PropertyValueValidation": "Warning",
       },
       body: JSON.stringify(transformedData),
     });
