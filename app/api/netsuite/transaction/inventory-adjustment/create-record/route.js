@@ -54,6 +54,8 @@ export async function POST(request) {
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
     const idempotencyKey = randomUUID();
+    console.log("Create INVADJUST URL ", url);
+    console.log("Create INVADJUST idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",
