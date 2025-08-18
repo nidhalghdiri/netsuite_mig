@@ -25,7 +25,7 @@ export async function POST(request) {
       adjLocation: { id: recordData.adjLocation.id },
       //   postingPeriod: { id: recordData.postingPeriod.id },
       inventory: {
-        items: recordData.inventory.map((item) => ({
+        items: recordData.inventory.items.map((item) => ({
           item: { id: item.item.id },
           location: { id: item.location.id },
           adjustQtyBy: item.quantity,
