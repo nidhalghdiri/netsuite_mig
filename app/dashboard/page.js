@@ -287,6 +287,8 @@ export default function DashboardOverview() {
     search: "",
   });
   const [error, setError] = useState(null);
+  const [currentTransaction, setCurrentTransaction] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const oldSession = getSession("old");
   const newSession = getSession("new");
@@ -336,7 +338,7 @@ export default function DashboardOverview() {
     return matchesStatus && matchesType && matchesSearch;
   });
 
-  const processTransaction = async (internalId) => {
+  const fetchTransaction = async (internalId) => {
     try {
       const accountID = "5319757";
       const oldSession = getSession("old");
@@ -364,37 +366,67 @@ export default function DashboardOverview() {
       }
       const data = await response.json();
       console.log("[InventoryAdjustment UI] data: ", data);
+      setCurrentTransaction(data);
+    } catch (error) {
+      console.error("Fetching error:", error);
+      throw error;
+    }
+  };
+  const processTransaction = async (transactionData) => {
+    if (!transactionData) {
+      throw new Error("No transaction data to process");
+    }
 
-      console.log("[InventoryAdjustment UI] Creating Record Start...");
+    setIsProcessing(true);
+    try {
+      console.log("Starting transaction processing...");
       const newAccountID = "11661334-sb1";
       const newSession = getSession("new");
+
       if (!newSession?.token) {
         throw new Error("Not connected to new instance");
       }
 
-      const newResponse = await fetch(
+      const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/create-record`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${newSession.token}`, // Recommended for security
+          },
           body: JSON.stringify({
             accountId: newAccountID,
             token: newSession.token,
             recordType: "inventoryAdjustment",
-            recordData: data,
+            recordData: transactionData,
           }),
         }
       );
-      if (!newResponse.ok) {
-        const errorText = await newResponse.text();
-        throw new Error(`Migration failed: ${errorText}`);
+
+      // Handle both sync and async responses
+      if (response.status === 202) {
+        // Async processing
+        const locationHeader = response.headers.get("Location");
+        console.log("Async processing started. Location:", locationHeader);
+
+        // You might want to implement polling here or return the location
+        return { status: "pending", location: locationHeader };
+      } else if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || errorData.message || "Migration failed"
+        );
       }
 
-      const result = await newResponse.json();
+      const result = await response.json();
       console.log("Creation successful:", result);
+      return { status: "completed", data: result };
     } catch (error) {
       console.error("Processing error:", error);
       throw error;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -639,13 +671,45 @@ export default function DashboardOverview() {
                     <div className="col-span-2 truncate">{trx.entity}</div>
                     <div className="col-span-1">${trx.foreigntotal}</div>
                     <div className="col-span-2">{trx.trandate}</div>
-                    <div className="col-span-2">
-                      {" "}
+                    <div className="col-span-2  flex gap-2">
                       <button
-                        onClick={() => processTransaction(trx.id)}
+                        onClick={async () => {
+                          try {
+                            await fetchTransaction(trx.id);
+                            toast.success("Transaction fetched successfully");
+                          } catch (error) {
+                            toast.error(`Fetch failed: ${error.message}`);
+                          }
+                        }}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-70"
+                        disabled={isProcessing}
                       >
-                        Process
+                        Fetch
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          try {
+                            const result = await processTransaction(
+                              currentTransaction
+                            );
+                            if (result.status === "pending") {
+                              toast.success(
+                                "Processing started. Check back later."
+                              );
+                            } else {
+                              toast.success(
+                                "Transaction processed successfully!"
+                              );
+                            }
+                          } catch (error) {
+                            toast.error(`Processing failed: ${error.message}`);
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-70"
+                        disabled={!currentTransaction || isProcessing}
+                      >
+                        {isProcessing ? "Processing..." : "Process"}
                       </button>
                     </div>
                     <div className="col-span-2 flex justify-center space-x-1">
