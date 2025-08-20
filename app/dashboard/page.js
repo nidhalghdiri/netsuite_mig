@@ -2,6 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getSession, isSessionValid } from "@/lib/storage";
+import { toast } from "react-toastify";
 import {
   FiCheckCircle,
   FiAlertCircle,
@@ -382,9 +383,14 @@ export default function DashboardOverview() {
       console.log("Starting transaction processing...");
       const newAccountID = "11661334-sb1";
       const newSession = getSession("new");
+      const oldAccountID = "5319757";
+      const oldSession = getSession("old");
 
       if (!newSession?.token) {
         throw new Error("Not connected to new instance");
+      }
+      if (!oldSession?.token) {
+        throw new Error("Not connected to old instance");
       }
 
       const response = await fetch(
@@ -397,7 +403,9 @@ export default function DashboardOverview() {
           },
           body: JSON.stringify({
             accountId: newAccountID,
+            oldAccountId: oldAccountID,
             token: newSession.token,
+            oldToken: oldSession.token,
             recordType: "inventoryAdjustment",
             recordData: transactionData,
           }),

@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, token, recordType, recordData } = await request.json();
+    const { accountId, oldAccountId, token, oldToken, recordType, recordData } =
+      await request.json();
 
     // Validate input
     if (!accountId || !token || !recordType || !recordData) {
@@ -13,6 +14,8 @@ export async function POST(request) {
       );
     }
 
+    const unitMapping = await getUnitMapping(oldAccountId, oldToken);
+    console.log("unitMapping", unitMapping);
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);
     // Transform data using NetSuite's structure
@@ -34,10 +37,11 @@ export async function POST(request) {
           description: item.description,
           exchangeRate: item.exchangeRate,
           memo: item.memo,
+          units: unitMapping[item.units],
           inventoryDetail: item.inventoryDetail
             ? {
                 quantity: item.inventoryDetail.quantity,
-                unit: { id: item.inventoryDetail.unit },
+                unit: unitMapping[item.inventoryDetail.unit],
                 inventoryAssignment: {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => ({
@@ -83,20 +87,68 @@ export async function POST(request) {
       console.log("Async job started. Location:", locationHeader);
       try {
         // Step 1: Get the record link through async processing
-        const recordLink = await getAsyncResultLink(locationHeader, token);
-        console.log("Record link retrieved:", recordLink);
-
-        // Step 2: Extract internal ID from record link
-        const internalId = recordLink.substring(
-          recordLink.lastIndexOf("/") + 1
-        );
-        console.log("Created record internal ID:", internalId);
-
-        return NextResponse.json({
-          success: true,
-          internalId,
-          recordLink,
+        const resultUrl = await getAsyncResultLink(locationHeader, token);
+        console.log("Record link retrieved:", resultUrl);
+        // Step 2: Fetch the result URL to get the record location
+        const resultResponse = await fetch(resultUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
+
+        // Handle 204 No Content response
+        if (resultResponse.status === 204) {
+          const recordLocation = resultResponse.headers.get("Location");
+
+          if (!recordLocation) {
+            throw new Error("Location header not found in result response");
+          }
+
+          console.log("Record location header:", recordLocation);
+
+          // Step 3: Extract internal ID from record location
+          const internalId = recordLocation.substring(
+            recordLocation.lastIndexOf("/") + 1
+          );
+
+          if (!internalId || isNaN(internalId)) {
+            throw new Error("Invalid internal ID format: " + internalId);
+          }
+
+          console.log("Created record internal ID:", internalId);
+          // Step 4: (Optional) Fetch full record details
+          const recordResponse = await fetch(recordLocation, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          if (!recordResponse.ok) {
+            console.warn(
+              "Failed to fetch full record details, proceeding with ID"
+            );
+            return NextResponse.json({
+              success: true,
+              internalId,
+              recordLocation,
+            });
+          }
+
+          const recordData = await recordResponse.json();
+          return NextResponse.json({
+            success: true,
+            internalId,
+            recordLocation,
+            recordData,
+          });
+        }
+        // Handle unexpected responses
+        const resultText = await resultResponse.text();
+        throw new Error(
+          `Unexpected result response: ${resultResponse.status} - ${resultText}`
+        );
       } catch (asyncError) {
         console.error("Async processing failed:", asyncError);
         return NextResponse.json(
@@ -241,4 +293,31 @@ async function getAsyncResultLink(locationHeader, token) {
   }
 
   throw new Error("Max polling attempts reached without job completion");
+}
+
+async function getUnitMapping(accountId, token) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/unit-mapping`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get unit mapping");
+    }
+
+    const result = await response.json();
+    return result.unitMapping;
+  } catch (error) {
+    console.error("Error getting unit mapping:", error);
+    throw error;
+  }
 }
