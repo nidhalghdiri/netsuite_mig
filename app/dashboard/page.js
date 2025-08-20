@@ -339,7 +339,12 @@ export default function DashboardOverview() {
     return matchesStatus && matchesType && matchesSearch;
   });
 
-  const fetchTransaction = async (internalId) => {
+  const RECORDS = {
+    InvAdjst: "inventory-adjustment",
+    TrnfrOrd: "transfer-order",
+  };
+
+  const fetchTransaction = async (internalId, recordType) => {
     try {
       const accountID = "5319757";
       const oldSession = getSession("old");
@@ -349,7 +354,7 @@ export default function DashboardOverview() {
         throw new Error("No valid session token found");
       }
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-record`,
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/fetch-record`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -683,7 +688,7 @@ export default function DashboardOverview() {
                       <button
                         onClick={async () => {
                           try {
-                            await fetchTransaction(trx.id);
+                            await fetchTransaction(trx.i, trx.type);
                             toast.success("Transaction fetched successfully");
                           } catch (error) {
                             toast.error(`Fetch failed: ${error.message}`);
