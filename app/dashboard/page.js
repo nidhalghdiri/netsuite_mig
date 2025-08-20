@@ -378,7 +378,7 @@ export default function DashboardOverview() {
       throw error;
     }
   };
-  const processTransaction = async (transactionData) => {
+  const processTransaction = async (transactionData, recordType) => {
     if (!transactionData) {
       throw new Error("No transaction data to process");
     }
@@ -399,7 +399,7 @@ export default function DashboardOverview() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/create-record`,
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/create-record`,
         {
           method: "POST",
           headers: {
@@ -411,7 +411,7 @@ export default function DashboardOverview() {
             oldAccountId: oldAccountID,
             token: newSession.token,
             oldToken: oldSession.token,
-            recordType: "inventoryAdjustment",
+            recordType: "transferOrder", //"inventoryAdjustment"
             recordData: transactionData,
           }),
         }
@@ -704,7 +704,8 @@ export default function DashboardOverview() {
                         onClick={async () => {
                           try {
                             const result = await processTransaction(
-                              currentTransaction
+                              currentTransaction,
+                              trx.type
                             );
                             if (result.status === "pending") {
                               toast.success(
