@@ -5,7 +5,7 @@ export async function POST(request) {
     const { accountId, token } = await request.json();
 
     // Validate input
-    if (!accountId || !token || !Array.isArray(oldUnitIds)) {
+    if (!accountId || !token) {
       return NextResponse.json(
         { error: "Missing required parameters or invalid format" },
         { status: 400 }
