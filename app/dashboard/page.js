@@ -688,7 +688,7 @@ export default function DashboardOverview() {
                       <button
                         onClick={async () => {
                           try {
-                            await fetchTransaction(trx.i, trx.type);
+                            await fetchTransaction(trx.id, trx.type);
                             toast.success("Transaction fetched successfully");
                           } catch (error) {
                             toast.error(`Fetch failed: ${error.message}`);
