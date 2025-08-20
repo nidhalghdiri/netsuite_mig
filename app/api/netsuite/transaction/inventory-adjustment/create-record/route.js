@@ -198,11 +198,11 @@ export async function POST(request) {
 async function getAsyncResultLink(locationHeader, token) {
   let jobUrl = locationHeader.trim();
   let attempts = 0;
-  const maxAttempts = 12; // 12 attempts * 5s = 60s timeout
+  const maxAttempts = 30; // 30 attempts * 5s = 2.5 minutes timeout
 
   while (attempts < maxAttempts) {
     attempts++;
-    await new Promise((resolve) => setTimeout(resolve, 3000)); // 5s delay
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // 5s delay
 
     try {
       const jobResponse = await fetch(jobUrl, {
