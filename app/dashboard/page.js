@@ -371,7 +371,7 @@ export default function DashboardOverview() {
         throw new Error(error.error || "Failed to process transaction");
       }
       const data = await response.json();
-      console.log("[InventoryAdjustment UI] data: ", data);
+      console.log("[Record UI] data: ", data);
       setCurrentTransaction(data);
     } catch (error) {
       console.error("Fetching error:", error);
