@@ -343,6 +343,10 @@ export default function DashboardOverview() {
     InvAdjst: "inventory-adjustment",
     TrnfrOrd: "transfer-order",
   };
+  const RECORDS_TYPE = {
+    InvAdjst: "inventoryAdjustment",
+    TrnfrOrd: "transferOrder",
+  };
 
   const fetchTransaction = async (internalId, recordType) => {
     try {
@@ -411,7 +415,7 @@ export default function DashboardOverview() {
             oldAccountId: oldAccountID,
             token: newSession.token,
             oldToken: oldSession.token,
-            recordType: "transferOrder", //"inventoryAdjustment"
+            recordType: RECORDS_TYPE[recordType], //"inventoryAdjustment"
             recordData: transactionData,
           }),
         }
