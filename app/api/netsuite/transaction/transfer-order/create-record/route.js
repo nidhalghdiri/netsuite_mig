@@ -52,7 +52,7 @@ export async function POST(request) {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => ({
                       quantity: ass.quantity,
-                      receiptInventoryNumber: ass.receiptInventoryNumber,
+                      receiptInventoryNumber: ass.issueInventoryNumber.refName,
                     })
                   ),
                 },
