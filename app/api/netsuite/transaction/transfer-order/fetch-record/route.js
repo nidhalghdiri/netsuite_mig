@@ -117,8 +117,6 @@ async function expandReferences(accountId, token, record) {
       } else if (field === "transferLocation") {
         recordType = "location";
         newIdField = REFERENCE_FIELD_NEW_ID["location"];
-      } else if (field === "item") {
-        recordType = "transferOrder-itemElement";
       } else {
         recordType = field;
         newIdField = REFERENCE_FIELD_NEW_ID[field];
