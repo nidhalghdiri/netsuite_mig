@@ -8,6 +8,7 @@ const REFERENCE_FIELDS = [
   "transferLocation",
   "subsidiary",
   "item",
+  "customer",
 ];
 
 const REFERENCE_FIELD_NEW_ID = {
