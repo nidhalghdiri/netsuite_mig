@@ -36,13 +36,14 @@ export async function POST(request) {
       item: {
         items: recordData.item.items.map((item) => ({
           item: { id: item.item.new_id },
-          location: { id: item.location.new_id },
-          adjustQtyBy: item.adjustQtyBy,
-          unitCost: item.unitCost,
+          cseg2: { id: item.cseg2.id },
           description: item.description,
           exchangeRate: item.exchangeRate,
           memo: item.memo,
           units: unitMapping[item.units],
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.amount,
           inventoryDetail: item.inventoryDetail
             ? {
                 quantity: item.inventoryDetail.quantity,
