@@ -688,6 +688,7 @@ export default function DashboardOverview() {
                       <button
                         onClick={async () => {
                           try {
+                            console.log("Fetch Transaction Type: ", trx.type);
                             await fetchTransaction(trx.id, trx.type);
                             toast.success("Transaction fetched successfully");
                           } catch (error) {
@@ -703,6 +704,7 @@ export default function DashboardOverview() {
                       <button
                         onClick={async () => {
                           try {
+                            console.log("Process Transaction Type: ", trx.type);
                             const result = await processTransaction(
                               currentTransaction,
                               trx.type
