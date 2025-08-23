@@ -16,7 +16,11 @@ export async function POST(request) {
 
     const unitMapping = await getUnitMapping(oldAccountId, oldToken);
     console.log("unitMapping", unitMapping);
-    const lotNumbers = await getLotNumbers(oldAccountId, oldToken);
+    const lotNumbers = await getLotNumbers(
+      oldAccountId,
+      oldToken,
+      recordData.id
+    );
     console.log("lotNumbers", lotNumbers);
 
     // Transform inventory adjustment data for new instance
@@ -197,7 +201,11 @@ export async function POST(request) {
           // const recordData = await recordResponse.json();
           console.log("New Record Created: ", recordData);
 
-          const newLotNumbers = await getLotNumbers(accountId, token);
+          const newLotNumbers = await getLotNumbers(
+            accountId,
+            token,
+            recordData.id
+          );
           console.log("newLotNumbers", newLotNumbers);
 
           // Step 5: Create lot number mapping records if needed
