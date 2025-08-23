@@ -156,7 +156,7 @@ export async function POST(request) {
           console.log("Created record internal ID:", internalId);
           // Step 4: (Optional) Fetch full record details
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-record`,
+            `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-new-record`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -173,7 +173,6 @@ export async function POST(request) {
             throw new Error(error.error || "Failed to process transaction");
           }
           const recordData = await response.json();
-          console.log("New Record Created: ", recordData);
           // const recordResponse = await fetch(recordLocation, {
           //   method: "GET",
           //   headers: {
@@ -193,6 +192,7 @@ export async function POST(request) {
           // }
 
           // const recordData = await recordResponse.json();
+          console.log("New Record Created: ", recordData);
 
           // Step 5: Create lot number mapping records if needed
           if (lotNumbersToMap.length > 0) {
