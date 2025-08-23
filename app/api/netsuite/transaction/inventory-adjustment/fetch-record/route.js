@@ -65,6 +65,7 @@ export async function POST(request) {
 
     // Get lot mapping if we have new credentials
     let lotMapping = {};
+    let lotNumbers = {};
     try {
       // Check if we have inventory details
       const hasInventoryDetails = record.inventory?.items?.some(
@@ -74,6 +75,8 @@ export async function POST(request) {
       if (hasInventoryDetails) {
         lotMapping = await getLotMapping(accountId, token);
         console.log("lotMapping", lotMapping);
+        lotNumbers = await getLotNumbers(accountId, token, internalId);
+        console.log("lotNumbers", lotNumbers);
       }
     } catch (error) {
       console.error("Failed to get lot mapping, proceeding without it:", error);
@@ -84,8 +87,6 @@ export async function POST(request) {
     console.log("lotMapping: ", lotMapping);
     // Apply lot mapping to inventory details
     if (Object.keys(lotMapping).length > 0) {
-      const lotNumbers = await getLotNumbers(accountId, token, internalId);
-      console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
       applyLotMapping(expandedRecord, lotMapping, lotNumbers);
     }
 
