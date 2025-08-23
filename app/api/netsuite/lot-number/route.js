@@ -53,7 +53,7 @@ WHERE
       console.log("lotNumbers Response: ", JSON.stringify(result.items));
       result.items.forEach((item) => {
         // Map by both old ID and name for flexibility
-        lotNumbers[transactionline] = item;
+        lotNumbers[item.transactionline] = item;
       });
     }
 
