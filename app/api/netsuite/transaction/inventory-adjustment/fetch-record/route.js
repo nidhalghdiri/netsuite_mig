@@ -84,7 +84,8 @@ export async function POST(request) {
     console.log("lotMapping: ", lotMapping);
     // Apply lot mapping to inventory details
     if (Object.keys(lotMapping).length > 0) {
-      applyLotMapping(expandedRecord, lotMapping);
+      const lotNumbers = await getLotNumbers(accountId, token, internalId);
+      applyLotMapping(expandedRecord, lotMapping, lotNumbers);
     }
 
     return NextResponse.json(expandedRecord);
@@ -364,17 +365,51 @@ async function getLotMapping(accountId, token) {
     throw error;
   }
 }
+async function getLotNumbers(accountId, token, tranId) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/lot-number`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+          tranId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get lot Numbers");
+    }
+
+    const result = await response.json();
+    return result.lotMapping;
+  } catch (error) {
+    console.error("Error getting lot mapping:", error);
+    throw error;
+  }
+}
 
 // Function to apply lot mapping to inventory details
-function applyLotMapping(record, lotMapping) {
+function applyLotMapping(record, lotMapping, lotNumbers) {
   if (!record.inventory?.items) return;
 
   record.inventory.items.forEach((item) => {
+    var item_line = item.line;
+    console.log(
+      "Process Item Line: [" +
+        item_line +
+        "] ==> " +
+        JSON.stringify(lotNumbers[item_line])
+    );
     if (item.inventoryDetail?.inventoryAssignment?.items) {
       item.inventoryDetail.inventoryAssignment.items.forEach((assignment) => {
         // Handle issueInventoryNumber
-        if (assignment.internalId) {
-          const oldId = assignment.internalId;
+        if (lotNumbers[item_line]) {
+          const oldId = lotNumbers[item_line].inventorynumberid;
           if (lotMapping[oldId]) {
             assignment.old_id = oldId;
             assignment.new_id = lotMapping[oldId];
