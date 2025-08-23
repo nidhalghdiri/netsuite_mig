@@ -15,12 +15,12 @@ export async function POST(request) {
 
     // Construct SuiteQL query for lot mapping
     const suiteQLQuery = `
-      SELECT 
-        BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_MIG_LOT_NUMBER_RELATION.custrecord_mig_lot_number_name) AS lot_name, 
-        BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_MIG_LOT_NUMBER_RELATION.custrecord_mig_lot_number_old_id) AS lot_old_id, 
-        BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_MIG_LOT_NUMBER_RELATION.custrecord_mig_lot_number_new_id) AS lot_new_id
-      FROM 
-        CUSTOMRECORD_MIG_LOT_NUMBER_RELATION
+    SELECT 
+      CUSTOMRECORD_MIG_LOT_NUMBER_RELATION.custrecord_mig_lot_number_name AS lot_name, 
+      CUSTOMRECORD_MIG_LOT_NUMBER_RELATION.custrecord_mig_lot_number_old_id AS lot_old_id, 
+      CUSTOMRECORD_MIG_LOT_NUMBER_RELATION.custrecord_mig_lot_number_new_id AS lot_new_id
+    FROM 
+      CUSTOMRECORD_MIG_LOT_NUMBER_RELATION
     `;
 
     // Execute SuiteQL query
@@ -48,6 +48,7 @@ export async function POST(request) {
     // Transform results into a mapping object
     const lotMapping = {};
     if (result.items && result.items.length > 0) {
+      console.log("lotMapping Response: ", JSON.stringify(result.items));
       result.items.forEach((item) => {
         // Map by both old ID and name for flexibility
         lotMapping[item.lot_old_id] = item.lot_new_id;
