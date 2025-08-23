@@ -63,7 +63,29 @@ export async function POST(request) {
       }
     }
 
+    // Get lot mapping if we have new credentials
+    let lotMapping = {};
+    try {
+      // Check if we have inventory details
+      const hasInventoryDetails = record.inventory?.items?.some(
+        (item) => item.inventoryDetail
+      );
+
+      if (hasInventoryDetails) {
+        lotMapping = await getLotMapping(accountId, token);
+        console.log("lotMapping", lotMapping);
+      }
+    } catch (error) {
+      console.error("Failed to get lot mapping, proceeding without it:", error);
+    }
+
     const expandedRecord = await expandReferences(accountId, token, record);
+
+    console.log("lotMapping: ", lotMapping);
+    // Apply lot mapping to inventory details
+    if (Object.keys(lotMapping).length > 0) {
+      applyLotMapping(expandedRecord, lotMapping);
+    }
 
     return NextResponse.json(expandedRecord);
   } catch (error) {
@@ -314,4 +336,51 @@ async function fetchSublistItem(accountId, token, itemUrl) {
   }
 
   return response.json();
+}
+// Add this function to your route.js file
+async function getLotMapping(accountId, token) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/lot-mapping`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get lot mapping");
+    }
+
+    const result = await response.json();
+    return result.lotMapping;
+  } catch (error) {
+    console.error("Error getting lot mapping:", error);
+    throw error;
+  }
+}
+
+// Function to apply lot mapping to inventory details
+function applyLotMapping(record, lotMapping) {
+  if (!record.inventory?.items) return;
+
+  record.inventory.items.forEach((item) => {
+    if (item.inventoryDetail?.inventoryAssignment?.items) {
+      item.inventoryDetail.inventoryAssignment.items.forEach((assignment) => {
+        // Handle issueInventoryNumber
+        if (assignment.internalId) {
+          const oldId = assignment.internalId;
+          if (lotMapping[oldId]) {
+            assignment.old_id = oldId;
+            assignment.new_id = lotMapping[oldId];
+          }
+        }
+      });
+    }
+  });
 }

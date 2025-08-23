@@ -16,96 +16,50 @@ export async function POST(request) {
 
     const unitMapping = await getUnitMapping(oldAccountId, oldToken);
     console.log("unitMapping", unitMapping);
+
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);
     // Transform data using NetSuite's structure
-    // const transformedData = {
-    //   tranId: recordData.tranId,
-    //   tranDate: recordData.tranDate,
-    //   memo: recordData.memo,
-    //   currency: { id: recordData.currency.id },
-    //   department: { id: recordData.department.new_id },
-    //   firmed: recordData.firmed,
-    //   incoTerm: { id: recordData.incoTerm.id },
-    //   location: { id: recordData.location.new_id },
-    //   shipAddress: recordData.shipAddress,
-    //   subsidiary: { id: recordData.subsidiary.new_id },
-    //   transferLocation: { id: recordData.transferLocation.new_id },
-    //   useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
-    //   // postingPeriod: { id: "20" },
-    //   item: {
-    //     items: recordData.item.items.map((item) => ({
-    //       item: { id: item.item.new_id },
-    //       cseg2: { id: item.cseg2.id },
-    //       description: item.description,
-    //       exchangeRate: item.exchangeRate,
-    //       memo: item.memo,
-    //       units: unitMapping[item.units],
-    //       quantity: item.quantity,
-    //       rate: item.rate,
-    //       amount: item.amount,
-    //       inventoryDetail: item.inventoryDetail
-    //         ? {
-    //             quantity: item.inventoryDetail.quantity,
-    //             unit: unitMapping[item.inventoryDetail.unit],
-    //             inventoryAssignment: {
-    //               items: item.inventoryDetail.inventoryAssignment.items.map(
-    //                 (ass) => ({
-    //                   quantity: ass.quantity,
-    //                   receiptInventoryNumber: ass.issueInventoryNumber.refName,
-    //                 })
-    //               ),
-    //             },
-    //           }
-    //         : null,
-    //     })),
-    //   },
-    // };
-
     const transformedData = {
-      externalId: "EXTNFSAI0002",
-      tranId: "IANFS00018",
-      tranDate: "2020-01-01",
-      memo: "Opening Balance Transaction",
-      subsidiary: {
-        id: 18,
-      },
-      account: {
-        id: 53,
-      },
-      adjLocation: {
-        id: 330,
-      },
-      inventory: {
-        items: [
-          {
-            item: {
-              id: 6745,
-            },
-            location: {
-              id: 330,
-            },
-            adjustQtyBy: 100,
-            unitCost: 24.08,
-            description: "أرز الغسان بسمتي طويل الحبة 2*20كجم",
-            exchangeRate: 1,
-            memo: "Opening Balance Transaction",
-            units: "76",
-            inventoryDetail: {
-              quantity: 100,
-              unit: "76",
-              inventoryAssignment: {
-                items: [
-                  {
-                    id: 402,
-                    quantity: 20,
-                    // receiptInventoryNumber: "ri00029",
-                  },
-                ],
-              },
-            },
-          },
-        ],
+      tranId: recordData.tranId,
+      tranDate: recordData.tranDate,
+      memo: recordData.memo,
+      currency: { id: recordData.currency.id },
+      department: { id: recordData.department.new_id },
+      firmed: recordData.firmed,
+      incoTerm: { id: recordData.incoTerm.id },
+      location: { id: recordData.location.new_id },
+      shipAddress: recordData.shipAddress,
+      subsidiary: { id: recordData.subsidiary.new_id },
+      transferLocation: { id: recordData.transferLocation.new_id },
+      useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
+      // postingPeriod: { id: "20" },
+      item: {
+        items: recordData.item.items.map((item) => ({
+          item: { id: item.item.new_id },
+          cseg2: { id: item.cseg2.id },
+          description: item.description,
+          exchangeRate: item.exchangeRate,
+          memo: item.memo,
+          units: unitMapping[item.units],
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.amount,
+          inventoryDetail: item.inventoryDetail
+            ? {
+                quantity: item.inventoryDetail.quantity,
+                unit: unitMapping[item.inventoryDetail.unit],
+                inventoryAssignment: {
+                  items: item.inventoryDetail.inventoryAssignment.items.map(
+                    (ass) => ({
+                      quantity: ass.quantity,
+                      receiptInventoryNumber: ass.issueInventoryNumber.refName,
+                    })
+                  ),
+                },
+              }
+            : null,
+        })),
       },
     };
 
@@ -371,6 +325,34 @@ async function getUnitMapping(accountId, token) {
     return result.unitMapping;
   } catch (error) {
     console.error("Error getting unit mapping:", error);
+    throw error;
+  }
+}
+
+// Add this function to your route.js file
+async function getLotMapping(accountId, token) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/lot-mapping`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get lot mapping");
+    }
+
+    const result = await response.json();
+    return result.lotMapping;
+  } catch (error) {
+    console.error("Error getting lot mapping:", error);
     throw error;
   }
 }
