@@ -19,6 +19,8 @@ export async function POST(request) {
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);
     // Transform data using NetSuite's structure
+    const lotNumbersToMap = [];
+
     const transformedData = {
       externalId: recordData.externalId,
       tranId: recordData.tranId,
@@ -44,10 +46,41 @@ export async function POST(request) {
                 unit: unitMapping[item.inventoryDetail.unit],
                 inventoryAssignment: {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
-                    (ass) => ({
-                      quantity: ass.quantity,
-                      receiptInventoryNumber: ass.receiptInventoryNumber,
-                    })
+                    (ass) => {
+                      // Check if we have a new_id for this lot number
+                      if (ass.internalId && ass.new_id) {
+                        // Use the new_id if available
+                        return {
+                          internalId: ass.new_id,
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      } else if (ass.internalId) {
+                        // If no new_id, we'll need to create a mapping later
+                        lotNumbersToMap.push({
+                          old_id: ass.internalId,
+                          refName: ass.receiptInventoryNumber,
+                          itemId: item.item.new_id,
+                          itemName: item.description,
+                          quantity: ass.quantity,
+                        });
+
+                        // Don't include internalId for new creation
+                        return {
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      }
+                      return {
+                        quantity: ass.quantity,
+                        receiptInventoryNumber: ass.receiptInventoryNumber,
+                      };
+                    }
+
+                    //   ({
+                    //   quantity: ass.quantity,
+                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
+                    // })
                   ),
                 },
               }
@@ -57,6 +90,10 @@ export async function POST(request) {
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
+    console.log(
+      "Lot numbers to map:",
+      JSON.stringify(lotNumbersToMap, null, 2)
+    );
 
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
@@ -137,6 +174,17 @@ export async function POST(request) {
           }
 
           const recordData = await recordResponse.json();
+
+          // Step 5: Create lot number mapping records if needed
+          if (lotNumbersToMap.length > 0) {
+            await createLotNumberMappings(
+              accountId,
+              token,
+              createdRecord,
+              lotNumbersToMap
+            );
+          }
+
           return NextResponse.json({
             success: true,
             internalId,
@@ -163,6 +211,15 @@ export async function POST(request) {
     // Handle other successful responses
     if (response.ok) {
       const result = await response.json();
+      // Create lot number mapping records if needed
+      if (lotNumbersToMap.length > 0) {
+        await createLotNumberMappings(
+          accountId,
+          token,
+          result,
+          lotNumbersToMap
+        );
+      }
       return NextResponse.json(result);
     }
     // Handle errors
@@ -320,4 +377,84 @@ async function getUnitMapping(accountId, token) {
     console.error("Error getting unit mapping:", error);
     throw error;
   }
+}
+
+// Function to create lot number mapping records
+async function createLotNumberMappings(
+  accountId,
+  token,
+  createdRecord,
+  lotNumbersToMap
+) {
+  try {
+    // Extract the new lot number IDs from the created record
+    const newLotMappings = [];
+
+    if (createdRecord.inventory && createdRecord.inventory.items) {
+      for (const item of createdRecord.inventory.items) {
+        if (item.inventoryDetail && item.inventoryDetail.inventoryAssignment) {
+          for (const assignment of item.inventoryDetail.inventoryAssignment
+            .items) {
+            // Find the corresponding old lot number
+            const oldLot = lotNumbersToMap.find(
+              (lot) => lot.refName === assignment.receiptInventoryNumber
+            );
+
+            if (oldLot) {
+              newLotMappings.push({
+                old_id: oldLot.old_id,
+                new_id: assignment.internalId,
+                refName: oldLot.refName,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    console.log("newLotMappings: ", JSON.stringify(newLotMappings, null, 2));
+
+    // Create mapping records for each lot number
+    for (const mapping of newLotMappings) {
+      await createLotMappingRecord(accountId, token, mapping);
+    }
+
+    // console.log("Created lot number mappings:", newLotMappings);
+  } catch (error) {
+    console.error("Error creating lot number mappings:", error);
+    // Don't throw error here as the transaction was created successfully
+  }
+}
+
+// Function to create a single lot mapping record
+async function createLotMappingRecord(accountId, token, mapping) {
+  const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/customrecord_mig_lot_number_relation`;
+
+  const payload = {
+    name: mapping.refName,
+    custrecord_mig_lot_number_old_id: mapping.old_id,
+    custrecord_mig_lot_number_new_id: mapping.new_id,
+    custrecord_mig_lot_number_ref_name: mapping.refName,
+  };
+
+  console.log(
+    "Lot Record Supposed Created : ",
+    JSON.stringify(payload, null, 2)
+  );
+
+  // const response = await fetch(url, {
+  //   method: "POST",
+  //   headers: {
+  //     Authorization: `Bearer ${token}`,
+  //     "Content-Type": "application/json",
+  //   },
+  //   body: JSON.stringify(payload),
+  // });
+
+  // if (!response.ok) {
+  //   const errorText = await response.text();
+  //   throw new Error(`Failed to create lot mapping record: ${errorText}`);
+  // }
+
+  // return response.json();
 }
