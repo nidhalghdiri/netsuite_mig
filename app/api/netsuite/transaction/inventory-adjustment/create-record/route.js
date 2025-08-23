@@ -16,6 +16,9 @@ export async function POST(request) {
 
     const unitMapping = await getUnitMapping(oldAccountId, oldToken);
     console.log("unitMapping", unitMapping);
+    const lotNumbers = await getLotNumbers(oldAccountId, oldToken);
+    console.log("lotNumbers", lotNumbers);
+
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);
     // Transform data using NetSuite's structure
@@ -58,7 +61,7 @@ export async function POST(request) {
                       } else if (ass.internalId) {
                         // If no new_id, we'll need to create a mapping later
                         lotNumbersToMap.push({
-                          old_id: ass.internalId,
+                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
                           refName: ass.receiptInventoryNumber,
                           itemId: item.item.new_id,
                           itemName: item.description,
@@ -194,13 +197,18 @@ export async function POST(request) {
           // const recordData = await recordResponse.json();
           console.log("New Record Created: ", recordData);
 
+          const newLotNumbers = await getLotNumbers(accountId, token);
+          console.log("newLotNumbers", newLotNumbers);
+
           // Step 5: Create lot number mapping records if needed
           if (lotNumbersToMap.length > 0) {
             await createLotNumberMappings(
               accountId,
               token,
               recordData,
-              lotNumbersToMap
+              lotNumbersToMap,
+              lotNumbers,
+              newLotNumbers
             );
           }
 
@@ -227,40 +235,6 @@ export async function POST(request) {
         );
       }
     }
-    // Handle other successful responses
-    if (response.ok) {
-      const result = await response.json();
-      // Create lot number mapping records if needed
-      if (lotNumbersToMap.length > 0) {
-        await createLotNumberMappings(
-          accountId,
-          token,
-          result,
-          lotNumbersToMap
-        );
-      }
-      return NextResponse.json(result);
-    }
-    // Handle errors
-    const responseText = await response.text();
-    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-
-    try {
-      const errorResponse = JSON.parse(responseText);
-      errorMessage += ` - ${errorResponse.title || "No error title"}`;
-      if (errorResponse.detail) {
-        errorMessage += `: ${errorResponse.detail}`;
-      }
-      if (errorResponse["o:errorDetails"]) {
-        errorMessage += ` | Details: ${JSON.stringify(
-          errorResponse["o:errorDetails"]
-        )}`;
-      }
-    } catch (e) {
-      errorMessage += ` - ${responseText.substring(0, 200)}`;
-    }
-
-    throw new Error(`Failed to create record: ${errorMessage}`);
   } catch (error) {
     console.error("Error creating record:", error);
     return NextResponse.json(
@@ -398,12 +372,42 @@ async function getUnitMapping(accountId, token) {
   }
 }
 
+async function getLotNumbers(accountId, token, tranId) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/lot-number`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+          tranId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get lot Numbers");
+    }
+
+    const result = await response.json();
+    return result.lotNumbers;
+  } catch (error) {
+    console.error("Error getting lot mapping:", error);
+    throw error;
+  }
+}
+
 // Function to create lot number mapping records
 async function createLotNumberMappings(
   accountId,
   token,
   createdRecord,
-  lotNumbersToMap
+  lotNumbersToMap,
+  lotNumbers,
+  newLotNumbers
 ) {
   try {
     // Extract the new lot number IDs from the created record
@@ -422,7 +426,7 @@ async function createLotNumberMappings(
             if (oldLot) {
               newLotMappings.push({
                 old_id: oldLot.old_id,
-                new_id: assignment.internalId,
+                new_id: newLotNumbers[item.line],
                 refName: oldLot.refName,
               });
             }
