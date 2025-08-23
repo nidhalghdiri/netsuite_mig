@@ -180,7 +180,7 @@ export async function POST(request) {
             await createLotNumberMappings(
               accountId,
               token,
-              createdRecord,
+              recordData,
               lotNumbersToMap
             );
           }
