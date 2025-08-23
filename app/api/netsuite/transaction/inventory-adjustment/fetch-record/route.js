@@ -85,6 +85,7 @@ export async function POST(request) {
     // Apply lot mapping to inventory details
     if (Object.keys(lotMapping).length > 0) {
       const lotNumbers = await getLotNumbers(accountId, token, internalId);
+      console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
       applyLotMapping(expandedRecord, lotMapping, lotNumbers);
     }
 
@@ -386,7 +387,7 @@ async function getLotNumbers(accountId, token, tranId) {
     }
 
     const result = await response.json();
-    return result.lotMapping;
+    return result.lotNumbers;
   } catch (error) {
     console.error("Error getting lot mapping:", error);
     throw error;
