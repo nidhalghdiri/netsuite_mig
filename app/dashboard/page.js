@@ -389,6 +389,9 @@ export default function DashboardOverview() {
       throw error;
     }
   };
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   const processTransaction = async (transactionData, recordType) => {
     if (!transactionData) {
       throw new Error("No transaction data to process");
@@ -410,9 +413,13 @@ export default function DashboardOverview() {
       }
       const oldToken = oldSession?.token;
       const newToken = newSession?.token;
+      await delay(1000); // 1 second delay
+
       // Step 1: get Unit Mapping
       const unitMapping = await getUnitMapping(oldAccountID, oldToken);
       console.log("unitMapping", unitMapping);
+
+      await delay(1000);
 
       // Step 2 : get Lot Numbers (Old System)
       const lotNumbers = await getLotNumbers(
@@ -421,6 +428,8 @@ export default function DashboardOverview() {
         transactionData.id
       );
       console.log("lotNumbers", lotNumbers);
+
+      await delay(1000);
 
       // Step 3 : Create New Transaction
       const createdTransaction = await createTransaction(
@@ -435,6 +444,8 @@ export default function DashboardOverview() {
       );
       console.log("createTransaction", createdTransaction);
 
+      await delay(1000);
+
       // Step 4 : Ftech New Transaction
       const newTransaction = await fetchNewTransaction(
         RECORDS_TYPE[recordType],
@@ -447,6 +458,8 @@ export default function DashboardOverview() {
       const lotNumbersToMap = createdTransaction.lotNumbersToMap;
       console.log("lotNumbersToMap: ", lotNumbersToMap);
 
+      await delay(1000);
+
       // Step 5 : get Lot Numbers (New System)
       const newLotNumbers = await getLotNumbers(
         newAccountID,
@@ -454,6 +467,8 @@ export default function DashboardOverview() {
         newTransaction.id
       );
       console.log("newLotNumbers", newLotNumbers);
+
+      await delay(1000);
 
       // Step 6 : create Lot Number Mappings
 
@@ -466,46 +481,6 @@ export default function DashboardOverview() {
           newLotNumbers
         );
       }
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/create-record`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${newSession.token}`, // Recommended for security
-          },
-          body: JSON.stringify({
-            accountId: newAccountID,
-            oldAccountId: oldAccountID,
-            token: newSession.token,
-            oldToken: oldSession.token,
-            recordType: RECORDS_TYPE[recordType], //"inventoryAdjustment"
-            recordData: transactionData,
-            unitMapping,
-            lotNumbers,
-          }),
-        }
-      );
-
-      // Handle both sync and async responses
-      if (response.status === 202) {
-        // Async processing
-        const locationHeader = response.headers.get("Location");
-        console.log("Async processing started. Location:", locationHeader);
-
-        // You might want to implement polling here or return the location
-        return { status: "pending", location: locationHeader };
-      } else if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || errorData.message || "Migration failed"
-        );
-      }
-
-      const result = await response.json();
-      console.log("Creation successful:", result);
-      return { status: "completed", data: result };
     } catch (error) {
       console.error("Processing error:", error);
       throw error;
