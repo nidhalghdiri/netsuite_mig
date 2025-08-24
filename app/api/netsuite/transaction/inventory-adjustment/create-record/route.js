@@ -32,7 +32,7 @@ export async function POST(request) {
       externalId: recordData.externalId,
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
-      memo: recordData.memo,
+      memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       subsidiary: { id: recordData.subsidiary.new_id },
       account: { id: recordData.account.new_id },
       adjLocation: { id: recordData.adjLocation.new_id },
@@ -43,9 +43,11 @@ export async function POST(request) {
           location: { id: item.location.new_id },
           adjustQtyBy: item.adjustQtyBy,
           unitCost: item.unitCost,
-          description: item.description,
+          description: item.description
+            ? item.description.substring(0, 40)
+            : "",
           exchangeRate: item.exchangeRate,
-          memo: item.memo,
+          memo: item.memo ? item.memo.substring(0, 4000) : "",
           units: unitMapping[item.units],
           inventoryDetail: item.inventoryDetail
             ? {
@@ -68,7 +70,9 @@ export async function POST(request) {
                           old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
                           refName: ass.receiptInventoryNumber,
                           itemId: item.item.new_id,
-                          itemName: item.description,
+                          itemName: item.description
+                            ? item.description.substring(0, 40)
+                            : "",
                           quantity: ass.quantity,
                         });
 
