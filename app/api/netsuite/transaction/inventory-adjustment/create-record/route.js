@@ -211,8 +211,8 @@ export async function POST(request) {
           // Step 5: Create lot number mapping records if needed
           if (lotNumbersToMap.length > 0) {
             await createLotNumberMappings(
-              accountId,
-              token,
+              oldAccountId,
+              oldToken,
               recordData,
               lotNumbersToMap,
               lotNumbers,
@@ -460,12 +460,12 @@ async function createLotNumberMappings(
 // Function to create a single lot mapping record
 async function createLotMappingRecord(accountId, token, mapping) {
   const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/customrecord_mig_lot_number_relation`;
+  const idempotencyKey = randomUUID();
 
   const payload = {
-    name: mapping.refName,
     custrecord_mig_lot_number_old_id: mapping.old_id,
     custrecord_mig_lot_number_new_id: mapping.new_id,
-    custrecord_mig_lot_number_ref_name: mapping.refName,
+    custrecord_mig_lot_number_name: mapping.refName,
   };
 
   console.log(
@@ -473,19 +473,67 @@ async function createLotMappingRecord(accountId, token, mapping) {
     JSON.stringify(payload, null, 2)
   );
 
-  // const response = await fetch(url, {
-  //   method: "POST",
-  //   headers: {
-  //     Authorization: `Bearer ${token}`,
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify(payload),
-  // });
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Prefer: "respond-async",
+      "X-NetSuite-Idempotency-Key": idempotencyKey,
+      "X-NetSuite-PropertyNameValidation": "Warning",
+      "X-NetSuite-PropertyValueValidation": "Warning",
+    },
+    body: JSON.stringify(payload),
+  });
 
-  // if (!response.ok) {
-  //   const errorText = await response.text();
-  //   throw new Error(`Failed to create lot mapping record: ${errorText}`);
-  // }
+  if (response.status === 202) {
+    const locationHeader = response.headers.get("Location");
 
-  // return response.json();
+    if (!locationHeader) {
+      throw new Error("Location header not found in 202 response");
+    }
+    try {
+      // Step 1: Get the record link through async processing
+      const resultUrl = await getAsyncResultLink(locationHeader, token);
+      // Step 2: Fetch the result URL to get the record location
+      const resultResponse = await fetch(resultUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Handle 204 No Content response
+      if (resultResponse.status === 204) {
+        const recordLocation = resultResponse.headers.get("Location");
+
+        if (!recordLocation) {
+          throw new Error("Location header not found in result response");
+        }
+
+        // Step 3: Extract internal ID from record location
+        const internalId = recordLocation.substring(
+          recordLocation.lastIndexOf("/") + 1
+        );
+
+        if (!internalId || isNaN(internalId)) {
+          throw new Error("Invalid internal ID format: " + internalId);
+        }
+
+        console.log("Created MIG Lot Number Relation internal ID:", internalId);
+
+        return internalId;
+      }
+      // Handle unexpected responses
+      const resultText = await resultResponse.text();
+      throw new Error(
+        `Unexpected result response: ${resultResponse.status} - ${resultText}`
+      );
+    } catch (asyncError) {
+      console.error("Async processing failed:", asyncError);
+      return null;
+    }
+  }
+
+  return null;
 }
