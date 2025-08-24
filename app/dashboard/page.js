@@ -437,6 +437,7 @@ export default function DashboardOverview() {
         oldToken,
         newAccountID,
         newToken,
+        recordType,
         RECORDS_TYPE[recordType],
         transactionData,
         unitMapping,
@@ -448,7 +449,7 @@ export default function DashboardOverview() {
 
       // Step 4 : Ftech New Transaction
       const newTransaction = await fetchNewTransaction(
-        RECORDS_TYPE[recordType],
+        recordType,
         newAccountID,
         newToken,
         createdTransaction.internalId
