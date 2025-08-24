@@ -256,7 +256,7 @@ export async function POST(request) {
 async function getAsyncResultLink(locationHeader, token) {
   let jobUrl = locationHeader.trim();
   let attempts = 0;
-  const maxAttempts = 30; // 30 attempts * 5s = 2.5 minutes timeout
+  const maxAttempts = 200; // 30 attempts * 5s = 2.5 minutes timeout
 
   while (attempts < maxAttempts) {
     attempts++;
