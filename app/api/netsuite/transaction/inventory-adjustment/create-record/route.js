@@ -12,7 +12,6 @@ export async function POST(request) {
       recordData,
       unitMapping,
       lotNumbers,
-      newLotNumbers,
     } = await request.json();
 
     // Validate input
@@ -220,7 +219,7 @@ export async function POST(request) {
           //   token,
           //   recordData.id
           // );
-          console.log("newLotNumbers", newLotNumbers);
+          // console.log("newLotNumbers", newLotNumbers);
 
           // Step 5: Create lot number mapping records if needed
           // if (lotNumbersToMap.length > 0) {
