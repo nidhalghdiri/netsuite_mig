@@ -462,9 +462,13 @@ async function createLotMappingRecord(accountId, token, mapping) {
   const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/customrecord_mig_lot_number_relation`;
   const idempotencyKey = randomUUID();
 
+  if (!mapping.old_id || !mapping.new_id) {
+    return null;
+  }
+
   const payload = {
-    custrecord_mig_lot_number_old_id: mapping.old_id,
-    custrecord_mig_lot_number_new_id: mapping.new_id,
+    custrecord_mig_lot_number_old_id: parseInt(mapping.old_id),
+    custrecord_mig_lot_number_new_id: parseInt(mapping.new_id),
     custrecord_mig_lot_number_name: mapping.refName,
   };
 
