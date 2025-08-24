@@ -400,12 +400,12 @@ function applyLotMapping(record, lotMapping, lotNumbers) {
 
   record.inventory.items.forEach((item) => {
     var item_line = item.line;
-    console.log(
-      "Process Item Line: [" +
-        item_line +
-        "] ==> " +
-        JSON.stringify(lotNumbers[item_line])
-    );
+    // console.log(
+    //   "Process Item Line: [" +
+    //     item_line +
+    //     "] ==> " +
+    //     JSON.stringify(lotNumbers[item_line])
+    // );
     if (item.inventoryDetail?.inventoryAssignment?.items) {
       item.inventoryDetail.inventoryAssignment.items.forEach((assignment) => {
         // Handle issueInventoryNumber

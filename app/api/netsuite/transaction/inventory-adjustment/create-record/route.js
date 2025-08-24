@@ -3,8 +3,17 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, oldAccountId, token, oldToken, recordType, recordData } =
-      await request.json();
+    const {
+      accountId,
+      oldAccountId,
+      token,
+      oldToken,
+      recordType,
+      recordData,
+      unitMapping,
+      lotNumbers,
+      newLotNumbers,
+    } = await request.json();
 
     // Validate input
     if (!accountId || !token || !recordType || !recordData) {
@@ -14,13 +23,13 @@ export async function POST(request) {
       );
     }
 
-    const unitMapping = await getUnitMapping(oldAccountId, oldToken);
+    // const unitMapping = await getUnitMapping(oldAccountId, oldToken);
     console.log("unitMapping", unitMapping);
-    const lotNumbers = await getLotNumbers(
-      oldAccountId,
-      oldToken,
-      recordData.id
-    );
+    // const lotNumbers = await getLotNumbers(
+    //   oldAccountId,
+    //   oldToken,
+    //   recordData.id
+    // );
     console.log("lotNumbers", lotNumbers);
 
     // Transform inventory adjustment data for new instance
@@ -165,25 +174,26 @@ export async function POST(request) {
           }
 
           console.log("Created record internal ID:", internalId);
-          // Step 4: (Optional) Fetch full record details
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-new-record`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                accountId: accountId,
-                token: token,
-                internalId: internalId,
-              }),
-            }
-          );
 
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || "Failed to process transaction");
-          }
-          const recordData = await response.json();
+          // Step 4: (Optional) Fetch full record details
+          // const response = await fetch(
+          //   `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-new-record`,
+          //   {
+          //     method: "POST",
+          //     headers: { "Content-Type": "application/json" },
+          //     body: JSON.stringify({
+          //       accountId: accountId,
+          //       token: token,
+          //       internalId: internalId,
+          //     }),
+          //   }
+          // );
+
+          // if (!response.ok) {
+          //   const error = await response.json();
+          //   throw new Error(error.error || "Failed to process transaction");
+          // }
+          // const recordData = await response.json();
           // const recordResponse = await fetch(recordLocation, {
           //   method: "GET",
           //   headers: {
@@ -203,32 +213,32 @@ export async function POST(request) {
           // }
 
           // const recordData = await recordResponse.json();
-          console.log("New Record Created: ", recordData);
+          // console.log("New Record Created: ", recordData);
 
-          const newLotNumbers = await getLotNumbers(
-            accountId,
-            token,
-            recordData.id
-          );
+          // const newLotNumbers = await getLotNumbers(
+          //   accountId,
+          //   token,
+          //   recordData.id
+          // );
           console.log("newLotNumbers", newLotNumbers);
 
           // Step 5: Create lot number mapping records if needed
-          if (lotNumbersToMap.length > 0) {
-            await createLotNumberMappings(
-              oldAccountId,
-              oldToken,
-              recordData,
-              lotNumbersToMap,
-              lotNumbers,
-              newLotNumbers
-            );
-          }
+          // if (lotNumbersToMap.length > 0) {
+          //   await createLotNumberMappings(
+          //     oldAccountId,
+          //     oldToken,
+          //     recordData,
+          //     lotNumbersToMap,
+          //     lotNumbers,
+          //     newLotNumbers
+          //   );
+          // }
 
           return NextResponse.json({
             success: true,
             internalId,
             recordLocation,
-            recordData,
+            lotNumbersToMap,
           });
         }
         // Handle unexpected responses
@@ -260,7 +270,7 @@ export async function POST(request) {
 async function getAsyncResultLink(locationHeader, token) {
   let jobUrl = locationHeader.trim();
   let attempts = 0;
-  const maxAttempts = 200; // 30 attempts * 5s = 2.5 minutes timeout
+  const maxAttempts = 12; // 30 attempts * 5s = 2.5 minutes timeout
 
   while (attempts < maxAttempts) {
     attempts++;
@@ -418,7 +428,6 @@ async function createLotNumberMappings(
   token,
   createdRecord,
   lotNumbersToMap,
-  lotNumbers,
   newLotNumbers
 ) {
   try {
@@ -476,10 +485,10 @@ async function createLotMappingRecord(accountId, token, mapping) {
     custrecord_mig_lot_number_name: mapping.refName,
   };
 
-  console.log(
-    "Lot Record Supposed Created : ",
-    JSON.stringify(payload, null, 2)
-  );
+  // console.log(
+  //   "Lot Record Supposed Created : ",
+  //   JSON.stringify(payload, null, 2)
+  // );
 
   const response = await fetch(url, {
     method: "POST",

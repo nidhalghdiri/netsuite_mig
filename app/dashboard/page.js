@@ -16,6 +16,13 @@ import {
   FiFilter,
   FiSearch,
 } from "react-icons/fi";
+import {
+  createLotNumberMappings,
+  createTransaction,
+  fetchNewTransaction,
+  getLotNumbers,
+  getUnitMapping,
+} from "@/lib/utils";
 
 // Mock data service
 const fetchMigrationData = async () => {
@@ -401,6 +408,64 @@ export default function DashboardOverview() {
       if (!oldSession?.token) {
         throw new Error("Not connected to old instance");
       }
+      const oldToken = oldSession?.token;
+      const newToken = newSession?.token;
+      // Step 1: get Unit Mapping
+      const unitMapping = await getUnitMapping(oldAccountID, oldToken);
+      console.log("unitMapping", unitMapping);
+
+      // Step 2 : get Lot Numbers (Old System)
+      const lotNumbers = await getLotNumbers(
+        oldAccountID,
+        oldToken,
+        transactionData.id
+      );
+      console.log("lotNumbers", lotNumbers);
+
+      // Step 3 : Create New Transaction
+      const createdTransaction = await createTransaction(
+        oldAccountID,
+        oldToken,
+        newAccountID,
+        newToken,
+        RECORDS_TYPE[recordType],
+        transactionData,
+        unitMapping,
+        lotNumbers
+      );
+      console.log("createTransaction", createdTransaction);
+
+      // Step 4 : Ftech New Transaction
+      const newTransaction = await fetchNewTransaction(
+        RECORDS_TYPE[recordType],
+        newAccountID,
+        newToken,
+        createdTransaction.internalId
+      );
+      console.log("newTransaction Data", newTransaction);
+
+      const lotNumbersToMap = createdTransaction.lotNumbersToMap;
+      console.log("lotNumbersToMap: ", lotNumbersToMap);
+
+      // Step 5 : get Lot Numbers (New System)
+      const newLotNumbers = await getLotNumbers(
+        newAccountID,
+        newToken,
+        newTransaction.id
+      );
+      console.log("newLotNumbers", newLotNumbers);
+
+      // Step 6 : create Lot Number Mappings
+
+      if (lotNumbersToMap.length > 0) {
+        await createLotNumberMappings(
+          oldAccountID,
+          oldToken,
+          newTransaction,
+          lotNumbersToMap,
+          newLotNumbers
+        );
+      }
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/create-record`,
@@ -417,6 +482,8 @@ export default function DashboardOverview() {
             oldToken: oldSession.token,
             recordType: RECORDS_TYPE[recordType], //"inventoryAdjustment"
             recordData: transactionData,
+            unitMapping,
+            lotNumbers,
           }),
         }
       );
