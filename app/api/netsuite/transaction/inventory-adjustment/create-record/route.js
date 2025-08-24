@@ -14,6 +14,24 @@ export async function POST(request) {
       lotNumbers,
     } = await request.json();
 
+    console.log("[Creating Transaction] newAccountID = ", accountId);
+    console.log("[Creating Transaction] oldAccountID = ", oldAccountId);
+    console.log("[Creating Transaction] newToken = ", token);
+    console.log("[Creating Transaction] oldToken = ", oldToken);
+    console.log("[Creating Transaction] recordType = ", recordType);
+    console.log(
+      "[Creating Transaction] transactionData = ",
+      JSON.stringify(recordData)
+    );
+    console.log(
+      "[Creating Transaction] unitMapping = ",
+      JSON.stringify(unitMapping)
+    );
+    console.log(
+      "[Creating Transaction] lotNumbers = ",
+      JSON.stringify(lotNumbers)
+    );
+
     // Validate input
     if (!accountId || !token || !recordType || !recordData) {
       return NextResponse.json(
