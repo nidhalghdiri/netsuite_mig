@@ -52,7 +52,7 @@ export async function POST(request) {
       result.items.forEach((item) => {
         // Map by both old ID and name for flexibility
         lotMapping[item.lot_old_id] = item.lot_new_id;
-        lotMapping[item.lot_name] = item.lot_new_id;
+        // lotMapping[item.lot_name] = item.lot_new_id;
       });
     }
 

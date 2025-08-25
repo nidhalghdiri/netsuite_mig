@@ -444,8 +444,8 @@ export default function DashboardOverview() {
         unitMapping,
         lotNumbers
       );
-      console.log("createTransaction URL", createdTransactionURL);
-      console.log("createTransaction MSG", createdTransactionURL.message);
+      console.log("createTransaction URL", createdTransactionURL.jobUrl);
+      console.log("MSG: ", createdTransactionURL.message);
 
       const createdTransactionId = await getInternalID(
         createdTransactionURL.jobUrl,
@@ -490,6 +490,10 @@ export default function DashboardOverview() {
           newLotNumbers
         );
       }
+
+      console.info(
+        "Create Transaction [" + transactionData.tranId + "] Process Done!!"
+      );
     } catch (error) {
       console.error("Processing error:", error);
       throw error;
