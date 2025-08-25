@@ -101,41 +101,69 @@ export async function POST(request) {
 
 async function fetchRecord(accountId, token, recordType, internalId) {
   const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Prefer: "transient",
+      },
+    });
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Prefer: "transient",
-    },
-  });
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage =
+          errorData.error?.message ||
+          errorData.message ||
+          JSON.stringify(errorData);
+      } catch (e) {
+        // If we can't parse the error response, use the status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(`Failed to fetch ${recordType}: ${errorMessage}`);
+    }
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to fetch ${recordType}: ${error.error.message}`);
+    return response.json();
+  } catch (error) {
+    console.error("Error in fetchRecord:", error);
+    throw new Error(`Failed to fetch ${recordType}: ${error.message}`);
   }
-
-  return response.json();
 }
 
 async function fetchSublist(accountId, token, sublistUrl) {
-  const response = await fetch(sublistUrl, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Prefer: "transient",
-    },
-  });
+  try {
+    const response = await fetch(sublistUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Prefer: "transient",
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to fetch sublist: ${error.error.message}`);
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage =
+          errorData.error?.message ||
+          errorData.message ||
+          JSON.stringify(errorData);
+      } catch (e) {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(`Failed to fetch sublist: ${errorMessage}`);
+    }
+
+    const result = await response.json();
+    return result.items || [];
+  } catch (error) {
+    console.error("Error in fetchSublist:", error);
+    throw new Error(`Failed to fetch sublist: ${error.message}`);
   }
-
-  const result = await response.json();
-  return result.items || [];
 }
 
 async function expandReferences(accountId, token, record) {
@@ -180,7 +208,10 @@ async function expandReferences(accountId, token, record) {
         id: record[field].id,
       };
     } catch (error) {
-      console.warn(`Failed to expand ${field} reference:`, error);
+      console.warn(
+        `Failed to expand ${field} reference:`,
+        error.message || error
+      );
       // Keep the original reference if expansion fails
       expanded[field] = record[field];
     }
@@ -323,21 +354,35 @@ async function processSingleAssignmentItem(accountId, token, item) {
 }
 
 async function fetchSublistItem(accountId, token, itemUrl) {
-  const response = await fetch(itemUrl, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Prefer: "transient",
-    },
-  });
+  try {
+    const response = await fetch(itemUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Prefer: "transient",
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to fetch sublist item: ${error.error.message}`);
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage =
+          errorData.error?.message ||
+          errorData.message ||
+          JSON.stringify(errorData);
+      } catch (e) {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(`Failed to fetch sublist item: ${errorMessage}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error in fetchSublistItem:", error);
+    throw new Error(`Failed to fetch sublist item: ${error.message}`);
   }
-
-  return response.json();
 }
 // Add this function to your route.js file
 async function getLotMapping(accountId, token) {
