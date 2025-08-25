@@ -1,93 +1,64 @@
-// app/api/netsuite/lot-mapping/route.js
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
 
 export async function POST(request) {
   try {
-    const { accountId, token, mapping } = await request.json();
+    const { jobUrl, token } = await request.json();
 
-    // Validate input
-    if (!accountId || !token || !mapping) {
+    if (!jobUrl || !token) {
       return NextResponse.json(
-        { error: "Missing required parameters or invalid format" },
+        { error: "Missing jobUrl or token parameters" },
         { status: 400 }
       );
     }
-
-    if (!mapping.old_id || !mapping.new_id) {
-      return NextResponse.json(
-        { error: "Mapping IDs are required: old_id and new_id" },
-        { status: 400 }
-      );
-    }
-    // Execute SuiteQL query
-    const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/customrecord_mig_lot_number_relation`;
-    const idempotencyKey = randomUUID();
-
-    const payload = {
-      custrecord_mig_lot_number_old_id: parseInt(mapping.old_id),
-      custrecord_mig_lot_number_new_id: parseInt(mapping.new_id),
-      custrecord_mig_lot_number_name: mapping.refName || "",
-    };
-
-    console.log(
-      "Creating lot mapping with payload:",
-      JSON.stringify(payload, null, 2)
-    );
-
-    const response = await fetch(url, {
-      method: "POST",
+    // Step 1: Get the record link through async processing
+    const resultUrl = await getAsyncResultLink(jobUrl, token);
+    console.log("Record link retrieved:", resultUrl);
+    // Step 2: Fetch the result URL to get the record location
+    const resultResponse = await fetch(resultUrl, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Prefer: "respond-async",
-        "X-NetSuite-Idempotency-Key": idempotencyKey,
-        "X-NetSuite-PropertyNameValidation": "Warning",
-        "X-NetSuite-PropertyValueValidation": "Warning",
       },
-      body: JSON.stringify(payload),
     });
-
-    if (response.status === 202) {
-      const locationHeader = response.headers.get("Location");
-      if (!locationHeader) {
-        throw new Error("Location header not found in 202 response");
+    // Handle 204 No Content response
+    if (resultResponse.status === 204) {
+      const recordLocation = resultResponse.headers.get("Location");
+      if (!recordLocation) {
+        throw new Error("Location header not found in result response");
       }
-      console.log("Async job started. Location:", locationHeader);
+
+      console.log("Record location header:", recordLocation);
+
+      // Step 3: Extract internal ID from record location
+      const internalId = recordLocation.substring(
+        recordLocation.lastIndexOf("/") + 1
+      );
+
+      if (!internalId || isNaN(internalId)) {
+        throw new Error("Invalid internal ID format: " + internalId);
+      }
+
+      console.log("Created record internal ID:", internalId);
 
       return NextResponse.json({
-        status: "processing",
-        jobUrl: locationHeader,
-        message:
-          "Lot Mapping " +
-          mapping.refName +
-          " creation in progress. Use the jobUrl to check status.",
+        success: true,
+        internalId,
       });
     }
-    // Handle sync response
-    if (response.ok) {
-      const result = await response.json();
-      return NextResponse.json({
-        status: "completed",
-        data: result,
-        message: "Lot Number " + mapping.refName + " created successfully",
-      });
-    }
-    // Handle errors
-    const errorText = await response.text();
+    // Handle unexpected responses
+    const resultText = await resultResponse.text();
     throw new Error(
-      `Failed to create record: ${response.status} - ${errorText}`
+      `Unexpected result response: ${resultResponse.status} - ${resultText}`
     );
   } catch (error) {
-    console.error("Error in lot mapping:", error);
+    console.error("Error Get Status:", error);
     return NextResponse.json(
-      { error: "Failed to get lot mapping", details: error.message },
+      { error: "Failed to get status", details: error.message },
       { status: 500 }
     );
   }
 }
 
-// Helper function to get async result link (matches your Kotlin logic)
 async function getAsyncResultLink(locationHeader, token) {
   let jobUrl = locationHeader.trim();
   let attempts = 0;

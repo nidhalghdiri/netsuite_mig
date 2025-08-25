@@ -209,7 +209,7 @@ async function getAsyncResultLink(locationHeader, token) {
 
   while (attempts < maxAttempts) {
     attempts++;
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // 5s delay
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // 5s delay
 
     try {
       const jobResponse = await fetch(jobUrl, {

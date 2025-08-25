@@ -20,6 +20,7 @@ import {
   createLotNumberMappings,
   createTransaction,
   fetchNewTransaction,
+  getInternalID,
   getLotNumbers,
   getUnitMapping,
 } from "@/lib/utils";
@@ -432,7 +433,7 @@ export default function DashboardOverview() {
       await delay(1000);
 
       // Step 3 : Create New Transaction
-      const createdTransaction = await createTransaction(
+      const createdTransactionURL = await createTransaction(
         oldAccountID,
         oldToken,
         newAccountID,
@@ -443,7 +444,14 @@ export default function DashboardOverview() {
         unitMapping,
         lotNumbers
       );
-      console.log("createTransaction", createdTransaction);
+      console.log("createTransaction URL", createdTransactionURL);
+      console.log("createTransaction MSG", createdTransactionURL.message);
+
+      const createdTransactionId = await getInternalID(
+        createdTransactionURL.jobUrl,
+        newToken
+      );
+      console.log("createTransaction ID", createdTransactionId);
 
       await delay(1000);
 
@@ -452,11 +460,11 @@ export default function DashboardOverview() {
         recordType,
         newAccountID,
         newToken,
-        createdTransaction.internalId
+        createdTransactionId.internalId
       );
       console.log("newTransaction Data", newTransaction);
 
-      const lotNumbersToMap = createdTransaction.lotNumbersToMap;
+      const lotNumbersToMap = createdTransactionURL.lotNumbersToMap;
       console.log("lotNumbersToMap: ", lotNumbersToMap);
 
       await delay(1000);

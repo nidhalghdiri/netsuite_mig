@@ -14,24 +14,6 @@ export async function POST(request) {
       lotNumbers,
     } = await request.json();
 
-    console.log("[Creating Transaction] newAccountID = ", accountId);
-    console.log("[Creating Transaction] oldAccountID = ", oldAccountId);
-    console.log("[Creating Transaction] newToken = ", token);
-    console.log("[Creating Transaction] oldToken = ", oldToken);
-    console.log("[Creating Transaction] recordType = ", recordType);
-    console.log(
-      "[Creating Transaction] transactionData = ",
-      JSON.stringify(recordData)
-    );
-    console.log(
-      "[Creating Transaction] unitMapping = ",
-      JSON.stringify(unitMapping)
-    );
-    console.log(
-      "[Creating Transaction] lotNumbers = ",
-      JSON.stringify(lotNumbers)
-    );
-
     // Validate input
     if (!accountId || !token || !recordType || !recordData) {
       return NextResponse.json(
@@ -42,11 +24,6 @@ export async function POST(request) {
 
     // const unitMapping = await getUnitMapping(oldAccountId, oldToken);
     console.log("unitMapping", unitMapping);
-    // const lotNumbers = await getLotNumbers(
-    //   oldAccountId,
-    //   oldToken,
-    //   recordData.id
-    // );
     console.log("lotNumbers", lotNumbers);
 
     // Transform inventory adjustment data for new instance
@@ -159,121 +136,85 @@ export async function POST(request) {
         throw new Error("Location header not found in 202 response");
       }
       console.log("Async job started. Location:", locationHeader);
-      try {
-        // Step 1: Get the record link through async processing
-        const resultUrl = await getAsyncResultLink(locationHeader, token);
-        console.log("Record link retrieved:", resultUrl);
-        // Step 2: Fetch the result URL to get the record location
-        const resultResponse = await fetch(resultUrl, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
 
-        // Handle 204 No Content response
-        if (resultResponse.status === 204) {
-          const recordLocation = resultResponse.headers.get("Location");
+      return NextResponse.json({
+        status: "processing",
+        jobUrl: locationHeader,
+        lotNumbersToMap,
+        message:
+          "Transaction creation in progress. Use the jobUrl to check status.",
+      });
 
-          if (!recordLocation) {
-            throw new Error("Location header not found in result response");
-          }
+      // try {
+      //   // Step 1: Get the record link through async processing
+      //   const resultUrl = await getAsyncResultLink(locationHeader, token);
+      //   console.log("Record link retrieved:", resultUrl);
+      //   // Step 2: Fetch the result URL to get the record location
+      //   const resultResponse = await fetch(resultUrl, {
+      //     method: "GET",
+      //     headers: {
+      //       Authorization: `Bearer ${token}`,
+      //     },
+      //   });
 
-          console.log("Record location header:", recordLocation);
+      //   // Handle 204 No Content response
+      //   if (resultResponse.status === 204) {
+      //     const recordLocation = resultResponse.headers.get("Location");
 
-          // Step 3: Extract internal ID from record location
-          const internalId = recordLocation.substring(
-            recordLocation.lastIndexOf("/") + 1
-          );
+      //     if (!recordLocation) {
+      //       throw new Error("Location header not found in result response");
+      //     }
 
-          if (!internalId || isNaN(internalId)) {
-            throw new Error("Invalid internal ID format: " + internalId);
-          }
+      //     console.log("Record location header:", recordLocation);
 
-          console.log("Created record internal ID:", internalId);
+      //     // Step 3: Extract internal ID from record location
+      //     const internalId = recordLocation.substring(
+      //       recordLocation.lastIndexOf("/") + 1
+      //     );
 
-          // Step 4: (Optional) Fetch full record details
-          // const response = await fetch(
-          //   `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/inventory-adjustment/fetch-new-record`,
-          //   {
-          //     method: "POST",
-          //     headers: { "Content-Type": "application/json" },
-          //     body: JSON.stringify({
-          //       accountId: accountId,
-          //       token: token,
-          //       internalId: internalId,
-          //     }),
-          //   }
-          // );
+      //     if (!internalId || isNaN(internalId)) {
+      //       throw new Error("Invalid internal ID format: " + internalId);
+      //     }
 
-          // if (!response.ok) {
-          //   const error = await response.json();
-          //   throw new Error(error.error || "Failed to process transaction");
-          // }
-          // const recordData = await response.json();
-          // const recordResponse = await fetch(recordLocation, {
-          //   method: "GET",
-          //   headers: {
-          //     Authorization: `Bearer ${token}`,
-          //     "Content-Type": "application/json",
-          //   },
-          // });
-          // if (!recordResponse.ok) {
-          //   console.warn(
-          //     "Failed to fetch full record details, proceeding with ID"
-          //   );
-          //   return NextResponse.json({
-          //     success: true,
-          //     internalId,
-          //     recordLocation,
-          //   });
-          // }
+      //     console.log("Created record internal ID:", internalId);
 
-          // const recordData = await recordResponse.json();
-          // console.log("New Record Created: ", recordData);
-
-          // const newLotNumbers = await getLotNumbers(
-          //   accountId,
-          //   token,
-          //   recordData.id
-          // );
-          // console.log("newLotNumbers", newLotNumbers);
-
-          // Step 5: Create lot number mapping records if needed
-          // if (lotNumbersToMap.length > 0) {
-          //   await createLotNumberMappings(
-          //     oldAccountId,
-          //     oldToken,
-          //     recordData,
-          //     lotNumbersToMap,
-          //     lotNumbers,
-          //     newLotNumbers
-          //   );
-          // }
-
-          return NextResponse.json({
-            success: true,
-            internalId,
-            recordLocation,
-            lotNumbersToMap,
-          });
-        }
-        // Handle unexpected responses
-        const resultText = await resultResponse.text();
-        throw new Error(
-          `Unexpected result response: ${resultResponse.status} - ${resultText}`
-        );
-      } catch (asyncError) {
-        console.error("Async processing failed:", asyncError);
-        return NextResponse.json(
-          {
-            error: "Async processing failed",
-            details: asyncError.message,
-          },
-          { status: 500 }
-        );
-      }
+      //     return NextResponse.json({
+      //       success: true,
+      //       internalId,
+      //       recordLocation,
+      //       lotNumbersToMap,
+      //     });
+      //   }
+      //   // Handle unexpected responses
+      //   const resultText = await resultResponse.text();
+      //   throw new Error(
+      //     `Unexpected result response: ${resultResponse.status} - ${resultText}`
+      //   );
+      // } catch (asyncError) {
+      //   console.error("Async processing failed:", asyncError);
+      //   return NextResponse.json(
+      //     {
+      //       error: "Async processing failed",
+      //       details: asyncError.message,
+      //     },
+      //     { status: 500 }
+      //   );
+      // }
     }
+    // Handle sync response
+    if (response.ok) {
+      const result = await response.json();
+      return NextResponse.json({
+        status: "completed",
+        data: result,
+        message: "Transaction created successfully",
+      });
+    }
+    // Handle errors
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to create record: ${response.status} - ${errorText}`
+    );
   } catch (error) {
     console.error("Error creating record:", error);
     return NextResponse.json(
@@ -291,7 +232,7 @@ async function getAsyncResultLink(locationHeader, token) {
 
   while (attempts < maxAttempts) {
     attempts++;
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // 5s delay
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // 5s delay
 
     try {
       const jobResponse = await fetch(jobUrl, {
