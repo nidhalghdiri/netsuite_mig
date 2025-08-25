@@ -77,6 +77,7 @@ export async function POST(request) {
                             ? item.description.substring(0, 40)
                             : "",
                           quantity: ass.quantity,
+                          line: item.line,
                         });
 
                         // Don't include internalId for new creation
