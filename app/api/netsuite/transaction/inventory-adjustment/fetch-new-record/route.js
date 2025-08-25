@@ -59,7 +59,9 @@ async function fetchRecord(accountId, token, recordType, internalId) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(`Failed to fetch ${recordType}: ${error.error.message}`);
+    const errorMessage =
+      error.message || error.error?.message || "Unknown error occurred";
+    throw new Error(`Failed to fetch ${recordType}: ${errorMessage}`);
   }
 
   return response.json();
@@ -77,7 +79,9 @@ async function fetchSublist(accountId, token, sublistUrl) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(`Failed to fetch sublist: ${error.error.message}`);
+    const errorMessage =
+      error.message || error.error?.message || "Unknown error occurred";
+    throw new Error(`Failed to fetch sublist: ${errorMessage}`);
   }
 
   const result = await response.json();
@@ -229,7 +233,9 @@ async function fetchSublistItem(accountId, token, itemUrl) {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(`Failed to fetch sublist item: ${error.error.message}`);
+    const errorMessage =
+      error.message || error.error?.message || "Unknown error occurred";
+    throw new Error(`Failed to fetch sublist item: ${errorMessage}`);
   }
 
   return response.json();
