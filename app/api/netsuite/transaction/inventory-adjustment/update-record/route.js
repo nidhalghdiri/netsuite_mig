@@ -30,9 +30,9 @@ export async function POST(request) {
         "X-NetSuite-PropertyNameValidation": "Warning",
         "X-NetSuite-PropertyValueValidation": "Warning",
       },
-      body: {
+      body: JSON.stringify({
         custbody_mig_new_internal_id: parseFloat(newId) || 0.0,
-      },
+      }),
     });
 
     // Handle 202 Accepted (async processing)
