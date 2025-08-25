@@ -23,6 +23,7 @@ import {
   getInternalID,
   getLotNumbers,
   getUnitMapping,
+  updateTransaction,
 } from "@/lib/utils";
 
 // Mock data service
@@ -494,6 +495,21 @@ export default function DashboardOverview() {
       console.info(
         "Create Transaction [" + transactionData.tranId + "] Process Done!!"
       );
+
+      // Step 7 : Update the New ID in the Old Transaction
+      var updatedTransaction = await updateTransaction(
+        oldAccountID,
+        oldToken,
+        recordType,
+        RECORDS_TYPE[recordType],
+        transactionData.id
+      );
+
+      const updatedTransactionId = await getInternalID(
+        updatedTransaction.jobUrl,
+        oldToken
+      );
+      console.log("Updated Transaction ID", updatedTransactionId);
     } catch (error) {
       console.error("Processing error:", error);
       throw error;
