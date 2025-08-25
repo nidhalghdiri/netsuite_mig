@@ -3,18 +3,21 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, token, recordType, internalId } = await request.json();
+    const { accountId, token, recordType, internalId, newId } =
+      await request.json();
 
     // Validate input
-    if (!accountId || !token || !recordType || !internalId) {
+    if (!accountId || !token || !recordType || !internalId || !newId) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 }
       );
     }
+    console.log("UPDATE Record [" + internalId + "]: ", "New ID : " + newId);
 
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
+    console.log("UPDATE URL: ", url);
     const idempotencyKey = randomUUID();
 
     const response = await fetch(url, {
@@ -28,7 +31,7 @@ export async function POST(request) {
         "X-NetSuite-PropertyValueValidation": "Warning",
       },
       body: {
-        custbody_mig_new_internal_id: internalId,
+        custbody_mig_new_internal_id: parseFloat(newId) || 0.0,
       },
     });
 

@@ -39,7 +39,7 @@ export async function POST(request) {
       subsidiary: { id: recordData.subsidiary.new_id },
       account: { id: recordData.account.new_id },
       adjLocation: { id: recordData.adjLocation.new_id },
-      custbody_mig_old_internal_id: recordData.id,
+      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
       inventory: {
         items: recordData.inventory.items.map((item) => ({
