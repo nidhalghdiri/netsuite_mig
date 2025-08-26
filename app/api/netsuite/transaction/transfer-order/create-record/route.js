@@ -44,6 +44,7 @@ export async function POST(request) {
       transferLocation: { id: recordData.transferLocation.new_id },
       useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
+      orderStatus: { id: "B" },
       // postingPeriod: { id: "20" },
       item: {
         items: recordData.item.items.map((item) => ({
