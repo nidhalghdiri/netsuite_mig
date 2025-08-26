@@ -959,9 +959,8 @@ export default function DashboardOverview() {
                             try {
                               console.log("Fetch Transaction Type: ", trx.type);
                               await fetchTransaction(trx.id, trx.type);
-                              toast.success("Transaction fetched successfully");
                             } catch (error) {
-                              toast.error(`Fetch failed: ${error.message}`);
+                              console.log(`Fetch failed: ${error.message}`);
                             }
                           }}
                           className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1 disabled:opacity-70 text-xs"
@@ -981,11 +980,8 @@ export default function DashboardOverview() {
                                   trx.type
                                 );
                                 await processTransaction(trx.id, trx.type);
-                                toast.success(
-                                  "Transaction processed successfully!"
-                                );
                               } catch (error) {
-                                toast.error(
+                                console.log(
                                   `Processing failed: ${error.message}`
                                 );
                               }
@@ -1028,10 +1024,11 @@ export default function DashboardOverview() {
                                     newSession.token,
                                     details.oldData.custbody_mig_new_internal_id
                                   );
+                                console.log(
+                                  "fetchNewTransaction: ",
+                                  newTransaction
+                                );
                                 if (newTransaction) {
-                                  toast.success(
-                                    "New transaction fetched successfully"
-                                  );
                                   // Update transaction details with new data
                                   setTransactionDetails((prev) => ({
                                     ...prev,
@@ -1055,7 +1052,6 @@ export default function DashboardOverview() {
                                     },
                                   }));
                                 } else {
-                                  toast.error(`New Transaction Fetch failed`);
                                   // Update transaction details with error
                                   setTransactionDetails((prev) => ({
                                     ...prev,
@@ -1080,7 +1076,7 @@ export default function DashboardOverview() {
                                   }));
                                 }
                               } catch (error) {
-                                toast.error(`Fetch failed: ${error.message}`);
+                                console.log(`Fetch failed: ${error.message}`);
                               }
                             }}
                             className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-1 disabled:opacity-70 text-xs"
@@ -1210,15 +1206,66 @@ export default function DashboardOverview() {
                               {details.oldData
                                 ?.custbody_mig_new_internal_id && (
                                 <button
-                                  onClick={() =>
-                                    fetchNewTransaction(
+                                  onClick={() => {
+                                    const newTransaction = fetchNewTransaction(
                                       trx.type,
                                       "11661334-sb1",
                                       newSession.token,
                                       details.oldData
                                         .custbody_mig_new_internal_id
-                                    )
-                                  }
+                                    );
+                                    if (newTransaction) {
+                                      console.log(
+                                        "fetchNewTransaction ",
+                                        newTransaction
+                                      );
+                                      // Update transaction details with new data
+                                      setTransactionDetails((prev) => ({
+                                        ...prev,
+                                        [details.oldData
+                                          .custbody_mig_new_internal_id]: {
+                                          ...prev[
+                                            details.oldData
+                                              .custbody_mig_new_internal_id
+                                          ],
+                                          newData: newTransaction,
+                                          steps: {
+                                            ...prev[
+                                              details.oldData
+                                                .custbody_mig_new_internal_id
+                                            ]?.steps,
+                                            relate: {
+                                              status: "completed",
+                                              timestamp: new Date(),
+                                            },
+                                          },
+                                        },
+                                      }));
+                                    } else {
+                                      // Update transaction details with error
+                                      setTransactionDetails((prev) => ({
+                                        ...prev,
+                                        [details.oldData
+                                          .custbody_mig_new_internal_id]: {
+                                          ...prev[
+                                            details.oldData
+                                              .custbody_mig_new_internal_id
+                                          ],
+                                          steps: {
+                                            ...prev[
+                                              details.oldData
+                                                .custbody_mig_new_internal_id
+                                            ]?.steps,
+                                            relate: {
+                                              status: "error",
+                                              error: "ERROR ERROR",
+                                              timestamp: new Date(),
+                                            },
+                                          },
+                                        },
+                                      }));
+                                    }
+                                  }}
                                   className="w-full bg-purple-100 text-purple-800 hover:bg-purple-200 py-2 px-3 rounded-md text-sm flex items-center justify-center gap-2"
                                 >
                                   <FiDatabase className="text-xs" />
