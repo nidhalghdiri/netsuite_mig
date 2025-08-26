@@ -66,35 +66,18 @@ export async function POST(request) {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => {
                       // Check if we have a new_id for this lot number
-                      if (ass.internalId && ass.new_id) {
+                      if (ass.issueInventoryNumber && ass.new_id) {
                         // Use the new_id if available
                         return {
-                          internalId: ass.new_id,
+                          // internalId: ass.new_id,
                           quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      } else if (ass.internalId) {
-                        // If no new_id, we'll need to create a mapping later
-                        lotNumbersToMap.push({
-                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
-                          refName: ass.receiptInventoryNumber,
-                          itemId: item.item.new_id,
-                          itemName: item.description
-                            ? item.description.substring(0, 40)
-                            : "",
-                          quantity: ass.quantity,
-                          line: item.line,
-                        });
-
-                        // Don't include internalId for new creation
-                        return {
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                          issueInventoryNumber: {
+                            id: ass.new_id,
+                          },
                         };
                       }
                       return {
                         quantity: ass.quantity,
-                        receiptInventoryNumber: ass.receiptInventoryNumber,
                       };
                     }
 

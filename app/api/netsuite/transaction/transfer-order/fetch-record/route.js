@@ -422,13 +422,20 @@ function applyLotMapping(record, lotMapping, lotNumbers) {
     // );
     if (item.inventoryDetail?.inventoryAssignment?.items) {
       item.inventoryDetail.inventoryAssignment.items.forEach((assignment) => {
+        // Handle receiptInventoryNumber
+        // if (lotNumbers[item_line]) {
+        //   const oldId = lotNumbers[item_line].inventorynumberid;
+        //   if (lotMapping[oldId]) {
+        //     assignment.old_id = oldId;
+        //     assignment.new_id = lotMapping[oldId];
+        //   }
+        // }
         // Handle issueInventoryNumber
-        if (lotNumbers[item_line]) {
-          const oldId = lotNumbers[item_line].inventorynumberid;
-          if (lotMapping[oldId]) {
-            assignment.old_id = oldId;
-            assignment.new_id = lotMapping[oldId];
-          }
+        var issueInventoryNumber = assignment.issueInventoryNumber;
+        const oldId = issueInventoryNumber.id;
+        if (lotMapping[oldId]) {
+          assignment.old_id = oldId;
+          assignment.new_id = lotMapping[oldId];
         }
       });
     }
