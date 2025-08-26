@@ -6,15 +6,15 @@ import { toast } from "react-toastify";
 import {
   FiCheckCircle,
   FiAlertCircle,
-  FiChevronDown,
-  FiChevronUp,
   FiRefreshCw,
-  FiFileText,
-  FiDatabase,
-  FiLink,
-  FiCheckSquare,
   FiFilter,
   FiSearch,
+  FiDatabase,
+  FiFileText,
+  FiChevronDown,
+  FiChevronUp,
+  FiPlay,
+  FiStopCircle,
 } from "react-icons/fi";
 import {
   createLotNumberMappings,
@@ -237,48 +237,67 @@ function mapRecordType(type) {
 }
 
 const StatusBadge = ({ status }) => {
-  const statusConfig = {
-    completed: { text: "Completed", color: "bg-green-100 text-green-800" },
-    "in-progress": {
-      text: "In Progress",
-      color: "bg-yellow-100 text-yellow-800",
-    },
-    pending: { text: "Pending", color: "bg-gray-100 text-gray-800" },
-    failed: { text: "Needs Attention", color: "bg-red-100 text-red-800" },
-  };
+  let bgColor = "";
+  let text = "";
+
+  switch (status) {
+    case "completed":
+      bgColor = "bg-green-100 text-green-800";
+      text = "Completed";
+      break;
+    case "in-progress":
+      bgColor = "bg-blue-100 text-blue-800";
+      text = "In Progress";
+      break;
+    case "pending":
+      bgColor = "bg-yellow-100 text-yellow-800";
+      text = "Pending";
+      break;
+    case "failed":
+      bgColor = "bg-red-100 text-red-800";
+      text = "Failed";
+      break;
+    default:
+      bgColor = "bg-gray-100 text-gray-800";
+      text = "Unknown";
+  }
 
   return (
-    <span
-      className={`px-2 py-1 rounded text-xs font-medium ${
-        statusConfig[status]?.color || ""
-      }`}
-    >
-      {statusConfig[status]?.text || status}
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor}`}>
+      {text}
     </span>
   );
 };
 
 const StepIcon = ({ step, status }) => {
-  const icons = {
-    fetch: <FiDatabase size={16} />,
-    create: <FiFileText size={16} />,
-    relate: <FiLink size={16} />,
-    compare: <FiCheckSquare size={16} />,
-  };
+  let icon;
+  let color;
+  let tooltip = `${step}: ${status}`;
 
-  const statusColors = {
-    completed: "text-green-500 bg-green-100",
-    "in-progress": "text-yellow-500 bg-yellow-100",
-    pending: "text-gray-400 bg-gray-100",
-    failed: "text-red-500 bg-red-100",
-  };
+  switch (status) {
+    case "completed":
+      icon = <FiCheckCircle className="text-green-500" />;
+      break;
+    case "completed-with-issues":
+      icon = <FiAlertCircle className="text-yellow-500" />;
+      tooltip = `${step}: completed with issues`;
+      break;
+    case "in-progress":
+      icon = <FiRefreshCw className="animate-spin text-blue-500" />;
+      break;
+    case "error":
+      icon = <FiAlertCircle className="text-red-500" />;
+      break;
+    default:
+      icon = <FiCircle className="text-gray-400" />;
+  }
 
   return (
-    <div
-      className={`w-8 h-8 rounded-full flex items-center justify-center ${statusColors[status]}`}
-      title={`${step}: ${status}`}
-    >
-      {icons[step]}
+    <div className="relative group">
+      {icon}
+      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2">
+        {tooltip}
+      </div>
     </div>
   );
 };
@@ -297,8 +316,9 @@ export default function DashboardOverview() {
     search: "",
   });
   const [error, setError] = useState(null);
-  const [currentTransaction, setCurrentTransaction] = useState(null);
+  const [transactionDetails, setTransactionDetails] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
 
   const oldSession = getSession("old");
   const newSession = getSession("new");
@@ -328,8 +348,21 @@ export default function DashboardOverview() {
     }
   }, [isOldConnected, isNewConnected]);
 
-  const toggleTransactionDetails = (id) => {
-    setExpandedTransaction(expandedTransaction === id ? null : id);
+  const toggleTransactionDetails = async (trx) => {
+    if (expandedTransaction === trx.id) {
+      setExpandedTransaction(null);
+    } else {
+      setExpandedTransaction(trx.id);
+
+      // If we haven't fetched details for this transaction yet, fetch them
+      if (!transactionDetails[trx.id]) {
+        try {
+          await fetchTransaction(trx.id, trx.type);
+        } catch (error) {
+          console.error("Failed to fetch transaction details:", error);
+        }
+      }
+    }
   };
 
   const handleFilterChange = (field, value) => {
@@ -343,7 +376,8 @@ export default function DashboardOverview() {
     const matchesSearch =
       filters.search === "" ||
       trx.id.toLowerCase().includes(filters.search.toLowerCase()) ||
-      trx.entity.toLowerCase().includes(filters.search.toLowerCase());
+      (trx.entity &&
+        trx.entity.toLowerCase().includes(filters.search.toLowerCase()));
 
     return matchesStatus && matchesType && matchesSearch;
   });
@@ -385,21 +419,86 @@ export default function DashboardOverview() {
       }
       const data = await response.json();
       console.log("[Record UI] data: ", data);
-      setCurrentTransaction(data);
+      // Update transaction details with old data
+      setTransactionDetails((prev) => ({
+        ...prev,
+        [internalId]: {
+          ...prev[internalId],
+          oldData: data,
+          steps: {
+            ...prev[internalId]?.steps,
+            fetch: { status: "completed", timestamp: new Date() },
+          },
+        },
+      }));
+
+      return data;
     } catch (error) {
       console.error("Fetching error:", error);
+      // Update transaction details with error
+      setTransactionDetails((prev) => ({
+        ...prev,
+        [internalId]: {
+          ...prev[internalId],
+          steps: {
+            ...prev[internalId]?.steps,
+            fetch: {
+              status: "error",
+              error: error.message,
+              timestamp: new Date(),
+            },
+          },
+        },
+      }));
       throw error;
     }
+  };
+
+  const compareTransactions = (oldData, newData) => {
+    if (!oldData || !newData) return [];
+
+    const fieldsToCompare = [
+      { key: "tranId", label: "Transaction ID" },
+      { key: "tranDate", label: "Date" },
+      { key: "memo", label: "Memo" },
+      { key: "estimatedTotalValue", label: "Total Value" },
+      { key: "subsidiary.refName", label: "Subsidiary" },
+      { key: "location.refName", label: "Location" },
+    ];
+
+    return fieldsToCompare.map((field) => {
+      let oldValue = getNestedValue(oldData, field.key);
+      let newValue = getNestedValue(newData, field.key);
+
+      // Format values for display
+      if (field.key === "estimatedTotalValue") {
+        oldValue = oldValue ? `$${parseFloat(oldValue).toFixed(2)}` : "";
+        newValue = newValue ? `$${parseFloat(newValue).toFixed(2)}` : "";
+      }
+
+      return {
+        name: field.label,
+        oldValue: oldValue || "N/A",
+        newValue: newValue || "N/A",
+        status: oldValue === newValue ? "match" : "mismatch",
+      };
+    });
+  };
+
+  const getNestedValue = (obj, path) => {
+    return path.split(".").reduce((acc, part) => acc && acc[part], obj);
   };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const processTransaction = async (transactionData, recordType) => {
-    if (!transactionData) {
-      throw new Error("No transaction data to process");
+    var transactionId = transactionData.id;
+    if (!transactionId) {
+      throw new Error("No transaction ID provided");
     }
 
     setIsProcessing(true);
+    setProcessingId(transactionId);
     try {
       console.log("Starting transaction processing...");
       const newAccountID = "11661334-sb1";
@@ -415,7 +514,14 @@ export default function DashboardOverview() {
       }
       const oldToken = oldSession?.token;
       const newToken = newSession?.token;
-      await delay(1000); // 1 second delay
+
+      // Get transaction data if not already fetched
+      let transactionData = transactionDetails[transactionId]?.oldData;
+      if (!transactionData) {
+        transactionData = await fetchTransaction(transactionId, recordType);
+      }
+
+      await delay(1000);
 
       // Step 1: get Unit Mapping
       const unitMapping = await getUnitMapping(oldAccountID, oldToken);
@@ -427,7 +533,7 @@ export default function DashboardOverview() {
       const lotNumbers = await getLotNumbers(
         oldAccountID,
         oldToken,
-        transactionData.id
+        transactionId
       );
       console.log("lotNumbers", lotNumbers);
 
@@ -454,6 +560,17 @@ export default function DashboardOverview() {
       );
       console.log("createTransaction ID", createdTransactionId);
 
+      // Update step status
+      setTransactionDetails((prev) => ({
+        ...prev,
+        [transactionId]: {
+          ...prev[transactionId],
+          steps: {
+            ...prev[transactionId]?.steps,
+            create: { status: "completed", timestamp: new Date() },
+          },
+        },
+      }));
       await delay(1000);
 
       // Step 4 : Ftech New Transaction
@@ -464,6 +581,36 @@ export default function DashboardOverview() {
         createdTransactionId.internalId
       );
       console.log("newTransaction Data", newTransaction);
+      if (newTransaction) {
+        // Update transaction details with new data
+        setTransactionDetails((prev) => ({
+          ...prev,
+          [createdTransactionId.internalId]: {
+            ...prev[createdTransactionId.internalId],
+            newData: data,
+            steps: {
+              ...prev[createdTransactionId.internalId]?.steps,
+              relate: { status: "completed", timestamp: new Date() },
+            },
+          },
+        }));
+      } else {
+        // Update transaction details with error
+        setTransactionDetails((prev) => ({
+          ...prev,
+          [createdTransactionId.internalId]: {
+            ...prev[createdTransactionId.internalId],
+            steps: {
+              ...prev[createdTransactionId.internalId]?.steps,
+              relate: {
+                status: "error",
+                error: error.message,
+                timestamp: new Date(),
+              },
+            },
+          },
+        }));
+      }
 
       const lotNumbersToMap = createdTransactionURL.lotNumbersToMap;
       console.log("lotNumbersToMap: ", lotNumbersToMap);
@@ -502,7 +649,7 @@ export default function DashboardOverview() {
         oldToken,
         recordType,
         RECORDS_TYPE[recordType],
-        transactionData.id,
+        transactionId,
         newTransaction.id
       );
 
@@ -511,11 +658,50 @@ export default function DashboardOverview() {
         oldToken
       );
       console.log("Updated Transaction ID", updatedTransactionId);
+
+      // Step 8: Compare transactions
+      const comparisonResults = compareTransactions(
+        transactionData,
+        newTransaction
+      );
+      setTransactionDetails((prev) => ({
+        ...prev,
+        [transactionId]: {
+          ...prev[transactionId],
+          comparison: comparisonResults,
+          steps: {
+            ...prev[transactionId]?.steps,
+            compare: {
+              status: comparisonResults.every((r) => r.status === "match")
+                ? "completed"
+                : "completed-with-issues",
+              timestamp: new Date(),
+              results: comparisonResults,
+            },
+          },
+        },
+      }));
     } catch (error) {
       console.error("Processing error:", error);
+      // Update step status with error
+      setTransactionDetails((prev) => ({
+        ...prev,
+        [transactionId]: {
+          ...prev[transactionId],
+          steps: {
+            ...prev[transactionId]?.steps,
+            create: {
+              status: "error",
+              error: error.message,
+              timestamp: new Date(),
+            },
+          },
+        },
+      }));
       throw error;
     } finally {
       setIsProcessing(false);
+      setProcessingId(null);
     }
   };
 
@@ -740,218 +926,353 @@ export default function DashboardOverview() {
               <div className="col-span-2">Entity</div>
               <div className="col-span-1">Amount</div>
               <div className="col-span-2">Date</div>
-              <div className="col-span-2">Action</div>
+              <div className="col-span-2">Actions</div>
               <div className="col-span-2 text-center">Migration Steps</div>
             </div>
 
             {/* Transaction Rows */}
             <div className="divide-y">
-              {filteredTransactions.map((trx) => (
-                <div key={trx.id}>
-                  <div
-                    className="grid grid-cols-12 gap-2 px-4 py-3 text-sm cursor-pointer hover:bg-blue-50"
-                    onClick={() => toggleTransactionDetails(trx.id)}
-                  >
-                    <div className="col-span-1 flex items-center">
-                      <StatusBadge status={trx.mig_status} />
-                    </div>
-                    <div className="col-span-2 font-medium">{trx.id}</div>
-                    <div className="col-span-2">{trx.type}</div>
-                    <div className="col-span-2 truncate">{trx.entity}</div>
-                    <div className="col-span-1">${trx.foreigntotal}</div>
-                    <div className="col-span-2">{trx.trandate}</div>
-                    <div className="col-span-2  flex gap-2">
-                      <button
-                        onClick={async () => {
-                          try {
-                            console.log("Fetch Transaction Type: ", trx.type);
-                            await fetchTransaction(trx.id, trx.type);
-                            toast.success("Transaction fetched successfully");
-                          } catch (error) {
-                            toast.error(`Fetch failed: ${error.message}`);
-                          }
-                        }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-70"
-                        disabled={isProcessing}
-                      >
-                        Fetch
-                      </button>
+              {filteredTransactions.map((trx) => {
+                const details = transactionDetails[trx.id] || {};
+                const hasNewId = details.oldData?.custbody_mig_new_internal_id;
+                const isCurrentlyProcessing = processingId === trx.id;
 
-                      <button
-                        onClick={async () => {
-                          try {
-                            console.log("Process Transaction Type: ", trx.type);
-                            const result = await processTransaction(
-                              currentTransaction,
-                              trx.type
-                            );
-                            if (result.status === "pending") {
-                              toast.success(
-                                "Processing started. Check back later."
-                              );
-                            } else {
-                              toast.success(
-                                "Transaction processed successfully!"
-                              );
+                return (
+                  <div key={trx.id}>
+                    <div
+                      className="grid grid-cols-12 gap-2 px-4 py-3 text-sm cursor-pointer hover:bg-blue-50"
+                      onClick={() => toggleTransactionDetails(trx)}
+                    >
+                      <div className="col-span-1 flex items-center">
+                        <StatusBadge status={trx.mig_status} />
+                      </div>
+                      <div className="col-span-2 font-medium">{trx.id}</div>
+                      <div className="col-span-2">{trx.type}</div>
+                      <div className="col-span-2 truncate">{trx.entity}</div>
+                      <div className="col-span-1">${trx.foreigntotal}</div>
+                      <div className="col-span-2">{trx.trandate}</div>
+                      <div className="col-span-2 flex gap-2">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              console.log("Fetch Transaction Type: ", trx.type);
+                              await fetchTransaction(trx.id, trx.type);
+                              toast.success("Transaction fetched successfully");
+                            } catch (error) {
+                              toast.error(`Fetch failed: ${error.message}`);
                             }
-                          } catch (error) {
-                            toast.error(`Processing failed: ${error.message}`);
-                          }
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-70"
-                        disabled={!currentTransaction || isProcessing}
-                      >
-                        {isProcessing ? "Processing..." : "Process"}
-                      </button>
-                    </div>
-                    <div className="col-span-2 flex justify-center space-x-1">
-                      <StepIcon step="fetch" status={trx.steps.fetch.status} />
-                      <StepIcon
-                        step="create"
-                        status={trx.steps.create.status}
-                      />
-                      <StepIcon
-                        step="relate"
-                        status={trx.steps.relate.status}
-                      />
-                      <StepIcon
-                        step="compare"
-                        status={trx.steps.compare.status}
-                      />
-                    </div>
-                  </div>
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1 disabled:opacity-70 text-xs"
+                          disabled={isProcessing}
+                        >
+                          <FiDatabase className="text-xs" />
+                          Fetch
+                        </button>
 
-                  {/* Transaction Details */}
-                  {expandedTransaction === trx.id && (
-                    <div className="bg-gray-50 p-4 border-t">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        {/* IDs */}
-                        <div className="border rounded-lg p-4 bg-white">
-                          <h4 className="font-medium mb-3">Transaction IDs</h4>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Old ID:</span>
-                              <span className="font-medium">{trx.oldId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">New ID:</span>
-                              <span className="font-medium">{trx.newId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">
-                                Created From:
-                              </span>
-                              <span className="font-medium">
-                                {trx.details.createdFrom}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                        {!hasNewId && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                console.log(
+                                  "Process Transaction Type: ",
+                                  trx.type
+                                );
+                                await processTransaction(trx.id, trx.type);
+                                toast.success(
+                                  "Transaction processed successfully!"
+                                );
+                              } catch (error) {
+                                toast.error(
+                                  `Processing failed: ${error.message}`
+                                );
+                              }
+                            }}
+                            className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-1 disabled:opacity-70 text-xs"
+                            disabled={isProcessing || !details.oldData}
+                          >
+                            {isCurrentlyProcessing ? (
+                              <FiRefreshCw className="animate-spin text-xs" />
+                            ) : (
+                              <FiPlay className="text-xs" />
+                            )}
+                            {isCurrentlyProcessing ? "Processing" : "Process"}
+                          </button>
+                        )}
 
-                        {/* Related Records */}
-                        <div className="border rounded-lg p-4 bg-white">
-                          <h4 className="font-medium mb-3">Related Records</h4>
-                          <div className="space-y-2">
-                            {trx.details.relatedRecords.map((record, idx) => (
-                              <div key={idx} className="flex justify-between">
-                                <div>
-                                  <span className="font-medium">
-                                    {record.type}:{" "}
-                                  </span>
-                                  <span className="text-gray-600">
-                                    {record.id}
-                                  </span>
-                                </div>
-                                <StatusBadge status={record.status} />
+                        {hasNewId && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                console.log(
+                                  "View New Transaction: ",
+                                  details.oldData.custbody_mig_new_internal_id
+                                );
+                                await fetchNewTransaction(
+                                  trx.type,
+                                  "11661334-sb1",
+                                  newSession.token,
+                                  details.oldData.custbody_mig_new_internal_id
+                                );
+                                toast.success(
+                                  "New transaction fetched successfully"
+                                );
+                              } catch (error) {
+                                toast.error(`Fetch failed: ${error.message}`);
+                              }
+                            }}
+                            className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-1 disabled:opacity-70 text-xs"
+                            disabled={isProcessing}
+                          >
+                            <FiDatabase className="text-xs" />
+                            View New
+                          </button>
+                        )}
+                      </div>
+                      <div className="col-span-2 flex justify-center space-x-1">
+                        <StepIcon
+                          step="fetch"
+                          status={details.steps?.fetch?.status || "pending"}
+                        />
+                        <StepIcon
+                          step="create"
+                          status={details.steps?.create?.status || "pending"}
+                        />
+                        <StepIcon
+                          step="relate"
+                          status={details.steps?.relate?.status || "pending"}
+                        />
+                        <StepIcon
+                          step="compare"
+                          status={details.steps?.compare?.status || "pending"}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    {expandedTransaction === trx.id && (
+                      <div className="bg-gray-50 p-4 border-t">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          {/* IDs */}
+                          <div className="border rounded-lg p-4 bg-white">
+                            <h4 className="font-medium mb-3">
+                              Transaction IDs
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Old ID:</span>
+                                <span className="font-medium">{trx.id}</span>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Attached Files */}
-                        <div className="border rounded-lg p-4 bg-white">
-                          <h4 className="font-medium mb-3">Attached Files</h4>
-                          <div className="flex items-center">
-                            <div className="bg-blue-100 text-blue-800 rounded-full w-10 h-10 flex items-center justify-center mr-3">
-                              <FiFileText />
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                {trx.details.files} files attached
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Click to view/download
-                              </p>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">New ID:</span>
+                                <span className="font-medium">
+                                  {details.oldData
+                                    ?.custbody_mig_new_internal_id ||
+                                    "Not created yet"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">
+                                  Created From:
+                                </span>
+                                <span className="font-medium">
+                                  {details.oldData?.createdFrom || "N/A"}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Field Comparison */}
-                      <h4 className="font-medium mb-3">Field Comparison</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-100">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                Field
-                              </th>
-                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                Old Value
-                              </th>
-                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                New Value
-                              </th>
-                              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                Status
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200 bg-white">
-                            {trx.details.fields.map((field, idx) => (
-                              <tr
-                                key={idx}
-                                className={
-                                  field.status === "mismatch" ? "bg-red-50" : ""
+                          {/* Status Overview */}
+                          <div className="border rounded-lg p-4 bg-white">
+                            <h4 className="font-medium mb-3">
+                              Migration Status
+                            </h4>
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600">
+                                  Fetch Step:
+                                </span>
+                                <StatusBadge
+                                  status={
+                                    details.steps?.fetch?.status || "pending"
+                                  }
+                                />
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600">
+                                  Create Step:
+                                </span>
+                                <StatusBadge
+                                  status={
+                                    details.steps?.create?.status || "pending"
+                                  }
+                                />
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600">
+                                  Relate Step:
+                                </span>
+                                <StatusBadge
+                                  status={
+                                    details.steps?.relate?.status || "pending"
+                                  }
+                                />
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600">
+                                  Compare Step:
+                                </span>
+                                <StatusBadge
+                                  status={
+                                    details.steps?.compare?.status || "pending"
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="border rounded-lg p-4 bg-white">
+                            <h4 className="font-medium mb-3">Actions</h4>
+                            <div className="space-y-2">
+                              <button
+                                onClick={() =>
+                                  fetchTransaction(trx.id, trx.type)
                                 }
+                                className="w-full bg-blue-100 text-blue-800 hover:bg-blue-200 py-2 px-3 rounded-md text-sm flex items-center justify-center gap-2"
                               >
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                  {field.name}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-700">
-                                  {field.oldValue}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-700">
-                                  {field.newValue}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {field.status === "match" ? (
-                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                      Match
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                                      Mismatch
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                <FiRefreshCw className="text-xs" />
+                                Refresh Old Data
+                              </button>
 
-                      {trx.details.fields.length === 0 && (
-                        <div className="text-center py-6 bg-gray-50 rounded-lg border">
-                          <p className="text-gray-500">
-                            No field comparison data available yet
-                          </p>
+                              {details.oldData
+                                ?.custbody_mig_new_internal_id && (
+                                <button
+                                  onClick={() =>
+                                    fetchNewTransaction(
+                                      trx.type,
+                                      "11661334-sb1",
+                                      newSession.token,
+                                      details.oldData
+                                        .custbody_mig_new_internal_id
+                                    )
+                                  }
+                                  className="w-full bg-purple-100 text-purple-800 hover:bg-purple-200 py-2 px-3 rounded-md text-sm flex items-center justify-center gap-2"
+                                >
+                                  <FiDatabase className="text-xs" />
+                                  Refresh New Data
+                                </button>
+                              )}
+
+                              {details.oldData && details.newData && (
+                                <button
+                                  onClick={() => {
+                                    const comparisonResults =
+                                      compareTransactions(
+                                        details.oldData,
+                                        details.newData
+                                      );
+                                    setTransactionDetails((prev) => ({
+                                      ...prev,
+                                      [trx.id]: {
+                                        ...prev[trx.id],
+                                        comparison: comparisonResults,
+                                        steps: {
+                                          ...prev[trx.id]?.steps,
+                                          compare: {
+                                            status: comparisonResults.every(
+                                              (r) => r.status === "match"
+                                            )
+                                              ? "completed"
+                                              : "completed-with-issues",
+                                            timestamp: new Date(),
+                                            results: comparisonResults,
+                                          },
+                                        },
+                                      },
+                                    }));
+                                  }}
+                                  className="w-full bg-green-100 text-green-800 hover:bg-green-200 py-2 px-3 rounded-md text-sm flex items-center justify-center gap-2"
+                                >
+                                  <FiRefreshCw className="text-xs" />
+                                  Re-run Comparison
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+
+                        {/* Field Comparison */}
+                        <h4 className="font-medium mb-3">Field Comparison</h4>
+                        {details.comparison && details.comparison.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                    Field
+                                  </th>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                    Old Value
+                                  </th>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                    New Value
+                                  </th>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                    Status
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200 bg-white">
+                                {details.comparison.map((field, idx) => (
+                                  <tr
+                                    key={idx}
+                                    className={
+                                      field.status === "mismatch"
+                                        ? "bg-red-50"
+                                        : ""
+                                    }
+                                  >
+                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                      {field.name}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-700">
+                                      {field.oldValue}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-700">
+                                      {field.newValue}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {field.status === "match" ? (
+                                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                          Match
+                                        </span>
+                                      ) : (
+                                        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                                          Mismatch
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 bg-gray-50 rounded-lg border">
+                            <p className="text-gray-500">
+                              No field comparison data available yet. Process
+                              the transaction to generate comparison data.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination */}
