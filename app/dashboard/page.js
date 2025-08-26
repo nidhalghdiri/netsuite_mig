@@ -605,7 +605,7 @@ export default function DashboardOverview() {
               ...prev[createdTransactionId.internalId]?.steps,
               relate: {
                 status: "error",
-                error: error.message,
+                error: "ERROR ERROR",
                 timestamp: new Date(),
               },
             },
@@ -1021,15 +1021,64 @@ export default function DashboardOverview() {
                                   details.oldData.custbody_mig_new_internal_id
                                 );
 
-                                await fetchNewTransaction(
-                                  trx.type,
-                                  "11661334-sb1",
-                                  newSession.token,
-                                  details.oldData.custbody_mig_new_internal_id
-                                );
-                                toast.success(
-                                  "New transaction fetched successfully"
-                                );
+                                const newTransaction =
+                                  await fetchNewTransaction(
+                                    trx.type,
+                                    "11661334-sb1",
+                                    newSession.token,
+                                    details.oldData.custbody_mig_new_internal_id
+                                  );
+                                if (newTransaction) {
+                                  toast.success(
+                                    "New transaction fetched successfully"
+                                  );
+                                  // Update transaction details with new data
+                                  setTransactionDetails((prev) => ({
+                                    ...prev,
+                                    [details.oldData
+                                      .custbody_mig_new_internal_id]: {
+                                      ...prev[
+                                        details.oldData
+                                          .custbody_mig_new_internal_id
+                                      ],
+                                      newData: data,
+                                      steps: {
+                                        ...prev[
+                                          details.oldData
+                                            .custbody_mig_new_internal_id
+                                        ]?.steps,
+                                        relate: {
+                                          status: "completed",
+                                          timestamp: new Date(),
+                                        },
+                                      },
+                                    },
+                                  }));
+                                } else {
+                                  toast.error(`New Transaction Fetch failed`);
+                                  // Update transaction details with error
+                                  setTransactionDetails((prev) => ({
+                                    ...prev,
+                                    [details.oldData
+                                      .custbody_mig_new_internal_id]: {
+                                      ...prev[
+                                        details.oldData
+                                          .custbody_mig_new_internal_id
+                                      ],
+                                      steps: {
+                                        ...prev[
+                                          details.oldData
+                                            .custbody_mig_new_internal_id
+                                        ]?.steps,
+                                        relate: {
+                                          status: "error",
+                                          error: "ERROR ERROR",
+                                          timestamp: new Date(),
+                                        },
+                                      },
+                                    },
+                                  }));
+                                }
                               } catch (error) {
                                 toast.error(`Fetch failed: ${error.message}`);
                               }
