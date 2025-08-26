@@ -17,6 +17,8 @@ export async function POST(request) {
       internalId
     );
 
+    console.log("[InventoryAdjustment] New Record : ", record);
+
     // Fetch Inventory Items
     if (record.inventory?.links) {
       const sublistUrl = record.inventory.links.find(
@@ -47,7 +49,7 @@ export async function POST(request) {
 
 async function fetchRecord(accountId, token, recordType, internalId) {
   const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
-
+  console.log("Fetch New Record URL ", url);
   const response = await fetch(url, {
     method: "GET",
     headers: {

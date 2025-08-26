@@ -1011,6 +1011,16 @@ export default function DashboardOverview() {
                                   "View New Transaction: ",
                                   details.oldData.custbody_mig_new_internal_id
                                 );
+                                console.log("Transaction Type: ", trx.type);
+                                console.log(
+                                  "Transaction new Token: ",
+                                  newSession.token
+                                );
+                                console.log(
+                                  "Transaction new ID: ",
+                                  details.oldData.custbody_mig_new_internal_id
+                                );
+
                                 await fetchNewTransaction(
                                   trx.type,
                                   "11661334-sb1",
