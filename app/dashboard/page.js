@@ -15,6 +15,7 @@ import {
   FiChevronUp,
   FiPlay,
   FiStopCircle,
+  FiCircle,
 } from "react-icons/fi";
 import {
   createLotNumberMappings,
