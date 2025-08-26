@@ -981,7 +981,7 @@ export default function DashboardOverview() {
                                   "Process Transaction Type: ",
                                   trx.type
                                 );
-                                await processTransaction(trx.id, trx.type);
+                                await processTransaction(trx, trx.type);
                               } catch (error) {
                                 console.log(
                                   `Processing failed: ${error.message}`
