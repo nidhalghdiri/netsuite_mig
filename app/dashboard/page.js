@@ -586,11 +586,11 @@ export default function DashboardOverview() {
         // Update transaction details with new data
         setTransactionDetails((prev) => ({
           ...prev,
-          [createdTransactionId.internalId]: {
-            ...prev[createdTransactionId.internalId],
+          [transactionId]: {
+            ...prev[transactionId],
             newData: newTransaction,
             steps: {
-              ...prev[createdTransactionId.internalId]?.steps,
+              ...prev[transactionId]?.steps,
               relate: { status: "completed", timestamp: new Date() },
             },
           },
@@ -599,10 +599,10 @@ export default function DashboardOverview() {
         // Update transaction details with error
         setTransactionDetails((prev) => ({
           ...prev,
-          [createdTransactionId.internalId]: {
-            ...prev[createdTransactionId.internalId],
+          [transactionId]: {
+            ...prev[transactionId],
             steps: {
-              ...prev[createdTransactionId.internalId]?.steps,
+              ...prev[transactionId]?.steps,
               relate: {
                 status: "error",
                 error: "ERROR ERROR",
@@ -1032,18 +1032,11 @@ export default function DashboardOverview() {
                                   // Update transaction details with new data
                                   setTransactionDetails((prev) => ({
                                     ...prev,
-                                    [details.oldData
-                                      .custbody_mig_new_internal_id]: {
-                                      ...prev[
-                                        details.oldData
-                                          .custbody_mig_new_internal_id
-                                      ],
+                                    [trx.id]: {
+                                      ...prev[trx.id],
                                       newData: newTransaction,
                                       steps: {
-                                        ...prev[
-                                          details.oldData
-                                            .custbody_mig_new_internal_id
-                                        ]?.steps,
+                                        ...prev[trx.id]?.steps,
                                         relate: {
                                           status: "completed",
                                           timestamp: new Date(),
@@ -1055,17 +1048,10 @@ export default function DashboardOverview() {
                                   // Update transaction details with error
                                   setTransactionDetails((prev) => ({
                                     ...prev,
-                                    [details.oldData
-                                      .custbody_mig_new_internal_id]: {
-                                      ...prev[
-                                        details.oldData
-                                          .custbody_mig_new_internal_id
-                                      ],
+                                    [trx.id]: {
+                                      ...prev[trx.id],
                                       steps: {
-                                        ...prev[
-                                          details.oldData
-                                            .custbody_mig_new_internal_id
-                                        ]?.steps,
+                                        ...prev[trx.id]?.steps,
                                         relate: {
                                           status: "error",
                                           error: "ERROR ERROR",
@@ -1222,18 +1208,11 @@ export default function DashboardOverview() {
                                       // Update transaction details with new data
                                       setTransactionDetails((prev) => ({
                                         ...prev,
-                                        [details.oldData
-                                          .custbody_mig_new_internal_id]: {
-                                          ...prev[
-                                            details.oldData
-                                              .custbody_mig_new_internal_id
-                                          ],
+                                        [trx.id]: {
+                                          ...prev[trx.id],
                                           newData: newTransaction,
                                           steps: {
-                                            ...prev[
-                                              details.oldData
-                                                .custbody_mig_new_internal_id
-                                            ]?.steps,
+                                            ...prev[trx.id]?.steps,
                                             relate: {
                                               status: "completed",
                                               timestamp: new Date(),
@@ -1245,17 +1224,10 @@ export default function DashboardOverview() {
                                       // Update transaction details with error
                                       setTransactionDetails((prev) => ({
                                         ...prev,
-                                        [details.oldData
-                                          .custbody_mig_new_internal_id]: {
-                                          ...prev[
-                                            details.oldData
-                                              .custbody_mig_new_internal_id
-                                          ],
+                                        [trx.id]: {
+                                          ...prev[trx.id],
                                           steps: {
-                                            ...prev[
-                                              details.oldData
-                                                .custbody_mig_new_internal_id
-                                            ]?.steps,
+                                            ...prev[trx.id]?.steps,
                                             relate: {
                                               status: "error",
                                               error: "ERROR ERROR",
