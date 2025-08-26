@@ -436,6 +436,7 @@ function applyLotMapping(record, lotMapping, lotNumbers) {
         if (lotMapping[oldId]) {
           assignment.old_id = oldId;
           assignment.new_id = lotMapping[oldId];
+          assignment.refName = issueInventoryNumber.refName;
         }
       });
     }
