@@ -72,7 +72,7 @@ export async function POST(request) {
                         return {
                           internalId: ass.new_id,
                           quantity: ass.quantity,
-                          issueInventoryNumber: ass.refName,
+                          // issueInventoryNumber: ass.refName,
                         };
                       }
                       return {
