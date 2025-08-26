@@ -588,7 +588,7 @@ export default function DashboardOverview() {
           ...prev,
           [createdTransactionId.internalId]: {
             ...prev[createdTransactionId.internalId],
-            newData: data,
+            newData: newTransaction,
             steps: {
               ...prev[createdTransactionId.internalId]?.steps,
               relate: { status: "completed", timestamp: new Date() },
@@ -1041,7 +1041,7 @@ export default function DashboardOverview() {
                                         details.oldData
                                           .custbody_mig_new_internal_id
                                       ],
-                                      newData: data,
+                                      newData: newTransaction,
                                       steps: {
                                         ...prev[
                                           details.oldData
