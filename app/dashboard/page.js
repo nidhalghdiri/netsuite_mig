@@ -227,8 +227,8 @@ function getDefaultStatistics() {
 // Map NetSuite internal types to user-friendly names
 function mapRecordType(type) {
   const typeMap = {
-    InvAdjst: "Inventory Adjustment",
-    TrnfrOrd: "Transfer Order",
+    // InvAdjst: "Inventory Adjustment",
+    // TrnfrOrd: "Transfer Order",
     CashSale: "Cash Sale",
     CustCred: "Credit Memo",
     CustInvc: "Invoice",
