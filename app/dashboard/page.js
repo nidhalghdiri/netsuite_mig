@@ -1192,50 +1192,58 @@ export default function DashboardOverview() {
                               {details.oldData
                                 ?.custbody_mig_new_internal_id && (
                                 <button
-                                  onClick={() => {
-                                    const newTransaction = fetchNewTransaction(
-                                      trx.type,
-                                      "11661334-sb1",
-                                      newSession.token,
-                                      details.oldData
-                                        .custbody_mig_new_internal_id
-                                    );
-                                    if (newTransaction) {
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      const newTransaction =
+                                        await fetchNewTransaction(
+                                          trx.type,
+                                          "11661334-sb1",
+                                          newSession.token,
+                                          details.oldData
+                                            .custbody_mig_new_internal_id
+                                        );
+                                      if (newTransaction) {
+                                        console.log(
+                                          "fetchNewTransaction ",
+                                          newTransaction
+                                        );
+                                        // Update transaction details with new data
+                                        setTransactionDetails((prev) => ({
+                                          ...prev,
+                                          [trx.id]: {
+                                            ...prev[trx.id],
+                                            newData: newTransaction,
+                                            steps: {
+                                              ...prev[trx.id]?.steps,
+                                              relate: {
+                                                status: "completed",
+                                                timestamp: new Date(),
+                                              },
+                                            },
+                                          },
+                                        }));
+                                      } else {
+                                        // Update transaction details with error
+                                        setTransactionDetails((prev) => ({
+                                          ...prev,
+                                          [trx.id]: {
+                                            ...prev[trx.id],
+                                            steps: {
+                                              ...prev[trx.id]?.steps,
+                                              relate: {
+                                                status: "error",
+                                                error: "ERROR ERROR",
+                                                timestamp: new Date(),
+                                              },
+                                            },
+                                          },
+                                        }));
+                                      }
+                                    } catch (error) {
                                       console.log(
-                                        "fetchNewTransaction ",
-                                        newTransaction
+                                        `Fetch failed: ${error.message}`
                                       );
-                                      // Update transaction details with new data
-                                      setTransactionDetails((prev) => ({
-                                        ...prev,
-                                        [trx.id]: {
-                                          ...prev[trx.id],
-                                          newData: newTransaction,
-                                          steps: {
-                                            ...prev[trx.id]?.steps,
-                                            relate: {
-                                              status: "completed",
-                                              timestamp: new Date(),
-                                            },
-                                          },
-                                        },
-                                      }));
-                                    } else {
-                                      // Update transaction details with error
-                                      setTransactionDetails((prev) => ({
-                                        ...prev,
-                                        [trx.id]: {
-                                          ...prev[trx.id],
-                                          steps: {
-                                            ...prev[trx.id]?.steps,
-                                            relate: {
-                                              status: "error",
-                                              error: "ERROR ERROR",
-                                              timestamp: new Date(),
-                                            },
-                                          },
-                                        },
-                                      }));
                                     }
                                   }}
                                   className="w-full bg-purple-100 text-purple-800 hover:bg-purple-200 py-2 px-3 rounded-md text-sm flex items-center justify-center gap-2"
