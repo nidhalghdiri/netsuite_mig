@@ -69,11 +69,10 @@ export async function POST(request) {
                       if (ass.issueInventoryNumber && ass.new_id) {
                         // Use the new_id if available
                         return {
-                          // internalId: ass.new_id,
+                          internalId: ass.new_id,
                           quantity: ass.quantity,
-                          issueInventoryNumber: {
-                            id: ass.new_id,
-                          },
+                          issueInventoryNumber:
+                            ass.issueInventoryNumber.refName,
                         };
                       }
                       return {
