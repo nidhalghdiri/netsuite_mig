@@ -51,8 +51,31 @@ export async function POST(request) {
         record.item.items = await processItems(accountId, token, items);
       }
     }
+    // Get lot mapping if we have new credentials
+    let lotMapping = {};
+    try {
+      // Check if we have inventory details
+      const hasInventoryDetails = record.item?.items?.some(
+        (item) => item.inventoryDetail
+      );
+
+      if (hasInventoryDetails) {
+        lotMapping = await getLotMapping(accountId, token);
+        console.log("lotMapping", lotMapping);
+      }
+    } catch (error) {
+      console.error("Failed to get lot mapping, proceeding without it:", error);
+    }
 
     const expandedRecord = await expandReferences(accountId, token, record);
+    console.log("lotMapping: ", lotMapping);
+
+    // Apply lot mapping to inventory details
+    if (Object.keys(lotMapping).length > 0) {
+      const lotNumbers = await getLotNumbers(accountId, token, internalId);
+      console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
+      applyLotMapping(expandedRecord, lotMapping, lotNumbers);
+    }
 
     return NextResponse.json(expandedRecord);
   } catch (error) {
@@ -85,22 +108,36 @@ async function fetchRecord(accountId, token, recordType, internalId) {
 }
 
 async function fetchSublist(accountId, token, sublistUrl) {
-  const response = await fetch(sublistUrl, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Prefer: "transient",
-    },
-  });
+  try {
+    const response = await fetch(sublistUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Prefer: "transient",
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to fetch sublist: ${error.error.message}`);
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage =
+          errorData.error?.message ||
+          errorData.message ||
+          JSON.stringify(errorData);
+      } catch (e) {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(`Failed to fetch sublist: ${errorMessage}`);
+    }
+
+    const result = await response.json();
+    return result.items || [];
+  } catch (error) {
+    console.error("Error in fetchSublist:", error);
+    throw new Error(`Failed to fetch sublist: ${error.message}`);
   }
-
-  const result = await response.json();
-  return result.items || [];
 }
 
 async function expandReferences(accountId, token, record) {
@@ -286,19 +323,114 @@ async function processSingleAssignmentItem(accountId, token, item) {
 }
 
 async function fetchSublistItem(accountId, token, itemUrl) {
-  const response = await fetch(itemUrl, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Prefer: "transient",
-    },
-  });
+  try {
+    const response = await fetch(itemUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Prefer: "transient",
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to fetch sublist item: ${error.error.message}`);
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage =
+          errorData.error?.message ||
+          errorData.message ||
+          JSON.stringify(errorData);
+      } catch (e) {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(`Failed to fetch sublist item: ${errorMessage}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error in fetchSublistItem:", error);
+    throw new Error(`Failed to fetch sublist item: ${error.message}`);
   }
+}
 
-  return response.json();
+async function getLotMapping(accountId, token) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/lot-mapping`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get lot mapping");
+    }
+
+    const result = await response.json();
+    return result.lotMapping;
+  } catch (error) {
+    console.error("Error getting lot mapping:", error);
+    throw error;
+  }
+}
+
+async function getLotNumbers(accountId, token, tranId) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/lot-number`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          token,
+          tranId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get lot Numbers");
+    }
+
+    const result = await response.json();
+    return result.lotNumbers;
+  } catch (error) {
+    console.error("Error getting lot mapping:", error);
+    throw error;
+  }
+}
+
+function applyLotMapping(record, lotMapping, lotNumbers) {
+  if (!record.item?.items) return;
+
+  record.item.items.forEach((item) => {
+    var item_line = item.line;
+    // console.log(
+    //   "Process Item Line: [" +
+    //     item_line +
+    //     "] ==> " +
+    //     JSON.stringify(lotNumbers[item_line])
+    // );
+    if (item.inventoryDetail?.inventoryAssignment?.items) {
+      item.inventoryDetail.inventoryAssignment.items.forEach((assignment) => {
+        // Handle issueInventoryNumber
+        if (lotNumbers[item_line]) {
+          const oldId = lotNumbers[item_line].inventorynumberid;
+          if (lotMapping[oldId]) {
+            assignment.old_id = oldId;
+            assignment.new_id = lotMapping[oldId];
+          }
+        }
+      });
+    }
+  });
 }
