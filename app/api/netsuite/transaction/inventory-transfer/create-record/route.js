@@ -34,6 +34,7 @@ export async function POST(request) {
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
       memo: recordData.memo,
+      customForm: { id: "52" }, // Standard Inventory Transfer Form
       // currency: { id: recordData.currency.id },
       department: { id: recordData.department.new_id },
       // firmed: recordData.firmed,

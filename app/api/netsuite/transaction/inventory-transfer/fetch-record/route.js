@@ -63,7 +63,7 @@ export async function POST(request) {
     let lotMapping = {};
     try {
       // Check if we have inventory details
-      const hasInventoryDetails = record.item?.items?.some(
+      const hasInventoryDetails = record.inventory?.items?.some(
         (item) => item.inventoryDetail
       );
 
@@ -162,6 +162,9 @@ async function expandReferences(accountId, token, record) {
         recordType = "inventoryItem";
         newIdField = REFERENCE_FIELD_NEW_ID[field];
       } else if (field === "transferLocation") {
+        recordType = "location";
+        newIdField = REFERENCE_FIELD_NEW_ID["location"];
+      } else if (field === "toLocation") {
         recordType = "location";
         newIdField = REFERENCE_FIELD_NEW_ID["location"];
       } else {
