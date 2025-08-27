@@ -35,6 +35,7 @@ export async function POST(request) {
       tranDate: recordData.tranDate,
       memo: recordData.memo,
       account: { id: recordData.account.new_id },
+      entity: { id: recordData.entity.new_id },
       billAddress: recordData.billAddress,
       billingAddress_text: recordData.billingAddress_text,
       billingAddress_text: recordData.billingAddress_text,

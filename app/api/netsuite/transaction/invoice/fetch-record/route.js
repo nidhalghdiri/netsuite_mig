@@ -7,7 +7,6 @@ const REFERENCE_FIELDS = [
   "department",
   "location",
   "transferLocation",
-  "toLocation",
   "subsidiary",
   "item",
   "customer",
@@ -20,7 +19,6 @@ const REFERENCE_FIELD_NEW_ID = {
   department: "custrecord_mig_sandbox_new_internal_id_d",
   location: "custrecord_mig_sandbox_new_internal_id_l",
   transferLocation: "custrecord_mig_sandbox_new_internal_id_l",
-  toLocation: "custrecord_mig_sandbox_new_internal_id_l",
   customer: "custentity_mig_sandbox_new_internal_id_e",
   subsidiary: "custrecord_mig_sandbox_new_internal_id",
   account: "custrecord_mig_sandbox_new_internal_id_a",
@@ -159,9 +157,6 @@ async function expandReferences(accountId, token, record) {
         recordType = "inventoryItem";
         newIdField = REFERENCE_FIELD_NEW_ID[field];
       } else if (field === "transferLocation") {
-        recordType = "location";
-        newIdField = REFERENCE_FIELD_NEW_ID["location"];
-      } else if (field === "toLocation") {
         recordType = "location";
         newIdField = REFERENCE_FIELD_NEW_ID["location"];
       } else if (field === "salesRep") {
