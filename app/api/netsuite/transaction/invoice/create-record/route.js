@@ -34,37 +34,56 @@ export async function POST(request) {
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
       memo: recordData.memo,
-      customForm: { id: "52" }, // Standard Inventory Transfer Form
-      // currency: { id: recordData.currency.id },
-      department: { id: recordData.department.new_id },
-      // firmed: recordData.firmed,
-      // incoTerm: { id: recordData.incoTerm.id },
+      account: { id: recordData.account.new_id },
+      billAddress: recordData.billAddress,
+      billingAddress_text: recordData.billingAddress_text,
+      billingAddress_text: recordData.billingAddress_text,
+      currency: { id: recordData.currency.id },
+      custbody_customer_type: { id: recordData.custbody_customer_type.id },
+      custbody_is_aprl_req: { id: recordData.custbody_is_aprl_req.id },
+      custbody_og_invoice_date: recordData.custbody_og_invoice_date,
+      custbody_og_invtype: { id: recordData.custbody_og_invtype.id },
+      custbody_og_sales_discount_item:
+        recordData.custbody_og_sales_discount_item,
+      custbody_og_sales_subtotal: recordData.custbody_og_sales_subtotal,
+      custbody_og_sales_total: recordData.custbody_og_sales_total,
+      custbody_og_sales_total_lindscnt:
+        recordData.custbody_og_sales_total_lindscnt,
+      custbody_og_total_sales_quantity:
+        recordData.custbody_og_total_sales_quantity,
+      custbody_og_trans_amount_words: recordData.custbody_og_trans_amount_words,
+      custbody_ogg_transaction_printed:
+        recordData.custbody_ogg_transaction_printed,
+      dueDate: recordData.dueDate,
+      salesEffectiveDate: recordData.salesEffectiveDate,
+      salesRep: { id: recordData.salesRep.new_id },
       location: { id: recordData.location.new_id },
-      // shipAddress: recordData.shipAddress,
+      shipAddress: recordData.shipAddress,
       subsidiary: { id: recordData.subsidiary.new_id },
-      transferLocation: { id: recordData.transferLocation.new_id },
-      // useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
+      terms: { id: recordData.terms.id },
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
-      inventory: {
-        items: recordData.inventory.items.map((item) => ({
+      item: {
+        items: recordData.item.items.map((item) => ({
           item: { id: item.item.new_id },
-          // cseg2: { id: item.cseg2.id },
+          account: { id: item.account.new_id },
+          costEstimateType: { id: item.costEstimateType.id },
+          cseg2: { id: item.cseg2.id },
+          location: { id: item.location.new_id },
+          price: { id: item.price.id },
           description: item.description
             ? item.description.substring(0, 40)
             : "",
           // exchangeRate: item.exchangeRate,
           memo: item.memo ? item.memo.substring(0, 4000) : "",
           units: unitMapping[item.inventoryDetail.unit],
-          adjustQtyBy: item.adjustQtyBy,
-          // rate: item.rate,
-          // amount: item.amount,
+          rate: item.rate,
+          quantity: item.quantity,
           inventoryDetail: item.inventoryDetail
             ? {
                 quantity: item.inventoryDetail.quantity,
                 unit: unitMapping[item.inventoryDetail.unit],
                 location: { id: item.inventoryDetail.location.new_id },
-                toLocation: { id: item.inventoryDetail.toLocation.new_id },
                 inventoryAssignment: {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => {
@@ -103,8 +122,8 @@ export async function POST(request) {
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
     const idempotencyKey = randomUUID();
-    console.log("Create TRANSFERORDER URL ", url);
-    console.log("Create TRANSFERORDER idempotencyKey ", idempotencyKey);
+    console.log("Create INV URL ", url);
+    console.log("Create INV idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",

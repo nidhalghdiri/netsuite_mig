@@ -12,6 +12,7 @@ const REFERENCE_FIELDS = [
   "item",
   "customer",
   "employee",
+  "entity",
 ];
 
 const REFERENCE_FIELD_NEW_ID = {
@@ -32,30 +33,23 @@ const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
-  console.log("[inventoryTransfer] AccountId: ", accountId);
-  console.log("[inventoryTransfer] token: ", token);
-  console.log("[inventoryTransfer] internalId: ", internalId);
+  console.log("[invoice] AccountId: ", accountId);
+  console.log("[invoice] token: ", token);
+  console.log("[invoice] internalId: ", internalId);
 
   try {
     // Fetch Inventory Adjustment Fields
-    const record = await fetchRecord(
-      accountId,
-      token,
-      "inventoryTransfer",
-      internalId
-    );
+    const record = await fetchRecord(accountId, token, "invoice", internalId);
 
     // Fetch Inventory Items
-    if (record.inventory?.links) {
-      const sublistUrl = record.inventory.links.find(
-        (l) => l.rel === "self"
-      )?.href;
+    if (record.item?.links) {
+      const sublistUrl = record.item.links.find((l) => l.rel === "self")?.href;
       if (sublistUrl) {
-        // First fetch the list of inventory items
+        // First fetch the list of item items
         const items = await fetchSublist(accountId, token, sublistUrl);
 
         // Then fetch details for each inventory item
-        record.inventory.items = await processInventoryItems(
+        record.item.items = await processInventoryItems(
           accountId,
           token,
           items
@@ -66,7 +60,7 @@ export async function POST(request) {
     let lotMapping = {};
     try {
       // Check if we have inventory details
-      const hasInventoryDetails = record.inventory?.items?.some(
+      const hasInventoryDetails = record.item?.items?.some(
         (item) => item.inventoryDetail
       );
 
@@ -173,6 +167,9 @@ async function expandReferences(accountId, token, record) {
       } else if (field === "salesRep") {
         recordType = "employee";
         newIdField = REFERENCE_FIELD_NEW_ID["employee"];
+      } else if (field === "entity") {
+        recordType = "customer";
+        newIdField = REFERENCE_FIELD_NEW_ID["customer"];
       } else {
         recordType = field;
         newIdField = REFERENCE_FIELD_NEW_ID[field];
@@ -429,7 +426,7 @@ async function getLotNumbers(accountId, token, tranId) {
 function applyLotMapping(record, lotMapping, lotNumbers) {
   if (!record.item?.items) return;
 
-  record.inventory.items.forEach((item) => {
+  record.item.items.forEach((item) => {
     var item_line = item.line;
     // console.log(
     //   "Process Item Line: [" +
