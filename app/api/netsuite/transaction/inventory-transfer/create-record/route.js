@@ -46,7 +46,7 @@ export async function POST(request) {
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
       inventory: {
-        items: recordData.item.items.map((item) => ({
+        items: recordData.inventory.items.map((item) => ({
           item: { id: item.item.new_id },
           // cseg2: { id: item.cseg2.id },
           description: item.description
