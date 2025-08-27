@@ -231,7 +231,6 @@ function mapRecordType(type) {
     // TrnfrOrd: "Transfer Order",
     CashSale: "Cash Sale",
     CustCred: "Credit Memo",
-    CustInvc: "Invoice",
     SalesOrd: "Sales Order",
     RtnAuth: "Return Authorization",
     Estimate: "Estimate",
