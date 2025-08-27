@@ -65,7 +65,7 @@ async function fetchAllTransactions(account, token) {
                 transaction.ID = transactionLine.transaction
                 AND transactionLine.mainline = 'T'
                 AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS')
-                AND transaction.id IN ('2226', '2326', '2426', '2526', '2626', '2726', '2861', '2862', '2864', '2865', '2874', '2875')
+                AND transaction.id IN ('2226', '2326', '2426', '2526', '2626', '2726', '2861', '2862', '2864', '2865', '2874', '2875', '2876')
             ORDER BY 
                 transaction.createddate ASC`;
     const response = await fetchNetSuiteData(

@@ -8,7 +8,6 @@ import ComparisonView from "@/components/ComparisonView";
 
 const recordTypes = [
   { id: "salesorder", name: "Sales Orders" },
-  { id: "invoice", name: "Invoices" },
   { id: "purchaseorder", name: "Purchase Orders" },
   { id: "itemfulfillment", name: "Item Fulfillments" },
   { id: "inventoryadjustment", name: "Inventory Adjustments" },

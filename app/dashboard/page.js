@@ -389,11 +389,13 @@ export default function DashboardOverview() {
     InvAdjst: "inventory-adjustment",
     TrnfrOrd: "transfer-order",
     InvTrnfr: "inventory-transfer",
+    CustInvc: "invoice",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
     TrnfrOrd: "transferOrder",
     InvTrnfr: "inventoryTransfer",
+    CustInvc: "invoice",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
