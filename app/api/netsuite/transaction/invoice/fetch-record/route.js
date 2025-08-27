@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 // List of fields that contain references we want to expand
 const REFERENCE_FIELDS = [
+  "account",
   "class",
   "department",
   "location",
@@ -10,6 +11,7 @@ const REFERENCE_FIELDS = [
   "subsidiary",
   "item",
   "customer",
+  "employee",
 ];
 
 const REFERENCE_FIELD_NEW_ID = {
@@ -23,6 +25,7 @@ const REFERENCE_FIELD_NEW_ID = {
   account: "custrecord_mig_sandbox_new_internal_id_a",
   class: "custrecord_mig_sandbox_new_internal_id_c",
   item: "custitem_mig_sandbox_new_intenral_id_i",
+  employee: "custentity_mig_sandbox_new_internal_id_e",
 };
 
 const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
@@ -167,6 +170,9 @@ async function expandReferences(accountId, token, record) {
       } else if (field === "toLocation") {
         recordType = "location";
         newIdField = REFERENCE_FIELD_NEW_ID["location"];
+      } else if (field === "salesRep") {
+        recordType = "employee";
+        newIdField = REFERENCE_FIELD_NEW_ID["employee"];
       } else {
         recordType = field;
         newIdField = REFERENCE_FIELD_NEW_ID[field];
@@ -421,7 +427,7 @@ async function getLotNumbers(accountId, token, tranId) {
 }
 
 function applyLotMapping(record, lotMapping, lotNumbers) {
-  if (!record.inventory?.items) return;
+  if (!record.item?.items) return;
 
   record.inventory.items.forEach((item) => {
     var item_line = item.line;
