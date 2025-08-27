@@ -62,16 +62,18 @@ export async function POST(request) {
             ? {
                 quantity: item.inventoryDetail.quantity,
                 unit: unitMapping[item.inventoryDetail.unit],
+                location: { id: item.inventoryDetail.location.new_id },
+                toLocation: { id: item.inventoryDetail.toLocation.new_id },
                 inventoryAssignment: {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => {
                       // Check if we have a new_id for this lot number
-                      if (ass.issueInventoryNumber && ass.new_id) {
+                      if (ass.new_id) {
                         // Use the new_id if available
                         return {
                           internalId: ass.new_id,
                           quantity: ass.quantity,
-                          issueInventoryNumber: ass.refName.toString(),
+                          receiptInventoryNumber: ass.refName.toString(),
                         };
                       }
                       return {
@@ -84,8 +86,6 @@ export async function POST(request) {
                     //   receiptInventoryNumber: ass.receiptInventoryNumber,
                     // })
                   ),
-                  location: { id: item.inventoryDetail.location.new_id },
-                  toLocation: { id: item.inventoryDetail.toLocation.new_id },
                 },
               }
             : null,
