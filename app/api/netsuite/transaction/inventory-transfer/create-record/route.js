@@ -84,8 +84,8 @@ export async function POST(request) {
                     //   receiptInventoryNumber: ass.receiptInventoryNumber,
                     // })
                   ),
-                  location: { id: inventoryDetail.location.new_id },
-                  toLocation: { id: inventoryDetail.toLocation.new_id },
+                  location: { id: item.inventoryDetail.location.new_id },
+                  toLocation: { id: item.inventoryDetail.toLocation.new_id },
                 },
               }
             : null,
