@@ -48,7 +48,7 @@ export async function POST(request) {
     // Transform results into a mapping object
     const lotMapping = {};
     if (result.items && result.items.length > 0) {
-      console.log("lotMapping Response: ", JSON.stringify(result.items));
+      // console.log("lotMapping Response: ", JSON.stringify(result.items));
       result.items.forEach((item) => {
         // Map by both old ID and name for flexibility
         lotMapping[item.lot_old_id] = item.lot_new_id;

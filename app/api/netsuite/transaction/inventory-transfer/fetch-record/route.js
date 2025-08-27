@@ -423,7 +423,7 @@ async function getLotNumbers(accountId, token, tranId) {
 function applyLotMapping(record, lotMapping, lotNumbers) {
   if (!record.item?.items) return;
 
-  record.item.items.forEach((item) => {
+  record.inventory.items.forEach((item) => {
     var item_line = item.line;
     // console.log(
     //   "Process Item Line: [" +
