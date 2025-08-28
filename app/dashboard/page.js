@@ -868,7 +868,7 @@ export default function DashboardOverview() {
               // unitCost: 48.68,
               description: itemName,
               memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
-              units: unitMapping[item.units],
+              units: item.units,
               inventoryDetail: {
                 inventoryAssignment: {
                   items: [
@@ -882,7 +882,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: itemName,
                 quantity: shortfall,
-                unit: unitMapping[item.units],
+                unit: item.units,
               },
             },
           ],
