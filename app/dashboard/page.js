@@ -389,12 +389,14 @@ export default function DashboardOverview() {
     TrnfrOrd: "transfer-order",
     InvTrnfr: "inventory-transfer",
     CustInvc: "invoice",
+    Journal: "journal",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
     TrnfrOrd: "transferOrder",
     InvTrnfr: "inventoryTransfer",
     CustInvc: "invoice",
+    Journal: "journalEntry",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
@@ -544,149 +546,182 @@ export default function DashboardOverview() {
       console.log("lotNumbers", lotNumbers);
 
       await delay(1000);
+      try {
+        // Step 3 : Create New Transaction
+        const createdTransactionURL = await createTransaction(
+          oldAccountID,
+          oldToken,
+          newAccountID,
+          newToken,
+          recordType,
+          RECORDS_TYPE[recordType],
+          transactionData,
+          unitMapping,
+          lotNumbers
+        );
+        console.log("createTransaction URL", createdTransactionURL.jobUrl);
+        console.log("MSG: ", createdTransactionURL.message);
 
-      // Step 3 : Create New Transaction
-      const createdTransactionURL = await createTransaction(
-        oldAccountID,
-        oldToken,
-        newAccountID,
-        newToken,
-        recordType,
-        RECORDS_TYPE[recordType],
-        transactionData,
-        unitMapping,
-        lotNumbers
-      );
-      console.log("createTransaction URL", createdTransactionURL.jobUrl);
-      console.log("MSG: ", createdTransactionURL.message);
+        const createdTransactionId = await getInternalID(
+          createdTransactionURL.jobUrl,
+          newToken
+        );
+        console.log("createTransaction ID", createdTransactionId);
 
-      const createdTransactionId = await getInternalID(
-        createdTransactionURL.jobUrl,
-        newToken
-      );
-      console.log("createTransaction ID", createdTransactionId);
-
-      // Update step status
-      setTransactionDetails((prev) => ({
-        ...prev,
-        [transactionId]: {
-          ...prev[transactionId],
-          steps: {
-            ...prev[transactionId]?.steps,
-            create: { status: "completed", timestamp: new Date() },
-          },
-        },
-      }));
-      await delay(1000);
-
-      // Step 4 : Ftech New Transaction
-      const newTransaction = await fetchNewTransaction(
-        recordType,
-        newAccountID,
-        newToken,
-        createdTransactionId.internalId
-      );
-      console.log("newTransaction Data", newTransaction);
-      if (newTransaction) {
-        // Update transaction details with new data
+        // Update step status
         setTransactionDetails((prev) => ({
           ...prev,
           [transactionId]: {
             ...prev[transactionId],
-            newData: newTransaction,
             steps: {
               ...prev[transactionId]?.steps,
-              relate: { status: "completed", timestamp: new Date() },
+              create: { status: "completed", timestamp: new Date() },
             },
           },
         }));
-      } else {
-        // Update transaction details with error
+        await delay(1000);
+
+        // Step 4 : Ftech New Transaction
+        const newTransaction = await fetchNewTransaction(
+          recordType,
+          newAccountID,
+          newToken,
+          createdTransactionId.internalId
+        );
+        console.log("newTransaction Data", newTransaction);
+        if (newTransaction) {
+          // Update transaction details with new data
+          setTransactionDetails((prev) => ({
+            ...prev,
+            [transactionId]: {
+              ...prev[transactionId],
+              newData: newTransaction,
+              steps: {
+                ...prev[transactionId]?.steps,
+                relate: { status: "completed", timestamp: new Date() },
+              },
+            },
+          }));
+        } else {
+          // Update transaction details with error
+          setTransactionDetails((prev) => ({
+            ...prev,
+            [transactionId]: {
+              ...prev[transactionId],
+              steps: {
+                ...prev[transactionId]?.steps,
+                relate: {
+                  status: "error",
+                  error: "ERROR ERROR",
+                  timestamp: new Date(),
+                },
+              },
+            },
+          }));
+        }
+
+        const lotNumbersToMap = createdTransactionURL.lotNumbersToMap;
+        console.log("lotNumbersToMap: ", lotNumbersToMap);
+
+        await delay(1000);
+
+        // Step 5 : get Lot Numbers (New System)
+        const newLotNumbers = await getLotNumbers(
+          newAccountID,
+          newToken,
+          newTransaction.id
+        );
+        console.log("newLotNumbers", newLotNumbers);
+
+        await delay(1000);
+
+        // Step 6 : create Lot Number Mappings
+
+        if (lotNumbersToMap.length > 0) {
+          await createLotNumberMappings(
+            oldAccountID,
+            oldToken,
+            newTransaction,
+            lotNumbersToMap,
+            newLotNumbers
+          );
+        }
+
+        console.info(
+          "Create Transaction [" + transactionData.tranId + "] Process Done!!"
+        );
+
+        // Step 7 : Update the New ID in the Old Transaction
+        var updatedTransaction = await updateTransaction(
+          oldAccountID,
+          oldToken,
+          recordType,
+          RECORDS_TYPE[recordType],
+          transactionId,
+          newTransaction.id
+        );
+
+        const updatedTransactionId = await getInternalID(
+          updatedTransaction.jobUrl,
+          oldToken
+        );
+        console.log("Updated Transaction ID", updatedTransactionId);
+
+        // Step 8: Compare transactions
+        const comparisonResults = compareTransactions(
+          transactionData,
+          newTransaction
+        );
         setTransactionDetails((prev) => ({
           ...prev,
           [transactionId]: {
             ...prev[transactionId],
+            comparison: comparisonResults,
             steps: {
               ...prev[transactionId]?.steps,
-              relate: {
-                status: "error",
-                error: "ERROR ERROR",
+              compare: {
+                status: comparisonResults.every((r) => r.status === "match")
+                  ? "completed"
+                  : "completed-with-issues",
                 timestamp: new Date(),
+                results: comparisonResults,
               },
             },
           },
         }));
+      } catch (error) {
+        try {
+          const errorDetails = JSON.parse(error.message);
+          if (errorDetails.isInventoryError) {
+            // Extract the available quantity from the error message
+            const errorMessage =
+              errorDetails.details["o:errorDetails"][0].detail;
+            const availableMatch = errorMessage.match(
+              /You only have (\d+) available/
+            );
+            if (availableMatch) {
+              const availableQty = parseInt(availableMatch[1]);
+              console.log(
+                `Inventory quantity error: ${availableQty} available`
+              );
+              // Call your function to handle inventory adjustment
+              await handleInventoryAdjustment(
+                transactionData,
+                availableQty,
+                errorDetails.details["o:errorDetails"][0]["o:errorPath"]
+              );
+
+              // Optionally retry the transaction or take other action
+              return; // Exit early since we're handling this specially
+            }
+          }
+          // If not an inventory error, rethrow
+          throw error;
+        } catch (parseError) {
+          // If we can't parse the error, just rethrow the original
+          throw error;
+        }
       }
-
-      const lotNumbersToMap = createdTransactionURL.lotNumbersToMap;
-      console.log("lotNumbersToMap: ", lotNumbersToMap);
-
-      await delay(1000);
-
-      // Step 5 : get Lot Numbers (New System)
-      const newLotNumbers = await getLotNumbers(
-        newAccountID,
-        newToken,
-        newTransaction.id
-      );
-      console.log("newLotNumbers", newLotNumbers);
-
-      await delay(1000);
-
-      // Step 6 : create Lot Number Mappings
-
-      if (lotNumbersToMap.length > 0) {
-        await createLotNumberMappings(
-          oldAccountID,
-          oldToken,
-          newTransaction,
-          lotNumbersToMap,
-          newLotNumbers
-        );
-      }
-
-      console.info(
-        "Create Transaction [" + transactionData.tranId + "] Process Done!!"
-      );
-
-      // Step 7 : Update the New ID in the Old Transaction
-      var updatedTransaction = await updateTransaction(
-        oldAccountID,
-        oldToken,
-        recordType,
-        RECORDS_TYPE[recordType],
-        transactionId,
-        newTransaction.id
-      );
-
-      const updatedTransactionId = await getInternalID(
-        updatedTransaction.jobUrl,
-        oldToken
-      );
-      console.log("Updated Transaction ID", updatedTransactionId);
-
-      // Step 8: Compare transactions
-      const comparisonResults = compareTransactions(
-        transactionData,
-        newTransaction
-      );
-      setTransactionDetails((prev) => ({
-        ...prev,
-        [transactionId]: {
-          ...prev[transactionId],
-          comparison: comparisonResults,
-          steps: {
-            ...prev[transactionId]?.steps,
-            compare: {
-              status: comparisonResults.every((r) => r.status === "match")
-                ? "completed"
-                : "completed-with-issues",
-              timestamp: new Date(),
-              results: comparisonResults,
-            },
-          },
-        },
-      }));
     } catch (error) {
       console.error("Processing error:", error);
       // Update step status with error
@@ -709,6 +744,48 @@ export default function DashboardOverview() {
       setIsProcessing(false);
       setProcessingId(null);
     }
+  };
+
+  const handleInventoryAdjustment = async (
+    transactionData,
+    availableQty,
+    errorPath
+  ) => {
+    console.log("Handling inventory adjustment:", availableQty, errorPath);
+
+    // // Extract item information from the error path
+    // const itemMatch = errorPath.match(/internalId==(\d+)/);
+    // const itemInternalId = itemMatch ? itemMatch[1] : null;
+
+    // // Here you can:
+    // // 1. Update the UI to show the inventory issue
+    // // 2. Adjust the quantity in the transaction data
+    // // 3. Create an inventory adjustment transaction
+    // // 4. Or take any other appropriate action
+
+    // // Example: Update transaction details with the error
+    // setTransactionDetails((prev) => ({
+    //   ...prev,
+    //   [transactionData.id]: {
+    //     ...prev[transactionData.id],
+    //     inventoryError: {
+    //       availableQty,
+    //       itemInternalId,
+    //       message: `Only ${availableQty} units available for item ${itemInternalId}`
+    //     },
+    //     steps: {
+    //       ...prev[transactionData.id]?.steps,
+    //       create: {
+    //         status: "inventory-error",
+    //         error: `Inventory quantity issue: Only ${availableQty} available`,
+    //         timestamp: new Date(),
+    //       },
+    //     },
+    //   },
+    // }));
+
+    // // You might also want to call another function here
+    // await createInventoryAdjustment(transactionData, availableQty, itemInternalId);
   };
 
   return (

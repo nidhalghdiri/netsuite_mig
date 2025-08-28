@@ -21,35 +21,55 @@ export async function POST(request) {
       },
     });
     // Handle 204 No Content response
-    if (resultResponse.status === 204) {
-      const recordLocation = resultResponse.headers.get("Location");
-      if (!recordLocation) {
-        throw new Error("Location header not found in result response");
+    if (resultResponse.status !== 204) {
+      const errorText = await resultResponse.text();
+      let errorDetails;
+      try {
+        errorDetails = JSON.parse(errorText);
+      } catch (e) {
+        errorDetails = { error: errorText };
       }
+      console.log("[Get-Status] ERROR: ", errorDetails);
 
-      console.log("Record location header:", recordLocation);
-
-      // Step 3: Extract internal ID from record location
-      const internalId = recordLocation.substring(
-        recordLocation.lastIndexOf("/") + 1
+      // Check if this is an inventory quantity error
+      const isInventoryError = errorDetails["o:errorDetails"]?.some(
+        (detail) =>
+          detail.detail?.includes("You only have") &&
+          detail.detail?.includes("available")
       );
+      console.log("[Get-Status] isInventoryError: ", isInventoryError);
 
-      if (!internalId || isNaN(internalId)) {
-        throw new Error("Invalid internal ID format: " + internalId);
-      }
-
-      console.log("Created record internal ID:", internalId);
-
-      return NextResponse.json({
-        success: true,
-        internalId,
-      });
+      return NextResponse.json(
+        {
+          error: "NetSuite Error",
+          details: errorDetails,
+          isInventoryError: isInventoryError,
+        },
+        { status: resultResponse.status }
+      );
     }
-    // Handle unexpected responses
-    const resultText = await resultResponse.text();
-    throw new Error(
-      `Unexpected result response: ${resultResponse.status} - ${resultText}`
+    const recordLocation = resultResponse.headers.get("Location");
+    if (!recordLocation) {
+      throw new Error("Location header not found in result response");
+    }
+
+    console.log("Record location header:", recordLocation);
+
+    // Step 3: Extract internal ID from record location
+    const internalId = recordLocation.substring(
+      recordLocation.lastIndexOf("/") + 1
     );
+
+    if (!internalId || isNaN(internalId)) {
+      throw new Error("Invalid internal ID format: " + internalId);
+    }
+
+    console.log("Created record internal ID:", internalId);
+
+    return NextResponse.json({
+      success: true,
+      internalId,
+    });
   } catch (error) {
     console.error("Error Get Status:", error);
     return NextResponse.json(
