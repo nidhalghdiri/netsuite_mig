@@ -844,13 +844,11 @@ export default function DashboardOverview() {
         tranId: `IANEW-${itemId}-${assignmentId}`,
         tranDate: transactionData.tranDate,
         memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
-        account: {
-          id: "3843",
-          refName: "5555 ضبط مخزون النظام الجديد",
-          new_id: 3843,
-        },
         subsidiary: {
           id: transactionData.subsidiary.new_id,
+        },
+        account: {
+          new_id: "3843",
         },
         adjLocation: {
           id: locationId,
@@ -890,6 +888,7 @@ export default function DashboardOverview() {
           ],
         },
       };
+      console.log("INVAdjust Data: ", invAdjustData);
 
       const createdTransactionURL = await createTransaction(
         oldAccountID,
