@@ -38,12 +38,9 @@ export async function POST(request) {
       entity: { id: recordData.entity.new_id },
       billAddress: recordData.billAddress,
       billingAddress_text: recordData.billingAddress_text,
-      billingAddress_text: recordData.billingAddress_text,
       currency: { id: recordData.currency.id },
       custbody_customer_type: { id: recordData.custbody_customer_type.id },
-      custbody_is_aprl_req: { id: recordData.custbody_is_aprl_req.id },
       custbody_og_invoice_date: recordData.custbody_og_invoice_date,
-      custbody_og_invtype: { id: recordData.custbody_og_invtype.id },
       custbody_og_sales_discount_item:
         recordData.custbody_og_sales_discount_item,
       custbody_og_sales_subtotal: recordData.custbody_og_sales_subtotal,
@@ -61,7 +58,7 @@ export async function POST(request) {
       location: { id: recordData.location.new_id },
       shipAddress: recordData.shipAddress,
       subsidiary: { id: recordData.subsidiary.new_id },
-      terms: { id: recordData.terms.id },
+      // terms: { id: recordData.terms.id },
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
       item: {

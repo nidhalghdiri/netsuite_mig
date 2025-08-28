@@ -12,6 +12,7 @@ const REFERENCE_FIELDS = [
   "customer",
   "employee",
   "entity",
+  "salesRep",
 ];
 
 const REFERENCE_FIELD_NEW_ID = {
