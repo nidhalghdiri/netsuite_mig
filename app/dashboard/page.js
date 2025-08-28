@@ -840,7 +840,7 @@ export default function DashboardOverview() {
       });
 
       var invAdjustData = {
-        externalId: "",
+        externalId: `IANEW-${itemId}-${assignmentId}`,
         tranId: `IANEW-${itemId}-${assignmentId}`,
         tranDate: transactionData.tranDate,
         memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
