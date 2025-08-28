@@ -708,7 +708,13 @@ export default function DashboardOverview() {
               await handleInventoryAdjustment(
                 transactionData,
                 availableQty,
-                errorDetails.details["o:errorDetails"][0]["o:errorPath"]
+                errorDetails.details["o:errorDetails"][0]["o:errorPath"],
+                unitMapping,
+                lotNumbers,
+                oldAccountID,
+                oldToken,
+                newAccountID,
+                newToken
               );
 
               // Optionally retry the transaction or take other action
@@ -749,7 +755,13 @@ export default function DashboardOverview() {
   const handleInventoryAdjustment = async (
     transactionData,
     availableQty,
-    errorPath
+    errorPath,
+    unitMapping,
+    lotNumbers,
+    oldAccountID,
+    oldToken,
+    newAccountID,
+    newToken
   ) => {
     console.log("Handling inventory adjustment:", availableQty, errorPath);
 
@@ -774,7 +786,7 @@ export default function DashboardOverview() {
 
     // Find the specific inventory assignment
     const assignment = item.inventoryDetail.inventoryAssignment.items.find(
-      (a) => a.internalId === assignmentId
+      (a) => a.new_id == assignmentId
     );
 
     if (!assignment) {
@@ -784,10 +796,16 @@ export default function DashboardOverview() {
 
     // Extract the needed information
     const quantityNeeded = assignment.quantity;
+    const assignmentName = assignment.refName;
     const shortfall = quantityNeeded - availableQty;
-    const itemId = item.item.id;
+    const itemId = item.item.new_id;
     const itemName = item.item.refName;
-    const locationId = assignment.location ? assignment.location.id : null;
+    const locationId = item.inventoryDetail.location
+      ? item.inventoryDetail.location.new_id
+      : null;
+    const locationName = item.inventoryDetail.location
+      ? item.inventoryDetail.location.refName
+      : null;
 
     console.log("Inventory adjustment details:", {
       itemId,
@@ -799,43 +817,89 @@ export default function DashboardOverview() {
       locationId,
     });
 
-    // Update transaction details with the error
-    // setTransactionDetails((prev) => ({
-    //   ...prev,
-    //   [transactionData.id]: {
-    //     ...prev[transactionData.id],
-    //     inventoryError: {
-    //       itemId,
-    //       itemName,
-    //       assignmentId,
-    //       quantityNeeded,
-    //       availableQty,
-    //       shortfall,
-    //       locationId,
-    //       message: `Item ${itemName} (${itemId}): Needed ${quantityNeeded}, but only ${availableQty} available (shortfall: ${shortfall})`
-    //     },
-    //     steps: {
-    //       ...prev[transactionData.id]?.steps,
-    //       create: {
-    //         status: "inventory-error",
-    //         error: `Inventory quantity issue: ${quantityNeeded} needed, but only ${availableQty} available for item ${itemName}`,
-    //         timestamp: new Date(),
-    //       },
-    //     },
-    //   },
-    // }));
+    var invAdjustData = {
+      externalId: "",
+      tranId: `IANEW-${itemId}-${assignmentId}`,
+      tranDate: transactionData.tranDate,
+      memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
+      account: {
+        id: "3843",
+        refName: "5555 ضبط مخزون النظام الجديد",
+        new_id: 3843,
+      },
+      subsidiary: {
+        id: data.subsidiary.new_id,
+        refName: data.subsidiary.refName,
+        new_id: data.subsidiary.new_id,
+      },
+      adjLocation: {
+        id: locationId,
+        refName: locationName,
+        new_id: locationId,
+      },
+      inventory: {
+        items: [
+          {
+            item: {
+              new_id: itemId,
+            },
+            location: {
+              new_id: locationId,
+            },
+            adjustQtyBy: shortfall,
+            // unitCost: 48.68,
+            description: itemName,
+            memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
+            units: unitMapping[item.units],
+            costingMethod: "AVG",
+            currentValue: 5208.76,
+            exchangeRate: 1,
+            inventoryDetail: {
+              inventoryAssignment: {
+                items: [
+                  {
+                    internalId: assignmentId,
+                    quantity: shortfall,
+                    receiptInventoryNumber: assignmentName,
+                    new_id: assignmentId,
+                  },
+                ],
+              },
+              itemDescription: itemName,
+              quantity: shortfall,
+              unit: unitMapping[item.units],
+            },
+          },
+        ],
+      },
+    };
 
-    // Call your function to handle inventory adjustment
-    // await createInventoryAdjustment(
-    //   transactionData,
-    //   itemId,
-    //   itemName,
-    //   assignmentId,
-    //   quantityNeeded,
-    //   availableQty,
-    //   shortfall,
-    //   locationId
-    // );
+    try {
+      const createdTransactionURL = await createTransaction(
+        oldAccountID,
+        oldToken,
+        newAccountID,
+        newToken,
+        "InvAdjst",
+        RECORDS_TYPE["InvAdjst"],
+        invAdjustData,
+        unitMapping,
+        lotNumbers
+      );
+      console.log(
+        "create InvAdjst Transaction URL",
+        createdTransactionURL.jobUrl
+      );
+      console.log("MSG InvAdjst: ", createdTransactionURL.message);
+
+      const createdTransactionId = await getInternalID(
+        createdTransactionURL.jobUrl,
+        newToken
+      );
+      console.log("create InvAdjst Transactio ID", createdTransactionId);
+    } catch (error) {
+      console.error("Handle Inventory Adjustment ERROR: ", error);
+    }
   };
 
   return (
