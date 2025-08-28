@@ -753,39 +753,89 @@ export default function DashboardOverview() {
   ) => {
     console.log("Handling inventory adjustment:", availableQty, errorPath);
 
-    // // Extract item information from the error path
-    // const itemMatch = errorPath.match(/internalId==(\d+)/);
-    // const itemInternalId = itemMatch ? itemMatch[1] : null;
+    // Parse the error path to extract the item index and assignment ID
+    const itemMatch = errorPath.match(/item\.items\[(\d+)\]/);
+    const assignmentMatch = errorPath.match(/internalId==(\d+)/);
 
-    // // Here you can:
-    // // 1. Update the UI to show the inventory issue
-    // // 2. Adjust the quantity in the transaction data
-    // // 3. Create an inventory adjustment transaction
-    // // 4. Or take any other appropriate action
+    const itemIndex = itemMatch ? parseInt(itemMatch[1]) : 0;
+    const assignmentId = assignmentMatch ? parseInt(assignmentMatch[1]) : null;
 
-    // // Example: Update transaction details with the error
+    // Get the specific item from the transaction data
+    const item = transactionData.item.items[itemIndex];
+
+    if (
+      !item ||
+      !item.inventoryDetail ||
+      !item.inventoryDetail.inventoryAssignment
+    ) {
+      console.error("Could not find inventory details for the item");
+      return;
+    }
+
+    // Find the specific inventory assignment
+    const assignment = item.inventoryDetail.inventoryAssignment.items.find(
+      (a) => a.internalId === assignmentId
+    );
+
+    if (!assignment) {
+      console.error("Could not find the specific inventory assignment");
+      return;
+    }
+
+    // Extract the needed information
+    const quantityNeeded = assignment.quantity;
+    const shortfall = quantityNeeded - availableQty;
+    const itemId = item.item.id;
+    const itemName = item.item.refName;
+    const locationId = assignment.location ? assignment.location.id : null;
+
+    console.log("Inventory adjustment details:", {
+      itemId,
+      itemName,
+      assignmentId,
+      quantityNeeded,
+      availableQty,
+      shortfall,
+      locationId,
+    });
+
+    // Update transaction details with the error
     // setTransactionDetails((prev) => ({
     //   ...prev,
     //   [transactionData.id]: {
     //     ...prev[transactionData.id],
     //     inventoryError: {
+    //       itemId,
+    //       itemName,
+    //       assignmentId,
+    //       quantityNeeded,
     //       availableQty,
-    //       itemInternalId,
-    //       message: `Only ${availableQty} units available for item ${itemInternalId}`
+    //       shortfall,
+    //       locationId,
+    //       message: `Item ${itemName} (${itemId}): Needed ${quantityNeeded}, but only ${availableQty} available (shortfall: ${shortfall})`
     //     },
     //     steps: {
     //       ...prev[transactionData.id]?.steps,
     //       create: {
     //         status: "inventory-error",
-    //         error: `Inventory quantity issue: Only ${availableQty} available`,
+    //         error: `Inventory quantity issue: ${quantityNeeded} needed, but only ${availableQty} available for item ${itemName}`,
     //         timestamp: new Date(),
     //       },
     //     },
     //   },
     // }));
 
-    // // You might also want to call another function here
-    // await createInventoryAdjustment(transactionData, availableQty, itemInternalId);
+    // Call your function to handle inventory adjustment
+    // await createInventoryAdjustment(
+    //   transactionData,
+    //   itemId,
+    //   itemName,
+    //   assignmentId,
+    //   quantityNeeded,
+    //   availableQty,
+    //   shortfall,
+    //   locationId
+    // );
   };
 
   return (
