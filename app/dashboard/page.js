@@ -845,7 +845,7 @@ export default function DashboardOverview() {
         tranDate: transactionData.tranDate,
         memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
         subsidiary: {
-          id: transactionData.subsidiary.new_id,
+          new_id: transactionData.subsidiary.new_id,
         },
         account: {
           new_id: "3843",
