@@ -28,6 +28,8 @@ export async function POST(request) {
       custrecord_mig_lot_number_old_id: parseInt(mapping.old_id),
       custrecord_mig_lot_number_new_id: parseInt(mapping.new_id),
       custrecord_mig_lot_number_name: mapping.refName || "",
+      custrecord_mig_lot_number_item_id: mapping.itemId || "",
+      custrecord_mig_lot_number_item_name: mapping.itemName || "",
     };
 
     console.log(
