@@ -692,12 +692,19 @@ export default function DashboardOverview() {
       } catch (error) {
         try {
           const errorDetails = JSON.parse(error.message);
+
           if (errorDetails.isInventoryError) {
             // Extract the available quantity from the error message
             const errorMessage =
               errorDetails.details["o:errorDetails"][0].detail;
+
+            // Pattern 1: "You only have X available"
             const availableMatch = errorMessage.match(
               /You only have (\d+) available/
+            );
+            // Pattern 2: "Inventory numbers are not available" with details
+            const negativeInventoryMatch = errorMessage.match(
+              /Item:(\d+), Number:(\d+), Quantity:(\d+), On Hand:(-?\d+), Committed:/
             );
             if (availableMatch) {
               const availableQty = parseInt(availableMatch[1]);
@@ -736,6 +743,77 @@ export default function DashboardOverview() {
 
               // Optionally retry the transaction or take other action
               return; // Exit early since we're handling this specially
+            } else if (negativeInventoryMatch) {
+              // Handle the new negative inventory pattern
+              const itemId = negativeInventoryMatch[1];
+              const lotNumber = negativeInventoryMatch[2];
+              const requestedQty = parseInt(negativeInventoryMatch[3]);
+              console.log(
+                `Negative inventory for Item [${itemId}] error: Requested ${requestedQty} for Lot Number [${lotNumber}]`
+              );
+
+              // Find the item in transactionData
+              const foundItem = transactionData.item.items.find(
+                (item) =>
+                  item.item.refName.includes(itemId) || item.item.id == itemId
+              );
+
+              if (!foundItem) {
+                throw new Error(
+                  `Item with ID ${itemId} not found in transaction data`
+                );
+              }
+              // Get the new item ID
+              const newItemId = foundItem.item.new_id;
+              const newItemName = foundItem.item.refName;
+              console.log(
+                `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
+              );
+
+              // Find the lot in inventory assignments
+              let oldLotId = null;
+              let newLotId = null;
+              let newLotName = null;
+              let locationId = null;
+              let locationName = null;
+              if (
+                foundItem.inventoryDetail &&
+                foundItem.inventoryDetail.inventoryAssignment
+              ) {
+                const foundLot =
+                  foundItem.inventoryDetail.inventoryAssignment.items.find(
+                    (lot) => lot.issueInventoryNumber.refName == lotNumber
+                  );
+                if (foundLot) {
+                  oldLotId = foundLot.old_id;
+                  newLotId = foundLot.new_id;
+                  newLotName = foundLot.refName;
+                  console.log(`Found lot: ${lotNumber}, New ID: ${newLotId}`);
+                }
+                locationId = foundItem.inventoryDetail.location.new_id;
+                locationName = foundItem.inventoryDetail.location.refName;
+              }
+              const adjustmentQty = requestedQty;
+              // Call function to create inventory adjustment
+
+              await handleNegativeInventoryAdjustment(
+                transactionData,
+                foundItem,
+                newItemId,
+                newItemName,
+                oldLotId,
+                newLotId,
+                newLotName,
+                locationId,
+                locationName,
+                adjustmentQty,
+                unitMapping,
+                lotNumbers,
+                oldAccountID,
+                oldToken,
+                newAccountID,
+                newToken
+              );
             }
           }
           // If not an inventory error, rethrow
@@ -918,6 +996,105 @@ export default function DashboardOverview() {
       throw new Error(`Inventory adjustment failed: ${error.message}`);
     }
   };
+  async function handleNegativeInventoryAdjustment(
+    transactionData,
+    foundItem,
+    newItemId,
+    newItemName,
+    oldLotId,
+    newLotId,
+    newLotName,
+    locationId,
+    locationName,
+    adjustmentQty,
+    unitMapping,
+    lotNumbers,
+    oldAccountID,
+    oldToken,
+    newAccountID,
+    newToken
+  ) {
+    try {
+      // Build the inventory adjustment object
+      var invAdjustData = {
+        externalId: `IANEW-${newItemId}-${newLotId}`,
+        tranId: `IANEW-${newItemId}-${newLotId}`,
+        tranDate: transactionData.tranDate,
+        memo: `معالجة مخزون الصنف ${newItemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${newLotId} \n بكمية ${adjustmentQty}`,
+        subsidiary: {
+          new_id: transactionData.subsidiary.new_id,
+        },
+        account: {
+          new_id: "3843",
+        },
+        adjLocation: {
+          id: locationId,
+          refName: locationName,
+          new_id: locationId,
+        },
+        inventory: {
+          items: [
+            {
+              item: {
+                new_id: newItemId,
+              },
+              location: {
+                new_id: locationId,
+              },
+              adjustQtyBy: adjustmentQty,
+              // unitCost: 48.68,
+              description: newItemName,
+              memo: `معالجة مخزون الصنف ${newItemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${newLotId} \n بكمية ${adjustmentQty}`,
+              units: foundItem.units,
+              inventoryDetail: {
+                inventoryAssignment: {
+                  items: [
+                    {
+                      internalId: newLotId,
+                      quantity: adjustmentQty,
+                      receiptInventoryNumber: newLotName,
+                      new_id: newLotId,
+                    },
+                  ],
+                },
+                itemDescription: newItemName,
+                quantity: adjustmentQty,
+                unit: foundItem.units,
+              },
+            },
+          ],
+        },
+      };
+      console.log("INVAdjust Data: ", invAdjustData);
+
+      const createdTransactionURL = await createTransaction(
+        oldAccountID,
+        oldToken,
+        newAccountID,
+        newToken,
+        "InvAdjst",
+        RECORDS_TYPE["InvAdjst"],
+        invAdjustData,
+        unitMapping,
+        lotNumbers
+      );
+      console.log(
+        "create InvAdjst Transaction URL",
+        createdTransactionURL.jobUrl
+      );
+      console.log("MSG InvAdjst: ", createdTransactionURL.message);
+      const createdTransactionId = await getInternalID(
+        createdTransactionURL.jobUrl,
+        newToken
+      );
+
+      console.log("create InvAdjst Transactio ID", createdTransactionId);
+      return { success: true, adjustmentId: createdTransactionId.internalId };
+    } catch (error) {
+      console.error("Handle Negative Inventory Adjustment ERROR: ", error);
+      throw new Error(`Inventory adjustment failed: ${error.message}`);
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto text-black">

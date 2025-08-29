@@ -32,11 +32,18 @@ export async function POST(request) {
       console.log("[Get-Status] ERROR: ", errorDetails);
 
       // Check if this is an inventory quantity error
-      const isInventoryError = errorDetails["o:errorDetails"]?.some(
+      const hasInventoryErrorPattern1 = errorDetails["o:errorDetails"]?.some(
         (detail) =>
           detail.detail?.includes("You only have") &&
           detail.detail?.includes("available")
       );
+      const hasInventoryErrorPattern2 = errorDetails["o:errorDetails"]?.some(
+        (detail) =>
+          detail.detail?.includes("Inventory numbers are not available")
+      );
+      const isInventoryError =
+        hasInventoryErrorPattern1 || hasInventoryErrorPattern2;
+
       console.log("[Get-Status] isInventoryError: ", isInventoryError);
 
       return NextResponse.json(
