@@ -38,7 +38,9 @@ export async function POST(request) {
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       subsidiary: { id: recordData.subsidiary.new_id },
       account: { id: recordData.account.new_id },
-      adjLocation: { id: recordData.adjLocation.new_id },
+      ...(recordData.adjLocation && {
+        adjLocation: { id: recordData.adjLocation.new_id },
+      }),
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
       inventory: {
@@ -146,62 +148,6 @@ export async function POST(request) {
         message:
           "Transaction creation in progress. Use the jobUrl to check status.",
       });
-
-      // try {
-      //   // Step 1: Get the record link through async processing
-      //   const resultUrl = await getAsyncResultLink(locationHeader, token);
-      //   console.log("Record link retrieved:", resultUrl);
-      //   // Step 2: Fetch the result URL to get the record location
-      //   const resultResponse = await fetch(resultUrl, {
-      //     method: "GET",
-      //     headers: {
-      //       Authorization: `Bearer ${token}`,
-      //     },
-      //   });
-
-      //   // Handle 204 No Content response
-      //   if (resultResponse.status === 204) {
-      //     const recordLocation = resultResponse.headers.get("Location");
-
-      //     if (!recordLocation) {
-      //       throw new Error("Location header not found in result response");
-      //     }
-
-      //     console.log("Record location header:", recordLocation);
-
-      //     // Step 3: Extract internal ID from record location
-      //     const internalId = recordLocation.substring(
-      //       recordLocation.lastIndexOf("/") + 1
-      //     );
-
-      //     if (!internalId || isNaN(internalId)) {
-      //       throw new Error("Invalid internal ID format: " + internalId);
-      //     }
-
-      //     console.log("Created record internal ID:", internalId);
-
-      //     return NextResponse.json({
-      //       success: true,
-      //       internalId,
-      //       recordLocation,
-      //       lotNumbersToMap,
-      //     });
-      //   }
-      //   // Handle unexpected responses
-      //   const resultText = await resultResponse.text();
-      //   throw new Error(
-      //     `Unexpected result response: ${resultResponse.status} - ${resultText}`
-      //   );
-      // } catch (asyncError) {
-      //   console.error("Async processing failed:", asyncError);
-      //   return NextResponse.json(
-      //     {
-      //       error: "Async processing failed",
-      //       details: asyncError.message,
-      //     },
-      //     { status: 500 }
-      //   );
-      // }
     }
     // Handle sync response
     if (response.ok) {
