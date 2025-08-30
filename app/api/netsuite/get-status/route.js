@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
   try {
-    const { jobUrl, token } = await request.json();
+    const { jobUrl, token, recordType } = await request.json();
 
     if (!jobUrl || !token) {
       return NextResponse.json(
@@ -11,7 +11,7 @@ export async function POST(request) {
       );
     }
     // Step 1: Get the record link through async processing
-    const resultUrl = await getAsyncResultLink(jobUrl, token);
+    const resultUrl = await getAsyncResultLink(jobUrl, token, recordType);
     console.log("Record link retrieved:", resultUrl);
     // Step 2: Fetch the result URL to get the record location
     const resultResponse = await fetch(resultUrl, {
@@ -86,14 +86,28 @@ export async function POST(request) {
   }
 }
 
-async function getAsyncResultLink(locationHeader, token) {
+async function getAsyncResultLink(locationHeader, token, recordType) {
   let jobUrl = locationHeader.trim();
   let attempts = 0;
-  const maxAttempts = 12; // 30 attempts * 5s = 2.5 minutes timeout
+  let maxAttempts, delayMs;
+  if (recordType == "journalEntry") {
+    // Longer timeout for journal entries, especially large ones
+    maxAttempts = 30; // Increased from 12
+    delayMs = 5000; // 5 seconds between attempts (increased from 3)
+  } else {
+    // Default settings for other record types
+    maxAttempts = 15;
+    delayMs = 3000;
+  }
+  console.log(
+    `Starting async processing for ${recordType}, max attempts: ${maxAttempts}, delay: ${delayMs}ms`
+  );
+
+  // const maxAttempts = 12; // 30 attempts * 5s = 2.5 minutes timeout
 
   while (attempts < maxAttempts) {
     attempts++;
-    await new Promise((resolve) => setTimeout(resolve, 3000)); // 5s delay
+    await new Promise((resolve) => setTimeout(resolve, delayMs)); // 5s delay
 
     try {
       const jobResponse = await fetch(jobUrl, {

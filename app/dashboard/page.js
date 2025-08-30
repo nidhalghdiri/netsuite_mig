@@ -564,7 +564,8 @@ export default function DashboardOverview() {
 
         const createdTransactionId = await getInternalID(
           createdTransactionURL.jobUrl,
-          newToken
+          newToken,
+          RECORDS_TYPE[recordType]
         );
         console.log("createTransaction ID", createdTransactionId);
 
@@ -663,7 +664,8 @@ export default function DashboardOverview() {
 
         const updatedTransactionId = await getInternalID(
           updatedTransaction.jobUrl,
-          oldToken
+          oldToken,
+          RECORDS_TYPE[recordType]
         );
         console.log("Updated Transaction ID", updatedTransactionId);
 
@@ -987,7 +989,8 @@ export default function DashboardOverview() {
 
       const createdTransactionId = await getInternalID(
         createdTransactionURL.jobUrl,
-        newToken
+        newToken,
+        RECORDS_TYPE["InvAdjst"]
       );
       console.log("create InvAdjst Transactio ID", createdTransactionId);
       return { success: true, adjustmentId: createdTransactionId.internalId };
@@ -1085,7 +1088,8 @@ export default function DashboardOverview() {
       console.log("MSG InvAdjst: ", createdTransactionURL.message);
       const createdTransactionId = await getInternalID(
         createdTransactionURL.jobUrl,
-        newToken
+        newToken,
+        RECORDS_TYPE["InvAdjst"]
       );
 
       console.log("create InvAdjst Transactio ID", createdTransactionId);
