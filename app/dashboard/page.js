@@ -708,6 +708,12 @@ export default function DashboardOverview() {
             const negativeInventoryMatch = errorMessage.match(
               /Item:(\d+), Number:(\d+), Quantity:(\d+), On Hand:(-?\d+), Committed:/
             );
+
+            // Pattern 3: "You cannot create an inventory detail for this item"
+            const inventoryDetailError = errorMessage.includes(
+              "You cannot create an inventory detail for this item"
+            );
+
             if (availableMatch) {
               const availableQty = parseInt(availableMatch[1]);
               console.log(
@@ -816,6 +822,53 @@ export default function DashboardOverview() {
                 newAccountID,
                 newToken
               );
+            } else if (inventoryDetailError) {
+              // Handle pattern 3: Create inventory adjustment for this item
+              console.log(
+                "Inventory detail not allowed for this item, creating inventory adjustment"
+              );
+
+              // Extract the index from the error path
+              const errorPath =
+                errorDetails.details["o:errorDetails"][0]["o:errorPath"];
+              const indexMatch = errorPath.match(/item\.items\[(\d+)\]/);
+
+              if (indexMatch) {
+                const itemIndex = parseInt(indexMatch[1]);
+
+                // Get the problematic item from transaction data
+                const problemItem = transactionData.item.items[itemIndex];
+                if (!problemItem || !problemItem.inventoryDetail) {
+                  throw new Error("Could not find item with inventory detail");
+                }
+
+                // Extract necessary information for inventory adjustment
+                const itemId = problemItem.item.new_id;
+                const itemName = problemItem.item.refName;
+                const locationId = problemItem.inventoryDetail.location.new_id;
+                const locationName =
+                  problemItem.inventoryDetail.location.refName;
+                const quantity = problemItem.inventoryDetail.quantity;
+
+                // Extract lot information if available
+                let lotId = null;
+                let lotName = null;
+
+                if (
+                  problemItem.inventoryDetail.inventoryAssignment &&
+                  problemItem.inventoryDetail.inventoryAssignment.items.length >
+                    0
+                ) {
+                  const lotAssignment =
+                    problemItem.inventoryDetail.inventoryAssignment.items[0];
+                  lotId = lotAssignment.issueInventoryNumber.new_id;
+                  lotName = lotAssignment.issueInventoryNumber.refName;
+                }
+
+                console.log(
+                  `Creating inventory adjustment for item ${itemId}, Location ${locationId}, quantity: ${quantity}`
+                );
+              }
             }
           }
           // If not an inventory error, rethrow
