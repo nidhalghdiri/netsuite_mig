@@ -694,7 +694,6 @@ export default function DashboardOverview() {
       } catch (error) {
         try {
           const errorDetails = JSON.parse(error.message);
-
           if (errorDetails.isInventoryError) {
             // Extract the available quantity from the error message
             const errorMessage =
@@ -706,7 +705,7 @@ export default function DashboardOverview() {
             );
             // Pattern 2: "Inventory numbers are not available" with details
             const negativeInventoryMatch = errorMessage.match(
-              /Item:(\d+), Number:(\d+), Quantity:(\d+), On Hand:(-?\d+), Committed:/
+              /Item:(\d+), Number:([^,]+), Quantity:(\d+), On Hand:(-?\d+), Committed:/
             );
 
             // Pattern 3: "You cannot create an inventory detail for this item"
@@ -875,7 +874,6 @@ export default function DashboardOverview() {
           throw error;
         } catch (parseError) {
           console.error("parseError: ", parseError);
-          console.error("parseError: ERROR", error);
           // If we can't parse the error, just rethrow the original
           throw error;
         }
