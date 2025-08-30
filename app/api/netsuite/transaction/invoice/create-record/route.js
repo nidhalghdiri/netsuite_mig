@@ -75,7 +75,8 @@ export async function POST(request) {
           // exchangeRate: item.exchangeRate,
           memo: item.memo ? item.memo.substring(0, 4000) : "",
           units: unitMapping[item.inventoryDetail.unit],
-          rate: item.rate,
+          rate: parseFloat(item.rate) || 0.0,
+          amount: parseFloat(item.amount) || 0.0,
           quantity: item.quantity,
           inventoryDetail: item.inventoryDetail
             ? {
