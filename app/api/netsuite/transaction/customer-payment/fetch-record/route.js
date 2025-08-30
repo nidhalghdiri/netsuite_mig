@@ -57,6 +57,22 @@ export async function POST(request) {
 
         // Then fetch details for each inventory item
         record.apply.items = await processLineItems(accountId, token, items);
+        console.log("record.apply.items Before: ", record.apply.items);
+        if (
+          record.apply &&
+          record.apply.items &&
+          Array.isArray(record.apply.items)
+        ) {
+          record.apply.items = record.apply.items.filter(
+            (item) => item.doc && Object.keys(item.doc).length > 0
+          );
+
+          // If no items remain after filtering, remove the apply section entirely
+          if (record.apply.items.length === 0) {
+            delete record.apply;
+          }
+        }
+        console.log("record.apply.items After: ", record.apply.items);
       }
     }
     // Fetch Credit Transactions
