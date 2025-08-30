@@ -391,6 +391,7 @@ export default function DashboardOverview() {
     CustInvc: "invoice",
     Journal: "journal",
     CustPymt: "customer-payment",
+    RtnAuth: "return-authorization",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
@@ -399,6 +400,7 @@ export default function DashboardOverview() {
     CustInvc: "invoice",
     Journal: "journalEntry",
     CustPymt: "customerPayment",
+    RtnAuth: "returnAuthorization",
   };
 
   const fetchTransaction = async (internalId, recordType) => {

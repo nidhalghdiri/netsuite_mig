@@ -64,7 +64,7 @@ export async function POST(request) {
           Array.isArray(record.apply.items)
         ) {
           record.apply.items = record.apply.items.filter(
-            (item) => item.doc && Object.keys(item.doc).length > 0
+            (item) => item.doc && item.doc.id && item.doc.id !== false
           );
 
           // If no items remain after filtering, remove the apply section entirely
