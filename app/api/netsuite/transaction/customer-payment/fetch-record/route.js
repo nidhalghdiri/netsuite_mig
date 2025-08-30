@@ -176,6 +176,18 @@ async function expandReferences(accountId, token, record) {
       } else if (field === "entity") {
         recordType = "customer";
         newIdField = REFERENCE_FIELD_NEW_ID["customer"];
+      } else if (field === "doc") {
+        if (record.type == "Invoice") {
+          recordType = "invoice";
+          newIdField = REFERENCE_FIELD_NEW_ID["doc"];
+        } else if (record.type === "CreditMemo") {
+          recordType = "creditmemo";
+          newIdField = REFERENCE_FIELD_NEW_ID["doc"];
+        } else {
+          // Default to invoice if type is not specified
+          recordType = "invoice";
+          newIdField = REFERENCE_FIELD_NEW_ID["invoice"];
+        }
       } else {
         recordType = field;
         newIdField = REFERENCE_FIELD_NEW_ID[field];
@@ -188,6 +200,10 @@ async function expandReferences(accountId, token, record) {
         recordType,
         record[field].id
       );
+      // Validate the reference has a new_id
+      if (!refRecord[newIdField]) {
+        throw new Error(`No new_id found for ${field} reference`);
+      }
 
       // Add the full record data to our expanded record
       expanded[field] = {
@@ -221,7 +237,7 @@ async function processLineItems(accountId, token, items) {
     const batchResults = await Promise.all(
       batch.map((item) => processSingleLineItem(accountId, token, item))
     );
-    processedItems.push(...batchResults);
+    processedItems.push(...batchResults.filter((item) => item !== null));
   }
 
   return processedItems;
@@ -231,7 +247,7 @@ async function processSingleLineItem(accountId, token, item) {
   try {
     // 1. Fetch full item details if self link exists
     const itemUrl = item.links?.find((l) => l.rel === "self")?.href;
-    if (!itemUrl) return item;
+    if (!itemUrl) return null; // Remove if no self link
 
     const fullItem = await fetchSublistItem(accountId, token, itemUrl);
     const mergedItem = { ...item, ...fullItem };

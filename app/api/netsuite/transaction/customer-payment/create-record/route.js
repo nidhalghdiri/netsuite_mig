@@ -29,29 +29,26 @@ export async function POST(request) {
 
     const transformedData = {
       tranId: recordData.tranId,
-
       tranDate: recordData.tranDate,
+      undepFunds: { id: recordData.undepFunds.id },
       subsidiary: { id: recordData.subsidiary?.new_id },
-      reversalDefer: recordData.reversalDefer,
+      status: { id: recordData.status.id },
+      prevDate: recordData.prevDate,
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
-      isReversal: recordData.isReversal,
-      approvalStatus: { id: recordData.approvalStatus.id },
+      customer: { id: recordData.customer?.new_id },
       currency: { id: recordData.currency.id },
+      aracct: { id: recordData.aracct?.new_id },
+      account: { id: recordData.account?.new_id },
+      payment: parseFloat(recordData.payment) || 0.0,
+
       // postingPeriod: { id: "20" },
-      line: {
-        items: recordData.line.items.map((line) => ({
-          account: { id: line.account?.new_id },
-          cleared: line.cleared,
-          debit: parseFloat(line.debit) || 0.0,
-          credit: parseFloat(line.credit) || 0.0,
-          ...(line.department && {
-            department: { id: line.department.new_id },
-          }),
-          ...(line.location && { location: { id: line.location.new_id } }),
-          ...(line.item && { item: { id: line.item.new_id } }),
-          ...(line.entity && { entity: { id: line.entity.new_id } }),
-          eliminate: line.eliminate,
-          memo: line.memo ? line.memo.substring(0, 4000) : "",
+      apply: {
+        items: recordData.apply.items.map((line) => ({
+          apply: line.apply,
+          amount: parseFloat(line.amount) || 0.0,
+          applyDate: line.applyDate,
+          ...(line.doc && { doc: { id: line.doc.new_id } }),
+          type: line.type,
         })),
       },
     };
