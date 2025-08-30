@@ -4,29 +4,30 @@ const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
-  console.log("[invoice] AccountId: ", accountId);
-  console.log("[invoice] token: ", token);
-  console.log("[invoice] internalId: ", internalId);
+  console.log("[Journal] AccountId: ", accountId);
+  console.log("[Journal] token: ", token);
+  console.log("[Journal] internalId: ", internalId);
 
   try {
     // Fetch Inventory Adjustment Fields
-    const record = await fetchRecord(accountId, token, "invoice", internalId);
+    const record = await fetchRecord(
+      accountId,
+      token,
+      "journalEntry",
+      internalId
+    );
 
-    console.log("[invoice] New Record : ", record);
+    console.log("[journalEntry] New Record : ", record);
 
     // Fetch Inventory Items
-    if (record.item?.links) {
-      const sublistUrl = record.item.links.find((l) => l.rel === "self")?.href;
+    if (record.line?.links) {
+      const sublistUrl = record.line.links.find((l) => l.rel === "self")?.href;
       if (sublistUrl) {
         // First fetch the list of inventory items
         const items = await fetchSublist(accountId, token, sublistUrl);
 
         // Then fetch details for each inventory item
-        record.item.items = await processInventoryItems(
-          accountId,
-          token,
-          items
-        );
+        record.line.items = await processLineItems(accountId, token, items);
       }
     }
 
@@ -83,7 +84,7 @@ async function fetchSublist(accountId, token, sublistUrl) {
   return result.items || [];
 }
 
-async function processInventoryItems(accountId, token, items) {
+async function processLineItems(accountId, token, items) {
   // Process items in batches to avoid rate limiting
   const batches = [];
   for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
@@ -93,7 +94,7 @@ async function processInventoryItems(accountId, token, items) {
   const processedItems = [];
   for (const batch of batches) {
     const batchResults = await Promise.all(
-      batch.map((item) => processSingleInventoryItem(accountId, token, item))
+      batch.map((item) => processSingleLineItem(accountId, token, item))
     );
     processedItems.push(...batchResults);
   }
@@ -101,7 +102,7 @@ async function processInventoryItems(accountId, token, items) {
   return processedItems;
 }
 
-async function processSingleInventoryItem(accountId, token, item) {
+async function processSingleLineItem(accountId, token, item) {
   try {
     // 1. Fetch full item details if self link exists
     const itemUrl = item.links?.find((l) => l.rel === "self")?.href;
@@ -109,110 +110,12 @@ async function processSingleInventoryItem(accountId, token, item) {
 
     const fullItem = await fetchSublistItem(accountId, token, itemUrl);
     const mergedItem = { ...item, ...fullItem };
-    // Process inventoryDetail if it exists
-    if (mergedItem.inventoryDetail?.links) {
-      const detailUrl = mergedItem.inventoryDetail.links.find(
-        (l) => l.rel === "self"
-      )?.href;
-      if (detailUrl) {
-        mergedItem.inventoryDetail = await fetchAndExpandInventoryDetail(
-          accountId,
-          token,
-          detailUrl
-        );
-      }
-    }
 
     // 3. Expand all references in the item
     return mergedItem;
   } catch (error) {
     console.warn("Error processing inventory item:", error);
     return item; // Return original if processing fails
-  }
-}
-
-async function fetchAndExpandInventoryDetail(accountId, token, detailUrl) {
-  try {
-    // Fetch the inventory detail
-    const inventoryDetail = await fetchSublistItem(accountId, token, detailUrl);
-    if (inventoryDetail.inventoryAssignment?.links) {
-      const assignmentUrl = inventoryDetail.inventoryAssignment.links.find(
-        (l) => l.rel === "self"
-      )?.href;
-      if (assignmentUrl) {
-        inventoryDetail.inventoryAssignment =
-          await fetchAndExpandInventoryAssignment(
-            accountId,
-            token,
-            assignmentUrl
-          );
-      }
-    }
-    // Process any nested references in the inventory detail
-    return await inventoryDetail;
-  } catch (error) {
-    console.warn("Error fetching inventory detail:", error);
-    return { error: "Failed to fetch inventory detail" };
-  }
-}
-async function fetchAndExpandInventoryAssignment(
-  accountId,
-  token,
-  assignmentUrl
-) {
-  try {
-    // Fetch the assignment list
-    const assignmentList = await fetchSublistItem(
-      accountId,
-      token,
-      assignmentUrl
-    );
-
-    // Process each assignment item
-    if (assignmentList.items && assignmentList.items.length > 0) {
-      assignmentList.items = await processAssignmentItems(
-        accountId,
-        token,
-        assignmentList.items
-      );
-    }
-
-    return assignmentList;
-  } catch (error) {
-    console.warn("Error fetching inventory assignment:", error);
-    return { error: "Failed to fetch inventory assignment" };
-  }
-}
-
-async function processAssignmentItems(accountId, token, items) {
-  const batches = [];
-  for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
-    batches.push(items.slice(i, i + MAX_PARALLEL_REQUESTS));
-  }
-
-  const processedItems = [];
-  for (const batch of batches) {
-    const batchResults = await Promise.all(
-      batch.map((item) => processSingleAssignmentItem(accountId, token, item))
-    );
-    processedItems.push(...batchResults);
-  }
-
-  return processedItems;
-}
-
-async function processSingleAssignmentItem(accountId, token, item) {
-  try {
-    const itemUrl = item.links?.find((l) => l.rel === "self")?.href;
-    if (!itemUrl) return item;
-
-    const fullItem = await fetchSublistItem(accountId, token, itemUrl);
-    const mergedItem = { ...item, ...fullItem };
-
-    return mergedItem;
-  } catch (error) {
-    console.warn("Error processing assignment item:", error);
-    return item;
   }
 }
 
