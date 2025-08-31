@@ -40,7 +40,7 @@ export async function POST(request) {
 
   try {
     // Clear cache at the beginning of each request to avoid stale data
-    // referenceCache.clear();
+    referenceCache.clear();
 
     // Fetch Inventory Adjustment Fields
     const record = await fetchRecord(
@@ -50,51 +50,51 @@ export async function POST(request) {
       internalId
     );
 
-    // // Fetch Inventory Items
-    // if (record.inventory?.links) {
-    //   const sublistUrl = record.inventory.links.find(
-    //     (l) => l.rel === "self"
-    //   )?.href;
-    //   if (sublistUrl) {
-    //     // First fetch the list of inventory items
-    //     const items = await fetchSublist(accountId, token, sublistUrl);
+    // Fetch Inventory Items
+    if (record.inventory?.links) {
+      const sublistUrl = record.inventory.links.find(
+        (l) => l.rel === "self"
+      )?.href;
+      if (sublistUrl) {
+        // First fetch the list of inventory items
+        const items = await fetchSublist(accountId, token, sublistUrl);
 
-    //     // Then fetch details for each inventory item
-    //     record.inventory.items = await processInventoryItems(
-    //       accountId,
-    //       token,
-    //       items
-    //     );
-    //   }
-    // }
+        // Then fetch details for each inventory item
+        record.inventory.items = await processInventoryItems(
+          accountId,
+          token,
+          items
+        );
+      }
+    }
 
-    // // Get lot mapping if we have new credentials
-    // let lotMapping = {};
-    // try {
-    //   // Check if we have inventory details
-    //   const hasInventoryDetails = record.inventory?.items?.some(
-    //     (item) => item.inventoryDetail
-    //   );
+    // Get lot mapping if we have new credentials
+    let lotMapping = {};
+    try {
+      // Check if we have inventory details
+      const hasInventoryDetails = record.inventory?.items?.some(
+        (item) => item.inventoryDetail
+      );
 
-    //   if (hasInventoryDetails) {
-    //     lotMapping = await getLotMapping(accountId, token);
-    //     console.log("lotMapping", lotMapping);
-    //   }
-    // } catch (error) {
-    //   console.error("Failed to get lot mapping, proceeding without it:", error);
-    // }
+      if (hasInventoryDetails) {
+        lotMapping = await getLotMapping(accountId, token);
+        console.log("lotMapping", lotMapping);
+      }
+    } catch (error) {
+      console.error("Failed to get lot mapping, proceeding without it:", error);
+    }
 
-    // const expandedRecord = await expandReferences(accountId, token, record);
+    const expandedRecord = await expandReferences(accountId, token, record);
 
-    // console.log("lotMapping: ", lotMapping);
-    // // Apply lot mapping to inventory details
-    // if (Object.keys(lotMapping).length > 0) {
-    //   const lotNumbers = await getLotNumbers(accountId, token, internalId);
-    //   console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
-    //   applyLotMapping(expandedRecord, lotMapping, lotNumbers);
-    // }
+    console.log("lotMapping: ", lotMapping);
+    // Apply lot mapping to inventory details
+    if (Object.keys(lotMapping).length > 0) {
+      const lotNumbers = await getLotNumbers(accountId, token, internalId);
+      console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
+      applyLotMapping(expandedRecord, lotMapping, lotNumbers);
+    }
 
-    return NextResponse.json(record);
+    return NextResponse.json(expandedRecord);
   } catch (error) {
     console.error("Error fetching record:", error);
     return NextResponse.json(

@@ -18,12 +18,17 @@ import {
   FiCircle,
 } from "react-icons/fi";
 import {
+  applyLotMapping,
   createLotNumberMappings,
   createTransaction,
+  expandReferences,
   fetchNewTransaction,
+  fetchSublist,
   getInternalID,
+  getLotMapping,
   getLotNumbers,
   getUnitMapping,
+  processInventoryItems,
   updateTransaction,
 } from "@/lib/utils";
 
@@ -414,7 +419,7 @@ export default function DashboardOverview() {
       }
       // Create an AbortController with 5-minute timeout (300000ms)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000);
+      const timeoutId = setTimeout(() => controller.abort(), 600000);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/fetch-record`,
         {
@@ -434,14 +439,69 @@ export default function DashboardOverview() {
         const error = await response.json();
         throw new Error(error.error || "Failed to process transaction");
       }
-      const data = await response.json();
-      console.log("[Record UI] data: ", data);
+      const record = await response.json();
+      console.log("[Record UI] data: ", record);
+      // Fetch Inventory Items
+      if (record.inventory?.links) {
+        const sublistUrl = record.inventory.links.find(
+          (l) => l.rel === "self"
+        )?.href;
+        if (sublistUrl) {
+          const items = await fetchSublist(
+            accountID,
+            oldSession.token,
+            sublistUrl
+          );
+          record.inventory.items = await processInventoryItems(
+            accountID,
+            oldSession.token,
+            items,
+            recordType
+          );
+        }
+      }
+      // Get lot mapping if we have new credentials
+      let lotMapping = {};
+      try {
+        // Check if we have inventory details
+        const hasInventoryDetails = record.inventory?.items?.some(
+          (item) => item.inventoryDetail
+        );
+
+        if (hasInventoryDetails) {
+          lotMapping = await getLotMapping(accountID, oldSession.token);
+          console.log("lotMapping", lotMapping);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to get lot mapping, proceeding without it:",
+          error
+        );
+      }
+
+      const expandedRecord = await expandReferences(
+        accountID,
+        oldSession.token,
+        record
+      );
+      console.log("lotMapping: ", lotMapping);
+      // Apply lot mapping to inventory details
+      if (Object.keys(lotMapping).length > 0) {
+        const lotNumbers = await getLotNumbers(
+          accountID,
+          oldSession.token,
+          internalId
+        );
+        console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
+        applyLotMapping(expandedRecord, lotMapping, lotNumbers);
+      }
+
       // Update transaction details with old data
       setTransactionDetails((prev) => ({
         ...prev,
         [internalId]: {
           ...prev[internalId],
-          oldData: data,
+          oldData: record,
           steps: {
             ...prev[internalId]?.steps,
             fetch: { status: "completed", timestamp: new Date() },
@@ -449,7 +509,7 @@ export default function DashboardOverview() {
         },
       }));
 
-      return data;
+      return record;
     } catch (error) {
       console.error("Fetching error:", error);
       if (error.name === "AbortError") {
