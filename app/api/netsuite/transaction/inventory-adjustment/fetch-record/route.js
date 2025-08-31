@@ -28,7 +28,8 @@ const SUBLISTS = [
   "inventory", // The inventory sublist containing line items
 ];
 
-const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
+const MAX_PARALLEL_REQUESTS = 3; // To avoid rate limiting
+const REQUEST_DELAY_MS = 500; // Add delay between batches
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
@@ -220,15 +221,36 @@ async function expandReferences(accountId, token, record) {
   return expanded;
 }
 
+// async function processInventoryItems(accountId, token, items) {
+//   // Process items in batches to avoid rate limiting
+//   const batches = [];
+//   for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
+//     batches.push(items.slice(i, i + MAX_PARALLEL_REQUESTS));
+//   }
+
+//   const processedItems = [];
+//   for (const batch of batches) {
+//     const batchResults = await Promise.all(
+//       batch.map((item) => processSingleInventoryItem(accountId, token, item))
+//     );
+//     processedItems.push(...batchResults);
+//   }
+
+//   return processedItems;
+// }
 async function processInventoryItems(accountId, token, items) {
-  // Process items in batches to avoid rate limiting
   const batches = [];
   for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
     batches.push(items.slice(i, i + MAX_PARALLEL_REQUESTS));
   }
 
   const processedItems = [];
-  for (const batch of batches) {
+  for (const [index, batch] of batches.entries()) {
+    // Add delay between batches (except the first one)
+    if (index > 0) {
+      await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS));
+    }
+
     const batchResults = await Promise.all(
       batch.map((item) => processSingleInventoryItem(accountId, token, item))
     );
