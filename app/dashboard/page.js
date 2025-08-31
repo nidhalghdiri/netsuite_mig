@@ -412,6 +412,9 @@ export default function DashboardOverview() {
       if (!oldSession?.token) {
         throw new Error("No valid session token found");
       }
+      // Create an AbortController with 5-minute timeout (300000ms)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/fetch-record`,
         {
@@ -424,6 +427,8 @@ export default function DashboardOverview() {
           }),
         }
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.json();
@@ -447,6 +452,10 @@ export default function DashboardOverview() {
       return data;
     } catch (error) {
       console.error("Fetching error:", error);
+      if (error.name === "AbortError") {
+        error.message =
+          "Request took too long to complete. The transaction is being processed with many items.";
+      }
       // Update transaction details with error
       setTransactionDetails((prev) => ({
         ...prev,
