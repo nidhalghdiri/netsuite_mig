@@ -452,13 +452,13 @@ export default function DashboardOverview() {
             accountID,
             oldSession.token,
             sublistUrl,
-            recordType
+            RECORDS[recordType]
           );
           record.inventory.items = await processInventoryItems(
             accountID,
             oldSession.token,
             items,
-            recordType
+            RECORDS[recordType]
           );
         }
       }

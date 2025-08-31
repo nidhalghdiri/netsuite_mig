@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
-  const { itemUrl, token } = await request.json();
-
   try {
+    const { itemUrl, token } = await request.json();
+    console.log("Fetch Item URL: ", itemUrl);
+
+    if (!itemUrl || !token) {
+      return NextResponse.json(
+        { error: "itemUrl and token are required" },
+        { status: 400 }
+      );
+    }
     const response = await fetch(itemUrl, {
       method: "GET",
       headers: {
@@ -14,17 +21,23 @@ export async function POST(request) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      const errorMessage =
-        error.message || error.error?.message || "Unknown error occurred";
-      throw new Error(`Failed to fetch Item: ${errorMessage}`);
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        {
+          error: "Failed to fetch Item",
+          details: errorData.message || response.statusText,
+          status: response.status,
+        },
+        { status: response.status }
+      );
     }
 
-    return NextResponse.json(response.json());
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("Error Item :", error);
+    console.error("Error in fetch-item:", error);
     return NextResponse.json(
-      { error: "Failed to Item ", details: error.message },
+      { error: "Internal server error", details: error.message },
       { status: 500 }
     );
   }
