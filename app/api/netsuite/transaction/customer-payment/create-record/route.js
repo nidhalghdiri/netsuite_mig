@@ -27,7 +27,7 @@ export async function POST(request) {
     // Transform data using NetSuite's structure
     const lotNumbersToMap = [];
 
-    const transformedData = {
+    var transformedData = {
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
       undepFunds: { id: recordData.undepFunds.id },
@@ -59,8 +59,8 @@ export async function POST(request) {
       transformedData.apply.items &&
       Array.isArray(transformedData.apply.items)
     ) {
-      transformedData.apply.items = transformedData.apply.items.filter(
-        (item) => item.doc && Object.keys(item.doc).length > 0
+      transformedData.apply.items = transformedData.apply.items.filter((item) =>
+        isValidDoc(item.doc)
       );
 
       // If no items remain after filtering, remove the apply section entirely
@@ -129,4 +129,9 @@ export async function POST(request) {
       { status: 500 }
     );
   }
+}
+
+function isValidDoc(doc) {
+  // Check if doc exists and has the required structure for the API
+  return doc && doc.id && doc.id !== false && doc.new_id; // This is the key field needed for the migration
 }
