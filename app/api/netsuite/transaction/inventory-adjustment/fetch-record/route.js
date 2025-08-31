@@ -28,8 +28,9 @@ const SUBLISTS = [
   "inventory", // The inventory sublist containing line items
 ];
 
-const MAX_PARALLEL_REQUESTS = 3; // To avoid rate limiting
-const REQUEST_DELAY_MS = 500; // Add delay between batches
+const MAX_PARALLEL_REQUESTS = 1; // To avoid rate limiting
+const REQUEST_DELAY_MS = 1000; // Add delay between batches
+const referenceCache = new Map();
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
@@ -38,6 +39,9 @@ export async function POST(request) {
   console.log("[InventoryAdjustment] internalId: ", internalId);
 
   try {
+    // Clear cache at the beginning of each request to avoid stale data
+    referenceCache.clear();
+
     // Fetch Inventory Adjustment Fields
     const record = await fetchRecord(
       accountId,
@@ -174,6 +178,13 @@ async function expandReferences(accountId, token, record) {
     if (!record[field]?.id) continue;
 
     try {
+      // Check if we have this reference in cache
+      const cacheKey = `${field}_${record[field].id}`;
+      if (referenceCache.has(cacheKey)) {
+        expanded[field] = referenceCache.get(cacheKey);
+        continue;
+      }
+
       // Determine record type from field name
       var recordType = "";
       var newIdField = "";
@@ -199,7 +210,7 @@ async function expandReferences(accountId, token, record) {
       );
 
       // Add the full record data to our expanded record
-      expanded[field] = {
+      const expandedRef = {
         ...record[field],
         // ...refRecord,
         new_id: refRecord[newIdField],
@@ -208,6 +219,12 @@ async function expandReferences(accountId, token, record) {
         refName: record[field].refName,
         id: record[field].id,
       };
+
+      // Add to cache for future use
+      referenceCache.set(cacheKey, expandedRef);
+
+      // Add to our expanded record
+      expanded[field] = expandedRef;
     } catch (error) {
       console.warn(
         `Failed to expand ${field} reference:`,
@@ -239,22 +256,19 @@ async function expandReferences(accountId, token, record) {
 //   return processedItems;
 // }
 async function processInventoryItems(accountId, token, items) {
-  const batches = [];
-  for (let i = 0; i < items.length; i += MAX_PARALLEL_REQUESTS) {
-    batches.push(items.slice(i, i + MAX_PARALLEL_REQUESTS));
-  }
-
   const processedItems = [];
-  for (const [index, batch] of batches.entries()) {
+  for (let i = 0; i < items.length; i++) {
     // Add delay between batches (except the first one)
-    if (index > 0) {
+    if (i > 0) {
       await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS));
     }
-
-    const batchResults = await Promise.all(
-      batch.map((item) => processSingleInventoryItem(accountId, token, item))
+    console.log("Processing Item [" + i + "] => ", items[i]);
+    const processedItem = await processSingleInventoryItem(
+      accountId,
+      token,
+      items[i]
     );
-    processedItems.push(...batchResults);
+    processedItems.push(processedItem);
   }
 
   return processedItems;
