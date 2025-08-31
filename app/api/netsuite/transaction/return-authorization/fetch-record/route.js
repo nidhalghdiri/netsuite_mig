@@ -26,19 +26,26 @@ const REFERENCE_FIELD_NEW_ID = {
   class: "custrecord_mig_sandbox_new_internal_id_c",
   item: "custitem_mig_sandbox_new_intenral_id_i",
   employee: "custentity_mig_sandbox_new_internal_id_e",
+  entity: "custentity_mig_sandbox_new_internal_id_e",
+  salesRep: "custentity_mig_sandbox_new_internal_id_e",
 };
 
 const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
-  console.log("[invoice] AccountId: ", accountId);
-  console.log("[invoice] token: ", token);
-  console.log("[invoice] internalId: ", internalId);
+  console.log("[returnAuthorization] AccountId: ", accountId);
+  console.log("[returnAuthorization] token: ", token);
+  console.log("[returnAuthorization] internalId: ", internalId);
 
   try {
     // Fetch Inventory Adjustment Fields
-    const record = await fetchRecord(accountId, token, "invoice", internalId);
+    const record = await fetchRecord(
+      accountId,
+      token,
+      "returnAuthorization",
+      internalId
+    );
 
     // Fetch Inventory Items
     if (record.item?.links) {
@@ -432,21 +439,12 @@ function applyLotMapping(record, lotMapping, lotNumbers) {
     // );
     if (item.inventoryDetail?.inventoryAssignment?.items) {
       item.inventoryDetail.inventoryAssignment.items.forEach((assignment) => {
-        // Handle receiptInventoryNumber
-        // if (lotNumbers[item_line]) {
-        //   const oldId = lotNumbers[item_line].inventorynumberid;
-        //   if (lotMapping[oldId]) {
-        //     assignment.old_id = oldId;
-        //     assignment.new_id = lotMapping[oldId];
-        //   }
-        // }
-        // Handle issueInventoryNumber
-        var issueInventoryNumber = assignment.issueInventoryNumber;
-        const oldId = issueInventoryNumber.id;
-        if (lotMapping[oldId]) {
-          assignment.old_id = oldId;
-          assignment.new_id = lotMapping[oldId];
-          assignment.refName = issueInventoryNumber.refName;
+        if (lotNumbers[item_line]) {
+          const oldId = lotNumbers[item_line].inventorynumberid;
+          if (lotMapping[oldId]) {
+            assignment.old_id = oldId;
+            assignment.new_id = lotMapping[oldId];
+          }
         }
       });
     }

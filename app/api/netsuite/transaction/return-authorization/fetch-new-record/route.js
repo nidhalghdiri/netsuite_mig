@@ -10,7 +10,12 @@ export async function POST(request) {
 
   try {
     // Fetch Inventory Adjustment Fields
-    const record = await fetchRecord(accountId, token, "invoice", internalId);
+    const record = await fetchRecord(
+      accountId,
+      token,
+      "returnAuthorization",
+      internalId
+    );
 
     console.log("[invoice] New Record : ", record);
 

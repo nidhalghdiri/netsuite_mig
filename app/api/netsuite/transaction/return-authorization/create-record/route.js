@@ -33,77 +33,84 @@ export async function POST(request) {
     const transformedData = {
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
+      subsidiary: { id: recordData.subsidiary.new_id },
+      status: { id: recordData.status.id },
+      shippingAddress_text: recordData.shippingAddress_text,
+      shipAddress: recordData.shipAddress,
+      salesRep: { id: recordData.salesRep.new_id },
+      salesEffectiveDate: recordData.salesEffectiveDate,
+      prevRep: recordData.prevRep,
+      orderStatus: { id: recordData.orderStatus.id },
       memo: recordData.memo,
-      account: { id: recordData.account.new_id },
+      location: { id: recordData.location.new_id },
       entity: { id: recordData.entity.new_id },
-      billAddress: recordData.billAddress,
-      billingAddress_text: recordData.billingAddress_text,
-      currency: { id: recordData.currency.id },
-      custbody_customer_type: { id: recordData.custbody_customer_type.id },
-      custbody_og_invoice_date: recordData.custbody_og_invoice_date,
       custbody_og_sales_discount_item:
         recordData.custbody_og_sales_discount_item,
       custbody_og_sales_subtotal: recordData.custbody_og_sales_subtotal,
       custbody_og_sales_total: recordData.custbody_og_sales_total,
-      custbody_og_sales_total_lindscnt:
-        recordData.custbody_og_sales_total_lindscnt,
-      custbody_og_total_sales_quantity:
-        recordData.custbody_og_total_sales_quantity,
-      custbody_og_trans_amount_words: recordData.custbody_og_trans_amount_words,
-      custbody_ogg_transaction_printed:
-        recordData.custbody_ogg_transaction_printed,
-      dueDate: recordData.dueDate,
-      salesEffectiveDate: recordData.salesEffectiveDate,
-      salesRep: { id: recordData.salesRep.new_id },
-      location: { id: recordData.location.new_id },
-      shipAddress: recordData.shipAddress,
-      subsidiary: { id: recordData.subsidiary.new_id },
-      // terms: { id: recordData.terms.id },
+      custbody_og_invoice_date: recordData.custbody_og_invoice_date,
+      custbody_og_invtype: { id: recordData.custbody_og_invtype.id },
+      currency: { id: recordData.currency.id },
+      billAddress: recordData.billAddress,
+      billingAddress_text: recordData.billingAddress_text,
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
       item: {
         items: recordData.item.items.map((item) => ({
           item: { id: item.item.new_id },
-          account: { id: item.account.new_id },
           costEstimateType: { id: item.costEstimateType.id },
-          cseg2: { id: item.cseg2.id },
-          location: { id: item.location.new_id },
-          price: { id: item.price.id },
+          amount: parseFloat(item.amount) || 0.0,
+          custcol_og_item_number: item.custcol_og_item_number,
           description: item.description
             ? item.description.substring(0, 40)
             : "",
-          // exchangeRate: item.exchangeRate,
-          memo: item.memo ? item.memo.substring(0, 4000) : "",
-          units: unitMapping[item.inventoryDetail.unit],
-          rate: parseFloat(item.rate) || 0.0,
-          amount: parseFloat(item.amount) || 0.0,
+          location: { id: item.location.new_id },
+          price: { id: item.price.id },
           quantity: item.quantity,
+          rate: parseFloat(item.rate) || 0.0,
+          units: unitMapping[item.inventoryDetail.unit],
           inventoryDetail: item.inventoryDetail
             ? {
+                item: { id: item.inventoryDetail.item.new_id },
+                itemDescription: item.inventoryDetail.itemDescription,
+                location: { id: item.inventoryDetail.location.new_id },
                 quantity: item.inventoryDetail.quantity,
                 unit: unitMapping[item.inventoryDetail.unit],
-                location: { id: item.inventoryDetail.location.new_id },
                 inventoryAssignment: {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => {
                       // Check if we have a new_id for this lot number
-                      if (ass.new_id) {
+                      if (ass.internalId && ass.new_id) {
                         // Use the new_id if available
                         return {
                           internalId: ass.new_id,
                           quantity: ass.quantity,
-                          receiptInventoryNumber: ass.refName.toString(),
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      } else if (ass.internalId) {
+                        // If no new_id, we'll need to create a mapping later
+                        lotNumbersToMap.push({
+                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
+                          refName: ass.receiptInventoryNumber,
+                          itemId: item.item.new_id,
+                          itemName: item.description
+                            ? item.description.substring(0, 40)
+                            : "",
+                          quantity: ass.quantity,
+                          line: item.line,
+                        });
+
+                        // Don't include internalId for new creation
+                        return {
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
                         };
                       }
                       return {
                         quantity: ass.quantity,
+                        receiptInventoryNumber: ass.receiptInventoryNumber,
                       };
                     }
-
-                    //   ({
-                    //   quantity: ass.quantity,
-                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
-                    // })
                   ),
                 },
               }
@@ -121,8 +128,8 @@ export async function POST(request) {
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
     const idempotencyKey = randomUUID();
-    console.log("Create INV URL ", url);
-    console.log("Create INV idempotencyKey ", idempotencyKey);
+    console.log("Create RETURN AUTH URL ", url);
+    console.log("Create RETURN AUTH idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",

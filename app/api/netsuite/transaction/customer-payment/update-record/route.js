@@ -32,6 +32,7 @@ export async function POST(request) {
       },
       body: JSON.stringify({
         custbody_mig_new_internal_id: parseFloat(newId) || 0.0,
+        custbody_ogg_tran_ref_num: "0000",
       }),
     });
 
