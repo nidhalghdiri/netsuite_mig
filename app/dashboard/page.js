@@ -24,6 +24,7 @@ import {
   expandReferences,
   fetchNewTransaction,
   fetchSublist,
+  fetchSublistItem,
   getInternalID,
   getLotMapping,
   getLotNumbers,
@@ -447,10 +448,11 @@ export default function DashboardOverview() {
           (l) => l.rel === "self"
         )?.href;
         if (sublistUrl) {
-          const items = await fetchSublist(
+          const items = await fetchSublistItem(
             accountID,
             oldSession.token,
-            sublistUrl
+            sublistUrl,
+            recordType
           );
           record.inventory.items = await processInventoryItems(
             accountID,
