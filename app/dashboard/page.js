@@ -1384,7 +1384,9 @@ export default function DashboardOverview() {
             <div className="divide-y">
               {filteredTransactions.map((trx) => {
                 const details = transactionDetails[trx.id] || {};
-                const hasNewId = details.oldData?.custbody_mig_new_internal_id;
+                const hasNewId =
+                  details.oldData?.custbody_mig_new_internal_id ||
+                  trx.custbody_mig_new_internal_id;
                 const isCurrentlyProcessing = processingId === trx.id;
 
                 return (
@@ -1396,7 +1398,9 @@ export default function DashboardOverview() {
                       <div className="col-span-1 flex items-center">
                         <StatusBadge status={trx.mig_status} />
                       </div>
-                      <div className="col-span-2 font-medium">{trx.id}</div>
+                      <div className="col-span-2 font-medium">
+                        {trx.id} - ${trx.typebaseddocumentnumber}
+                      </div>
                       <div className="col-span-2">{trx.type}</div>
                       <div className="col-span-2 truncate">{trx.entity}</div>
                       <div className="col-span-1">${trx.foreigntotal}</div>
