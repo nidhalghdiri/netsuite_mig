@@ -507,7 +507,7 @@ export default function DashboardOverview() {
         ...prev,
         [internalId]: {
           ...prev[internalId],
-          oldData: record,
+          oldData: expandedRecord,
           steps: {
             ...prev[internalId]?.steps,
             fetch: { status: "completed", timestamp: new Date() },
@@ -515,7 +515,7 @@ export default function DashboardOverview() {
         },
       }));
 
-      return record;
+      return expandedRecord;
     } catch (error) {
       console.error("Fetching error:", error);
       if (error.name === "AbortError") {
