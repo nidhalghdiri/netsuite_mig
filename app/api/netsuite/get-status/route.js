@@ -102,6 +102,10 @@ async function getAsyncResultLink(locationHeader, token, recordType) {
     // Longer timeout for journal entries, especially large ones
     maxAttempts = 30; // Increased from 12
     delayMs = 5000; // 5 seconds between attempts (increased from 3)
+  } else if (recordType == "inventoryAdjustment") {
+    // Longer timeout for journal entries, especially large ones
+    maxAttempts = 90; // Increased from 12
+    delayMs = 5000; // 5 seconds between attempts (increased from 3)
   } else {
     // Default settings for other record types
     maxAttempts = 15;
