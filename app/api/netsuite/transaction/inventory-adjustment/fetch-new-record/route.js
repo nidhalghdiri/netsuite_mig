@@ -20,22 +20,22 @@ export async function POST(request) {
     console.log("[InventoryAdjustment] New Record : ", record);
 
     // Fetch Inventory Items
-    if (record.inventory?.links) {
-      const sublistUrl = record.inventory.links.find(
-        (l) => l.rel === "self"
-      )?.href;
-      if (sublistUrl) {
-        // First fetch the list of inventory items
-        const items = await fetchSublist(accountId, token, sublistUrl);
+    // if (record.inventory?.links) {
+    //   const sublistUrl = record.inventory.links.find(
+    //     (l) => l.rel === "self"
+    //   )?.href;
+    //   if (sublistUrl) {
+    //     // First fetch the list of inventory items
+    //     const items = await fetchSublist(accountId, token, sublistUrl);
 
-        // Then fetch details for each inventory item
-        record.inventory.items = await processInventoryItems(
-          accountId,
-          token,
-          items
-        );
-      }
-    }
+    //     // Then fetch details for each inventory item
+    //     record.inventory.items = await processInventoryItems(
+    //       accountId,
+    //       token,
+    //       items
+    //     );
+    //   }
+    // }
 
     return NextResponse.json(record);
   } catch (error) {
