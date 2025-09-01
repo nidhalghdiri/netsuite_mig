@@ -485,7 +485,8 @@ export default function DashboardOverview() {
       const expandedRecord = await expandReferences(
         accountID,
         oldSession.token,
-        record
+        record,
+        RECORDS[recordType]
       );
       console.log("lotMapping: ", lotMapping);
       // Apply lot mapping to inventory details
