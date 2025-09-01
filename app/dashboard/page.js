@@ -419,8 +419,8 @@ export default function DashboardOverview() {
         throw new Error("No valid session token found");
       }
       // Create an AbortController with 5-minute timeout (300000ms)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 600000);
+      // const controller = new AbortController();
+      // const timeoutId = setTimeout(() => controller.abort(), 600000);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/fetch-record`,
         {
@@ -434,7 +434,7 @@ export default function DashboardOverview() {
         }
       );
 
-      clearTimeout(timeoutId);
+      // clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.json();
@@ -444,9 +444,11 @@ export default function DashboardOverview() {
       console.log("[Record UI] data: ", record);
       // Fetch Inventory Items
       if (record.inventory?.links) {
+        console.log("Found inventory links, proceeding to fetch sublist");
         const sublistUrl = record.inventory.links.find(
           (l) => l.rel === "self"
         )?.href;
+        console.log("Sublist Url", sublistUrl);
         if (sublistUrl) {
           const items = await fetchSublistItem(
             accountID,
