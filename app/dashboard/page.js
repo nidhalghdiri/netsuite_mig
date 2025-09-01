@@ -429,21 +429,21 @@ export default function DashboardOverview() {
       //   RtnAuth: "return-authorization",
       // };
 
-      var sublist = [];
+      const sublists = [];
       // Get lot mapping if we have new credentials
       let lotMapping = {};
       if (recordType == "InvAdjst" || recordType == "InvTrnfr") {
-        sublist = ["inventory"];
+        sublists.push("inventory");
       } else if (
         recordType == "TrnfrOrd" ||
         recordType == "CustInvc" ||
         recordType == "RtnAuth"
       ) {
-        sublist = ["item"];
+        sublists.push("item");
       } else if (recordType == "CustPymt") {
-        sublist = ["apply", "credit"];
+        sublists.push("apply", "credit");
       } else if (recordType == "Journal") {
-        sublist = ["line"];
+        sublists.push("line");
       }
 
       const response = await fetch(
@@ -466,11 +466,11 @@ export default function DashboardOverview() {
       const record = await response.json();
       console.log("[Record UI] data: ", record);
       // Fetch Items
-      for (let i = 0; i < sublist.length; i++) {
-        const sublist = sublist[i];
-        if (record[sublist]?.links) {
+      for (let i = 0; i < sublists.length; i++) {
+        const sublistName = sublists[i];
+        if (record[sublistName]?.links) {
           console.log("Found inventory links, proceeding to fetch sublist");
-          const sublistUrl = record[sublist].links.find(
+          const sublistUrl = record[sublistName].links.find(
             (l) => l.rel === "self"
           )?.href;
           console.log("Sublist Url", sublistUrl);
@@ -484,7 +484,7 @@ export default function DashboardOverview() {
 
             console.log("2. [Record UI] items: ", items.items);
 
-            record[sublist].items = await processInventoryItems(
+            record[sublistName].items = await processInventoryItems(
               accountID,
               oldSession.token,
               items.items,
@@ -495,7 +495,7 @@ export default function DashboardOverview() {
 
         try {
           // Check if we have inventory details
-          const hasInventoryDetails = record[sublist]?.items?.some(
+          const hasInventoryDetails = record[sublistName]?.items?.some(
             (item) => item.inventoryDetail
           );
 
