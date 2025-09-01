@@ -456,7 +456,7 @@ export default function DashboardOverview() {
             sublistUrl,
             RECORDS[recordType]
           );
-          console.log("2. [Record UI] items: ", items);
+          console.log("2. [Record UI] items: ", items.items);
           record.inventory.items = await processInventoryItems(
             accountID,
             oldSession.token,
