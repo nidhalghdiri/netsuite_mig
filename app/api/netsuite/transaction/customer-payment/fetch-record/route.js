@@ -49,62 +49,62 @@ export async function POST(request) {
     );
 
     // Fetch Apply Transactions
-    if (record.apply?.links) {
-      const sublistUrl = record.apply.links.find((l) => l.rel === "self")?.href;
-      if (sublistUrl) {
-        // First fetch the list of item items
-        const items = await fetchSublist(accountId, token, sublistUrl);
+    // if (record.apply?.links) {
+    //   const sublistUrl = record.apply.links.find((l) => l.rel === "self")?.href;
+    //   if (sublistUrl) {
+    //     // First fetch the list of item items
+    //     const items = await fetchSublist(accountId, token, sublistUrl);
 
-        // Then fetch details for each inventory item
-        record.apply.items = await processLineItems(accountId, token, items);
-        console.log("record.apply.items Before: ", record.apply.items);
-        if (
-          record.apply &&
-          record.apply.items &&
-          Array.isArray(record.apply.items)
-        ) {
-          record.apply.items = record.apply.items.filter(
-            (item) => item.doc && Object.keys(item.doc).length > 0
-          );
+    //     // Then fetch details for each inventory item
+    //     record.apply.items = await processLineItems(accountId, token, items);
+    //     console.log("record.apply.items Before: ", record.apply.items);
+    //     if (
+    //       record.apply &&
+    //       record.apply.items &&
+    //       Array.isArray(record.apply.items)
+    //     ) {
+    //       record.apply.items = record.apply.items.filter(
+    //         (item) => item.doc && Object.keys(item.doc).length > 0
+    //       );
 
-          // If no items remain after filtering, remove the apply section entirely
-          if (record.apply.items.length === 0) {
-            delete record.apply;
-          }
-        }
-        console.log("record.apply.items After: ", record.apply.items);
-      }
-    }
-    // Fetch Credit Transactions
-    if (record.credit?.links) {
-      const sublistUrl = record.credit.links.find(
-        (l) => l.rel === "self"
-      )?.href;
-      if (sublistUrl) {
-        // First fetch the list of item items
-        const items = await fetchSublist(accountId, token, sublistUrl);
+    //       // If no items remain after filtering, remove the apply section entirely
+    //       if (record.apply.items.length === 0) {
+    //         delete record.apply;
+    //       }
+    //     }
+    //     console.log("record.apply.items After: ", record.apply.items);
+    //   }
+    // }
+    // // Fetch Credit Transactions
+    // if (record.credit?.links) {
+    //   const sublistUrl = record.credit.links.find(
+    //     (l) => l.rel === "self"
+    //   )?.href;
+    //   if (sublistUrl) {
+    //     // First fetch the list of item items
+    //     const items = await fetchSublist(accountId, token, sublistUrl);
 
-        // Then fetch details for each inventory item
-        record.credit.items = await processLineItems(accountId, token, items);
-      }
-    }
-    // Fetch Deposit Transactions
-    if (record.credit?.links) {
-      const sublistUrl = record.credit.links.find(
-        (l) => l.rel === "self"
-      )?.href;
-      if (sublistUrl) {
-        // First fetch the list of item items
-        const items = await fetchSublist(accountId, token, sublistUrl);
+    //     // Then fetch details for each inventory item
+    //     record.credit.items = await processLineItems(accountId, token, items);
+    //   }
+    // }
+    // // Fetch Deposit Transactions
+    // if (record.credit?.links) {
+    //   const sublistUrl = record.credit.links.find(
+    //     (l) => l.rel === "self"
+    //   )?.href;
+    //   if (sublistUrl) {
+    //     // First fetch the list of item items
+    //     const items = await fetchSublist(accountId, token, sublistUrl);
 
-        // Then fetch details for each inventory item
-        record.credit.items = await processLineItems(accountId, token, items);
-      }
-    }
+    //     // Then fetch details for each inventory item
+    //     record.credit.items = await processLineItems(accountId, token, items);
+    //   }
+    // }
 
-    const expandedRecord = await expandReferences(accountId, token, record);
+    // const expandedRecord = await expandReferences(accountId, token, record);
 
-    return NextResponse.json(expandedRecord);
+    return NextResponse.json(record);
   } catch (error) {
     console.error("Error fetching record:", error);
     return NextResponse.json(

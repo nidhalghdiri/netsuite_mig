@@ -418,9 +418,34 @@ export default function DashboardOverview() {
       if (!oldSession?.token) {
         throw new Error("No valid session token found");
       }
-      // Create an AbortController with 5-minute timeout (300000ms)
-      // const controller = new AbortController();
-      // const timeoutId = setTimeout(() => controller.abort(), 600000);
+
+      //       const RECORDS = {
+      //   InvAdjst: "inventory-adjustment",
+      //   TrnfrOrd: "transfer-order",
+      //   InvTrnfr: "inventory-transfer",
+      //   CustInvc: "invoice",
+      //   Journal: "journal",
+      //   CustPymt: "customer-payment",
+      //   RtnAuth: "return-authorization",
+      // };
+
+      var sublist = [];
+      // Get lot mapping if we have new credentials
+      let lotMapping = {};
+      if (recordType == "InvAdjst" || recordType == "InvTrnfr") {
+        sublist = ["inventory"];
+      } else if (
+        recordType == "TrnfrOrd" ||
+        recordType == "CustInvc" ||
+        recordType == "RtnAuth"
+      ) {
+        sublist = ["item"];
+      } else if (recordType == "CustPymt") {
+        sublist = ["apply", "credit"];
+      } else if (recordType == "Journal") {
+        sublist = ["line"];
+      }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/fetch-record`,
         {
@@ -434,54 +459,56 @@ export default function DashboardOverview() {
         }
       );
 
-      // clearTimeout(timeoutId);
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to process transaction");
       }
       const record = await response.json();
       console.log("[Record UI] data: ", record);
-      // Fetch Inventory Items
-      if (record.inventory?.links) {
-        console.log("Found inventory links, proceeding to fetch sublist");
-        const sublistUrl = record.inventory.links.find(
-          (l) => l.rel === "self"
-        )?.href;
-        console.log("Sublist Url", sublistUrl);
-        if (sublistUrl) {
-          const items = await fetchSublistItem(
-            accountID,
-            oldSession.token,
-            sublistUrl,
-            RECORDS[recordType]
-          );
-          console.log("2. [Record UI] items: ", items.items);
-          record.inventory.items = await processInventoryItems(
-            accountID,
-            oldSession.token,
-            items.items,
-            RECORDS[recordType]
-          );
-        }
-      }
-      // Get lot mapping if we have new credentials
-      let lotMapping = {};
-      try {
-        // Check if we have inventory details
-        const hasInventoryDetails = record.inventory?.items?.some(
-          (item) => item.inventoryDetail
-        );
+      // Fetch Items
+      for (let i = 0; i < sublist.length; i++) {
+        const sublist = sublist[i];
+        if (record[sublist]?.links) {
+          console.log("Found inventory links, proceeding to fetch sublist");
+          const sublistUrl = record[sublist].links.find(
+            (l) => l.rel === "self"
+          )?.href;
+          console.log("Sublist Url", sublistUrl);
+          if (sublistUrl) {
+            const items = await fetchSublistItem(
+              accountID,
+              oldSession.token,
+              sublistUrl,
+              RECORDS[recordType]
+            );
 
-        if (hasInventoryDetails) {
-          lotMapping = await getLotMapping(accountID, oldSession.token);
-          console.log("lotMapping", lotMapping);
+            console.log("2. [Record UI] items: ", items.items);
+
+            record[sublist].items = await processInventoryItems(
+              accountID,
+              oldSession.token,
+              items.items,
+              RECORDS[recordType]
+            );
+          }
         }
-      } catch (error) {
-        console.error(
-          "Failed to get lot mapping, proceeding without it:",
-          error
-        );
+
+        try {
+          // Check if we have inventory details
+          const hasInventoryDetails = record[sublist]?.items?.some(
+            (item) => item.inventoryDetail
+          );
+
+          if (hasInventoryDetails) {
+            lotMapping = await getLotMapping(accountID, oldSession.token);
+            console.log("lotMapping", lotMapping);
+          }
+        } catch (error) {
+          console.error(
+            "Failed to get lot mapping, proceeding without it:",
+            error
+          );
+        }
       }
 
       const expandedRecord = await expandReferences(
@@ -499,7 +526,7 @@ export default function DashboardOverview() {
           internalId
         );
         console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
-        applyLotMapping(expandedRecord, lotMapping, lotNumbers);
+        applyLotMapping(expandedRecord, lotMapping, lotNumbers, recordType);
       }
 
       // Update transaction details with old data

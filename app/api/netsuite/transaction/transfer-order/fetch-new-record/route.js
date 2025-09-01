@@ -20,20 +20,20 @@ export async function POST(request) {
     console.log("[transferOrder] New Record : ", record);
 
     // Fetch Inventory Items
-    if (record.item?.links) {
-      const sublistUrl = record.item.links.find((l) => l.rel === "self")?.href;
-      if (sublistUrl) {
-        // First fetch the list of inventory items
-        const items = await fetchSublist(accountId, token, sublistUrl);
+    // if (record.item?.links) {
+    //   const sublistUrl = record.item.links.find((l) => l.rel === "self")?.href;
+    //   if (sublistUrl) {
+    //     // First fetch the list of inventory items
+    //     const items = await fetchSublist(accountId, token, sublistUrl);
 
-        // Then fetch details for each inventory item
-        record.item.items = await processInventoryItems(
-          accountId,
-          token,
-          items
-        );
-      }
-    }
+    //     // Then fetch details for each inventory item
+    //     record.item.items = await processInventoryItems(
+    //       accountId,
+    //       token,
+    //       items
+    //     );
+    //   }
+    // }
 
     return NextResponse.json(record);
   } catch (error) {

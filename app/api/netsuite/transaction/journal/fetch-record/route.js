@@ -45,20 +45,20 @@ export async function POST(request) {
     );
 
     // Fetch Inventory Items
-    if (record.line?.links) {
-      const sublistUrl = record.line.links.find((l) => l.rel === "self")?.href;
-      if (sublistUrl) {
-        // First fetch the list of item items
-        const items = await fetchSublist(accountId, token, sublistUrl);
+    // if (record.line?.links) {
+    //   const sublistUrl = record.line.links.find((l) => l.rel === "self")?.href;
+    //   if (sublistUrl) {
+    //     // First fetch the list of item items
+    //     const items = await fetchSublist(accountId, token, sublistUrl);
 
-        // Then fetch details for each inventory item
-        record.line.items = await processLineItems(accountId, token, items);
-      }
-    }
+    //     // Then fetch details for each inventory item
+    //     record.line.items = await processLineItems(accountId, token, items);
+    //   }
+    // }
 
-    const expandedRecord = await expandReferences(accountId, token, record);
+    // const expandedRecord = await expandReferences(accountId, token, record);
 
-    return NextResponse.json(expandedRecord);
+    return NextResponse.json(record);
   } catch (error) {
     console.error("Error fetching record:", error);
     return NextResponse.json(
