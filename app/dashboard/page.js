@@ -460,7 +460,7 @@ export default function DashboardOverview() {
           record.inventory.items = await processInventoryItems(
             accountID,
             oldSession.token,
-            items,
+            items.items,
             RECORDS[recordType]
           );
         }
