@@ -742,7 +742,8 @@ export default function DashboardOverview() {
             oldToken,
             newTransaction,
             lotNumbersToMap,
-            newLotNumbers
+            newLotNumbers,
+            recordType
           );
         }
 
