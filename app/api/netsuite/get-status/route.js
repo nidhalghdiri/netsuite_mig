@@ -97,20 +97,21 @@ export async function POST(request) {
 async function getAsyncResultLink(locationHeader, token, recordType) {
   let jobUrl = locationHeader.trim();
   let attempts = 0;
-  let maxAttempts, delayMs;
-  if (recordType == "journalEntry") {
-    // Longer timeout for journal entries, especially large ones
-    maxAttempts = 30; // Increased from 12
-    delayMs = 5000; // 5 seconds between attempts (increased from 3)
-  } else if (recordType == "inventoryAdjustment") {
-    // Longer timeout for journal entries, especially large ones
-    maxAttempts = 90; // Increased from 12
-    delayMs = 5000; // 5 seconds between attempts (increased from 3)
-  } else {
-    // Default settings for other record types
-    maxAttempts = 15;
-    delayMs = 3000;
-  }
+  let maxAttempts = 90;
+  let delayMs = 5000;
+  // if (recordType == "journalEntry") {
+  //   // Longer timeout for journal entries, especially large ones
+  //   maxAttempts = 30; // Increased from 12
+  //   delayMs = 5000; // 5 seconds between attempts (increased from 3)
+  // } else if (recordType == "inventoryAdjustment") {
+  //   // Longer timeout for journal entries, especially large ones
+  //   maxAttempts = 90; // Increased from 12
+  //   delayMs = 5000; // 5 seconds between attempts (increased from 3)
+  // } else {
+  //   // Default settings for other record types
+  //   maxAttempts = 90;
+  //   delayMs = 5000;
+  // }
   console.log(
     `Starting async processing for ${recordType}, max attempts: ${maxAttempts}, delay: ${delayMs}ms`
   );
