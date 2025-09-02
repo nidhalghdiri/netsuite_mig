@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, token, recordType, internalId, newId } =
+    const { accountId, token, recordType, internalId, newId, newTransaction } =
       await request.json();
 
     // Validate input
@@ -14,6 +14,11 @@ export async function POST(request) {
       );
     }
     console.log("UPDATE Record [" + internalId + "]: ", "New ID : " + newId);
+
+    var mainLocation = null;
+    if (newTransaction.expense && newTransaction.expense.items.length > 0) {
+      mainLocation = newTransaction.expense.items[0].location?.new_id;
+    }
 
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
@@ -33,6 +38,9 @@ export async function POST(request) {
       body: JSON.stringify({
         custbody_mig_new_internal_id: parseFloat(newId) || 0.0,
         custbody_ogg_tran_ref_num: "0000",
+        ...(mainLocation && {
+          location: { id: mainLocation },
+        }),
       }),
     });
 

@@ -758,7 +758,7 @@ export default function DashboardOverview() {
           recordType,
           RECORDS_TYPE[recordType],
           transactionId,
-          newTransaction.id
+          newTransaction
         );
 
         const updatedTransactionId = await getInternalID(

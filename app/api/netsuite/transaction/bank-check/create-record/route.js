@@ -26,10 +26,6 @@ export async function POST(request) {
     // const transformedData = transformInventoryAdjustment(recordData);
     // Transform data using NetSuite's structure
     const lotNumbersToMap = [];
-    var mainLocation = null;
-    if (recordData.expense && recordData.expense.items.length > 0) {
-      mainLocation = recordData.expense.items[0].location?.new_id;
-    }
 
     var transformedData = {
       tranId: recordData.tranId,
@@ -41,9 +37,6 @@ export async function POST(request) {
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       subsidiary: { id: recordData.subsidiary?.new_id },
       total: parseFloat(recordData.total) || 0.0,
-      ...(mainLocation && {
-        location: { id: mainLocation },
-      }),
       // postingPeriod: { id: "20" },
       expense: {
         items: recordData.expense.items.map((line) => ({
