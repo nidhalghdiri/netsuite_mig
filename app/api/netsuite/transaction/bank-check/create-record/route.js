@@ -50,29 +50,12 @@ export async function POST(request) {
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
-    if (
-      transformedData.apply &&
-      transformedData.apply.items &&
-      Array.isArray(transformedData.apply.items)
-    ) {
-      transformedData.apply.items = transformedData.apply.items.filter((item) =>
-        isValidDoc(item.doc)
-      );
 
-      // If no items remain after filtering, remove the apply section entirely
-      if (transformedData.apply.items.length === 0) {
-        delete transformedData.apply;
-      }
-    }
-    console.log(
-      "Final Payload Final:",
-      JSON.stringify(transformedData, null, 2)
-    );
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
     const idempotencyKey = randomUUID();
-    console.log("Create JOURNAL URL ", url);
-    console.log("Create JOURNAL idempotencyKey ", idempotencyKey);
+    console.log("Create  URL ", url);
+    console.log("Create  idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",
