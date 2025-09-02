@@ -40,7 +40,7 @@ export async function POST(request) {
       salesRep: { id: recordData.salesRep.new_id },
       salesEffectiveDate: recordData.salesEffectiveDate,
       prevRep: recordData.prevRep,
-      // orderStatus: { id: recordData.orderStatus.id },
+      orderStatus: { id: "B" },
       memo: recordData.memo,
       location: { id: recordData.location.new_id },
       entity: { id: recordData.entity.new_id },
