@@ -17,7 +17,7 @@ export async function POST(request) {
 
     var mainLocation = null;
     if (newTransaction.expense && newTransaction.expense.items.length > 0) {
-      mainLocation = newTransaction.expense.items[0].location?.new_id;
+      mainLocation = newTransaction.expense.items[0].location?.id;
     }
 
     // Create record in new instance
