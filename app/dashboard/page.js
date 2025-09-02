@@ -385,6 +385,7 @@ export default function DashboardOverview() {
     CustPymt: "customer-payment",
     RtnAuth: "return-authorization",
     Check: "bank-check",
+    Deposit: "deposit",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
@@ -395,6 +396,7 @@ export default function DashboardOverview() {
     CustPymt: "customerPayment",
     RtnAuth: "returnAuthorization",
     Check: "check",
+    Deposit: "deposit",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
@@ -433,6 +435,8 @@ export default function DashboardOverview() {
       } else if (recordType == "Journal") {
         sublists.push("line");
       } else if (recordType == "Check") {
+        sublists.push("expense");
+      } else if (recordType == "Deposit") {
         sublists.push("expense");
       }
 
