@@ -69,7 +69,7 @@ const fetchMigrationData = async () => {
     const transactions = Array.isArray(data.transactions)
       ? data.transactions.map((trx) => ({
           ...trx,
-          type: mapRecordType(trx.type || "unknown"),
+          type: trx.type || "unknown",
         }))
       : [];
 
@@ -78,7 +78,7 @@ const fetchMigrationData = async () => {
       ...data.statistics,
       byType: Object.fromEntries(
         Object.entries(data.statistics.byType).map(([type, count]) => [
-          mapRecordType(type),
+          type,
           count,
         ])
       ),
@@ -228,20 +228,6 @@ function getDefaultStatistics() {
     successRate: 0,
     byType: {},
   };
-}
-
-// Map NetSuite internal types to user-friendly names
-function mapRecordType(type) {
-  const typeMap = {
-    // InvAdjst: "Inventory Adjustment",
-    // TrnfrOrd: "Transfer Order",
-    CashSale: "Cash Sale",
-    CustCred: "Credit Memo",
-    SalesOrd: "Sales Order",
-    RtnAuth: "Return Authorization",
-    Estimate: "Estimate",
-  };
-  return typeMap[type] || type;
 }
 
 const StatusBadge = ({ status }) => {
@@ -398,6 +384,7 @@ export default function DashboardOverview() {
     Journal: "journal",
     CustPymt: "customer-payment",
     RtnAuth: "return-authorization",
+    Check: "bank-check",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
@@ -407,6 +394,7 @@ export default function DashboardOverview() {
     Journal: "journalEntry",
     CustPymt: "customerPayment",
     RtnAuth: "returnAuthorization",
+    Check: "check",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
@@ -444,6 +432,8 @@ export default function DashboardOverview() {
         sublists.push("apply", "credit");
       } else if (recordType == "Journal") {
         sublists.push("line");
+      } else if (recordType == "Check") {
+        sublists.push("expense");
       }
 
       const response = await fetch(
@@ -542,6 +532,7 @@ export default function DashboardOverview() {
         },
       }));
 
+      console.log("Final Record Data ", expandedRecord);
       return expandedRecord;
     } catch (error) {
       console.error("Fetching error:", error);
