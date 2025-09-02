@@ -16,9 +16,11 @@ export async function POST(request) {
     console.log("UPDATE Record [" + internalId + "]: ", "New ID : " + newId);
 
     var mainLocation = null;
+    console.log("newTransaction.expense : ", newTransaction.expense);
     if (newTransaction.expense && newTransaction.expense.items.length > 0) {
       mainLocation = newTransaction.expense.items[0].location?.id;
     }
+    console.log("mainLocation : ", mainLocation);
 
     // Create record in new instance
     const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
