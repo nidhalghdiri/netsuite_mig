@@ -34,17 +34,19 @@ export async function POST(request) {
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
       memo: recordData.memo,
-      currency: { id: recordData.currency.id },
+      ...(recordData.currency && { currency: { id: recordData.currency.id } }),
       ...(recordData.department && {
         department: { id: recordData.department.new_id },
       }),
-      firmed: recordData.firmed,
-      incoTerm: { id: recordData.incoTerm.id },
+      ...(recordData.firmed && { firmed: recordData.firmed }),
+      ...(recordData.incoTerm && { incoTerm: recordData.incoTerm }),
       location: { id: recordData.location.new_id },
-      shipAddress: recordData.shipAddress,
+      shipAddress: recordData.shipAddress || "",
       subsidiary: { id: recordData.subsidiary.new_id },
       transferLocation: { id: recordData.transferLocation.new_id },
-      useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
+      ...(recordData.useItemCostAsTransferCost && {
+        useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
+      }),
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       orderStatus: { id: "B" },
       // postingPeriod: { id: "20" },
@@ -55,7 +57,7 @@ export async function POST(request) {
           description: item.description
             ? item.description.substring(0, 40)
             : "",
-          exchangeRate: item.exchangeRate,
+          ...(item.exchangeRate && { exchangeRate: item.exchangeRate }),
           memo: item.memo ? item.memo.substring(0, 4000) : "",
           units: unitMapping[item.inventoryDetail.unit],
           quantity: item.quantity,
