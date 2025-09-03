@@ -25,159 +25,189 @@ export async function POST(request) {
     console.log("unitMapping", unitMapping);
     console.log("lotNumbers", lotNumbers);
 
-    // Helper function to safely get new_id with error reporting
-    const getNewId = (obj, fieldName) => {
-      if (!obj) {
-        throw new Error(`${fieldName} is undefined`);
-      }
-      if (!obj.new_id) {
-        throw new Error(`${fieldName} is missing new_id property`);
-      }
-      return obj.new_id;
-    };
+    // Transform inventory adjustment data for new instance
+    // const transformedData = transformInventoryAdjustment(recordData);
+    // Transform data using NetSuite's structure
+    const lotNumbersToMap = [];
 
-    try {
-      // Transform data using NetSuite's structure
-      const transformedData = {
-        tranId: recordData.tranId,
-        tranDate: recordData.tranDate,
-        memo: recordData.memo || "",
-        ...(recordData.currency && {
-          currency: { id: recordData.currency.id },
-        }),
-        ...(recordData.department && {
-          department: { id: getNewId(recordData.department, "Department") },
-        }),
-        ...(recordData.firmed && { firmed: recordData.firmed }),
-        ...(recordData.incoTerm && { incoTerm: recordData.incoTerm }),
-        location: { id: getNewId(recordData.location, "Location") },
-        shipAddress: recordData.shipAddress || "",
-        subsidiary: { id: getNewId(recordData.subsidiary, "Subsidiary") },
-        transferLocation: {
-          id: getNewId(recordData.transferLocation, "Transfer Location"),
-        },
-        ...(recordData.useItemCostAsTransferCost && {
-          useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
-        }),
-        custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-        orderStatus: { id: "B" },
-        item: {
-          items: recordData.item.items.map((item, index) => {
-            // Validate required item properties
-            if (!item.item) {
-              throw new Error(`Item at index ${index} is missing item object`);
-            }
-
-            return {
-              item: { id: getNewId(item.item, `Item at index ${index}`) },
-              ...(item.cseg2 && { cseg2: { id: item.cseg2.id } }),
-              description: item.description
-                ? item.description.substring(0, 40)
-                : "",
-              ...(item.exchangeRate && { exchangeRate: item.exchangeRate }),
-              memo: item.memo ? item.memo.substring(0, 4000) : "",
-              units: unitMapping[item.inventoryDetail?.unit] || "",
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: item.amount,
-              ...(item.inventoryDetail && {
-                inventoryDetail: {
-                  quantity: item.inventoryDetail.quantity,
-                  unit: unitMapping[item.inventoryDetail.unit] || "",
-                  inventoryAssignment: {
-                    items: item.inventoryDetail.inventoryAssignment.items.map(
-                      (ass, assIndex) => {
-                        // Check if we have a new_id for this lot number
-                        if (ass.issueInventoryNumber && ass.new_id) {
-                          return {
-                            internalId: ass.new_id,
-                            quantity: ass.quantity,
-                            receiptInventoryNumber:
-                              ass.refName?.toString() || "",
-                          };
-                        }
-                        // Validate required assignment properties
-                        if (ass.quantity === undefined) {
-                          throw new Error(
-                            `Assignment at index ${assIndex} in item ${index} is missing quantity`
-                          );
-                        }
+    const transformedData = {
+      tranId: recordData.tranId,
+      tranDate: recordData.tranDate,
+      memo: recordData.memo,
+      ...(recordData.currency && { currency: { id: recordData.currency.id } }),
+      ...(recordData.department && {
+        department: { id: recordData.department.new_id },
+      }),
+      ...(recordData.firmed && { firmed: recordData.firmed }),
+      ...(recordData.incoTerm && { incoTerm: recordData.incoTerm }),
+      location: { id: recordData.location.new_id },
+      shipAddress: recordData.shipAddress || "",
+      subsidiary: { id: recordData.subsidiary.new_id },
+      transferLocation: { id: recordData.transferLocation.new_id },
+      ...(recordData.useItemCostAsTransferCost && {
+        useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
+      }),
+      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
+      orderStatus: { id: "B" },
+      // postingPeriod: { id: "20" },
+      item: {
+        items: recordData.item.items.map((item) => ({
+          item: { id: item.item.new_id },
+          ...(item.cseg2 && { cseg2: { id: item.cseg2.id } }),
+          description: item.description
+            ? item.description.substring(0, 40)
+            : "",
+          ...(item.exchangeRate && { exchangeRate: item.exchangeRate }),
+          memo: item.memo ? item.memo.substring(0, 4000) : "",
+          units: unitMapping[item.inventoryDetail.unit],
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.amount,
+          inventoryDetail: item.inventoryDetail
+            ? {
+                quantity: item.inventoryDetail.quantity,
+                unit: unitMapping[item.inventoryDetail.unit],
+                inventoryAssignment: {
+                  items: item.inventoryDetail.inventoryAssignment.items.map(
+                    (ass) => {
+                      // Check if we have a new_id for this lot number
+                      if (ass.issueInventoryNumber && ass.new_id) {
+                        // Use the new_id if available
                         return {
+                          internalId: ass.new_id,
                           quantity: ass.quantity,
+                          receiptInventoryNumber: ass.refName.toString(),
                         };
                       }
-                    ),
-                  },
+                      return {
+                        quantity: ass.quantity,
+                      };
+                    }
+
+                    //   ({
+                    //   quantity: ass.quantity,
+                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
+                    // })
+                  ),
                 },
-              }),
-            };
-          }),
-        },
-      };
+              }
+            : null,
+        })),
+      },
+    };
 
-      console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
+    console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
+    console.log(
+      "Lot numbers to map:",
+      JSON.stringify(lotNumbersToMap, null, 2)
+    );
 
-      // Create record in new instance
-      const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
-      const idempotencyKey = randomUUID();
-      console.log("Create TRANSFERORDER URL ", url);
-      console.log("Create TRANSFERORDER idempotencyKey ", idempotencyKey);
+    // Create record in new instance
+    const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
+    const idempotencyKey = randomUUID();
+    console.log("Create TRANSFERORDER URL ", url);
+    console.log("Create TRANSFERORDER idempotencyKey ", idempotencyKey);
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Prefer: "respond-async",
-          "X-NetSuite-Idempotency-Key": idempotencyKey,
-          "X-NetSuite-PropertyNameValidation": "Warning",
-          "X-NetSuite-PropertyValueValidation": "Warning",
-        },
-        body: JSON.stringify(transformedData),
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Prefer: "respond-async",
+        "X-NetSuite-Idempotency-Key": idempotencyKey,
+        "X-NetSuite-PropertyNameValidation": "Warning",
+        "X-NetSuite-PropertyValueValidation": "Warning",
+      },
+      body: JSON.stringify(transformedData),
+    });
+
+    // Handle 202 Accepted (async processing)
+    if (response.status === 202) {
+      const locationHeader = response.headers.get("Location");
+
+      if (!locationHeader) {
+        throw new Error("Location header not found in 202 response");
+      }
+      console.log("Async job started. Location:", locationHeader);
+
+      return NextResponse.json({
+        status: "processing",
+        jobUrl: locationHeader,
+        lotNumbersToMap,
+        message:
+          "Transaction creation in progress. Use the jobUrl to check status.",
       });
 
-      // Handle 202 Accepted (async processing)
-      if (response.status === 202) {
-        const locationHeader = response.headers.get("Location");
+      // try {
+      //   // Step 1: Get the record link through async processing
+      //   const resultUrl = await getAsyncResultLink(locationHeader, token);
+      //   console.log("Record link retrieved:", resultUrl);
+      //   // Step 2: Fetch the result URL to get the record location
+      //   const resultResponse = await fetch(resultUrl, {
+      //     method: "GET",
+      //     headers: {
+      //       Authorization: `Bearer ${token}`,
+      //     },
+      //   });
 
-        if (!locationHeader) {
-          throw new Error("Location header not found in 202 response");
-        }
-        console.log("Async job started. Location:", locationHeader);
+      //   // Handle 204 No Content response
+      //   if (resultResponse.status === 204) {
+      //     const recordLocation = resultResponse.headers.get("Location");
 
-        return NextResponse.json({
-          status: "processing",
-          jobUrl: locationHeader,
-          message:
-            "Transaction creation in progress. Use the jobUrl to check status.",
-        });
-      }
+      //     if (!recordLocation) {
+      //       throw new Error("Location header not found in result response");
+      //     }
 
-      // Handle sync response
-      if (response.ok) {
-        const result = await response.json();
-        return NextResponse.json({
-          status: "completed",
-          data: result,
-          message: "Transaction created successfully",
-        });
-      }
+      //     console.log("Record location header:", recordLocation);
 
-      // Handle errors
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to create record: ${response.status} - ${errorText}`
-      );
-    } catch (transformationError) {
-      console.error("Error transforming data:", transformationError);
-      return NextResponse.json(
-        {
-          error: "Data transformation failed",
-          details: transformationError.message,
-        },
-        { status: 400 }
-      );
+      //     // Step 3: Extract internal ID from record location
+      //     const internalId = recordLocation.substring(
+      //       recordLocation.lastIndexOf("/") + 1
+      //     );
+
+      //     if (!internalId || isNaN(internalId)) {
+      //       throw new Error("Invalid internal ID format: " + internalId);
+      //     }
+
+      //     console.log("Created record internal ID:", internalId);
+
+      //     return NextResponse.json({
+      //       success: true,
+      //       internalId,
+      //       recordLocation,
+      //       lotNumbersToMap,
+      //     });
+      //   }
+      //   // Handle unexpected responses
+      //   const resultText = await resultResponse.text();
+      //   throw new Error(
+      //     `Unexpected result response: ${resultResponse.status} - ${resultText}`
+      //   );
+      // } catch (asyncError) {
+      //   console.error("Async processing failed:", asyncError);
+      //   return NextResponse.json(
+      //     {
+      //       error: "Async processing failed",
+      //       details: asyncError.message,
+      //     },
+      //     { status: 500 }
+      //   );
+      // }
     }
+    // Handle sync response
+    if (response.ok) {
+      const result = await response.json();
+      return NextResponse.json({
+        status: "completed",
+        data: result,
+        message: "Transaction created successfully",
+      });
+    }
+    // Handle errors
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to create record: ${response.status} - ${errorText}`
+    );
   } catch (error) {
     console.error("Error creating record:", error);
     return NextResponse.json(

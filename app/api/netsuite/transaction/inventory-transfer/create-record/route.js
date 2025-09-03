@@ -36,13 +36,21 @@ export async function POST(request) {
       memo: recordData.memo,
       customForm: { id: "52" }, // Standard Inventory Transfer Form
       // currency: { id: recordData.currency.id },
-      department: { id: recordData.department.new_id },
+      ...(recordData.department && {
+        department: { id: recordData.department.new_id },
+      }),
       // firmed: recordData.firmed,
       // incoTerm: { id: recordData.incoTerm.id },
-      location: { id: recordData.location.new_id },
+      ...(recordData.location && {
+        location: { id: recordData.location.new_id },
+      }),
       // shipAddress: recordData.shipAddress,
-      subsidiary: { id: recordData.subsidiary.new_id },
-      transferLocation: { id: recordData.transferLocation.new_id },
+      ...(recordData.subsidiary && {
+        subsidiary: { id: recordData.subsidiary.new_id },
+      }),
+      ...(recordData.transferLocation && {
+        transferLocation: { id: recordData.transferLocation.new_id },
+      }),
       // useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       // postingPeriod: { id: "20" },
