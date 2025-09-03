@@ -32,28 +32,26 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     const transformedData = {
-      externalId: recordData.externalId,
+      ...(recordData.externalId && { externalId: recordData.externalId }),
       tranId: recordData.tranId,
       tranDate: recordData.tranDate,
-      memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
-      subsidiary: { id: recordData.subsidiary.new_id },
-      account: { id: recordData.account.new_id },
-      ...(recordData.adjLocation && {
-        adjLocation: { id: recordData.adjLocation.new_id },
+      ...(recordData.memo && {
+        memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       }),
+      subsidiary: { id: recordData.subsidiary.new_id },
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
+      location: { id: recordData.location.new_id },
+      landedCostMethod: { id: recordData.landedCostMethod.id },
+      entity: { id: recordData.entity.new_id },
+      employee: { id: recordData.employee.new_id },
+      currency: { id: recordData.currency.id },
       // postingPeriod: { id: "20" },
-      inventory: {
-        items: recordData.inventory.items.map((item) => ({
+      item: {
+        items: recordData.item.items.map((item) => ({
           item: { id: item.item.new_id },
           location: { id: item.location.new_id },
-          adjustQtyBy: item.adjustQtyBy,
-          unitCost: item.unitCost,
-          description: item.description
-            ? item.description.substring(0, 40)
-            : "",
-          exchangeRate: item.exchangeRate,
-          memo: item.memo ? item.memo.substring(0, 4000) : "",
+          quantity: item.quantity,
+          quantity: item.quantity,
           units: unitMapping[item.units],
           inventoryDetail: item.inventoryDetail
             ? {

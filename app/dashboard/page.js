@@ -30,6 +30,7 @@ import {
   getLotNumbers,
   getUnitMapping,
   processInventoryItems,
+  transformTransaction,
   updateTransaction,
 } from "@/lib/utils";
 
@@ -657,24 +658,48 @@ export default function DashboardOverview() {
 
       await delay(1000);
       try {
-        console.log(
-          "#### Created From Transaction ####",
-          transactionData?.createdFrom
-        );
+        let createdTransactionURL;
         if (transactionData?.createdFrom && transactionData?.createdFrom?.id) {
+          console.log(
+            "#### Created From Transaction ####",
+            transactionData?.createdFrom
+          );
+          if (transactionData?.orderId && transactionData?.orderType) {
+            var url = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/${
+              RECORDS_TYPE[transactionData?.orderType]
+            }/${transactionData?.orderId}/transform/${
+              RECORDS_TYPE[recordType]
+            }`;
+            console.log("Transform URL: ", url);
+
+            // Step 3 : Create New Transaction
+            createdTransactionURL = await transformTransaction(
+              oldAccountID,
+              oldToken,
+              newAccountID,
+              newToken,
+              recordType,
+              RECORDS_TYPE[recordType],
+              transactionData,
+              unitMapping,
+              lotNumbers,
+              transformURL
+            );
+          }
+        } else {
+          // Step 3 : Create New Transaction
+          createdTransactionURL = await createTransaction(
+            oldAccountID,
+            oldToken,
+            newAccountID,
+            newToken,
+            recordType,
+            RECORDS_TYPE[recordType],
+            transactionData,
+            unitMapping,
+            lotNumbers
+          );
         }
-        // Step 3 : Create New Transaction
-        const createdTransactionURL = await createTransaction(
-          oldAccountID,
-          oldToken,
-          newAccountID,
-          newToken,
-          recordType,
-          RECORDS_TYPE[recordType],
-          transactionData,
-          unitMapping,
-          lotNumbers
-        );
         console.log("createTransaction URL", createdTransactionURL.jobUrl);
         console.log("MSG: ", createdTransactionURL.message);
 
