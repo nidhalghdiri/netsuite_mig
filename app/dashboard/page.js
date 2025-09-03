@@ -542,6 +542,10 @@ export default function DashboardOverview() {
       }));
 
       console.log("Final Record Data ", expandedRecord);
+      console.log(
+        "#### Created From Transaction ####",
+        expandedRecord?.createdFrom
+      );
       return expandedRecord;
     } catch (error) {
       console.error("Fetching error:", error);
@@ -653,6 +657,12 @@ export default function DashboardOverview() {
 
       await delay(1000);
       try {
+        console.log(
+          "#### Created From Transaction ####",
+          transactionData?.createdFrom
+        );
+        if (transactionData?.createdFrom && transactionData?.createdFrom?.id) {
+        }
         // Step 3 : Create New Transaction
         const createdTransactionURL = await createTransaction(
           oldAccountID,

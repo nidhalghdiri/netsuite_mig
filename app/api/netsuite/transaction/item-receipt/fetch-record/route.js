@@ -34,9 +34,9 @@ const referenceCache = new Map();
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
-  console.log("[InventoryAdjustment] AccountId: ", accountId);
-  console.log("[InventoryAdjustment] token: ", token);
-  console.log("[InventoryAdjustment] internalId: ", internalId);
+  console.log("[itemReceipt] AccountId: ", accountId);
+  console.log("[itemReceipt] token: ", token);
+  console.log("[itemReceipt] internalId: ", internalId);
 
   try {
     // Clear cache at the beginning of each request to avoid stale data
@@ -46,7 +46,7 @@ export async function POST(request) {
     const record = await fetchRecord(
       accountId,
       token,
-      "inventoryAdjustment",
+      "itemReceipt",
       internalId
     );
 
