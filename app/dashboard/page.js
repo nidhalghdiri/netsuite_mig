@@ -386,6 +386,7 @@ export default function DashboardOverview() {
     RtnAuth: "return-authorization",
     Check: "bank-check",
     Deposit: "deposit",
+    ItemRcpt: "item-receipt",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
@@ -397,6 +398,7 @@ export default function DashboardOverview() {
     RtnAuth: "returnAuthorization",
     Check: "check",
     Deposit: "deposit",
+    ItemRcpt: "itemReceipt",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
@@ -427,7 +429,8 @@ export default function DashboardOverview() {
       } else if (
         recordType == "TrnfrOrd" ||
         recordType == "CustInvc" ||
-        recordType == "RtnAuth"
+        recordType == "RtnAuth" ||
+        recordType == "ItemRcpt"
       ) {
         sublists.push("item");
       } else if (recordType == "CustPymt") {
@@ -437,7 +440,9 @@ export default function DashboardOverview() {
       } else if (recordType == "Check") {
         sublists.push("expense");
       } else if (recordType == "Deposit") {
-        sublists.push("expense");
+        sublists.push("cashback");
+        sublists.push("other");
+        sublists.push("payment");
       }
 
       const response = await fetch(
@@ -483,7 +488,7 @@ export default function DashboardOverview() {
               oldSession.token,
               items.items,
               RECORDS[recordType]
-            );
+            ); // item-receipt
           }
         }
 

@@ -55,19 +55,31 @@ async function fetchAllTransactions(account, token) {
   let hasMore = true;
 
   while (hasMore) {
+    // const query = `
+    //         SELECT
+    //             transaction.*
+    //         FROM
+    //             transaction,
+    //             transactionLine
+    //         WHERE
+    //             transaction.ID = transactionLine.transaction
+    //             AND transactionLine.mainline = 'T'
+    //             AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS')
+    //             AND transaction.id IN ('2226', '2326', '2426', '2526', '2626', '2726', '2861', '2862', '2864', '2865', '2874', '2875', '2876', '2908', '2997', '4941', '4956', '7875', '8776', '9185', '9429', '9433', '9436', '16140', '17071', '17189', '17293', '17293', '17399', '17918', '18321', '19350', '19356', '19368', '19385', '21184', '22107', '23917', '53679', '74034', '74035')
+    //         ORDER BY
+    //             transaction.createddate ASC`;
     const query = `
-            SELECT  
-                transaction.*
-            FROM 
-                transaction, 
-                transactionLine
-            WHERE 
-                transaction.ID = transactionLine.transaction
-                AND transactionLine.mainline = 'T'
-                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY HH24:MI:SS')
-                AND transaction.id IN ('2226', '2326', '2426', '2526', '2626', '2726', '2861', '2862', '2864', '2865', '2874', '2875', '2876', '2908', '2997', '4941', '4956', '7875', '8776', '9185', '9429', '9433', '9436', '16140', '17071', '17189', '17293', '17293', '17399', '17918', '18321', '19350', '19356', '19368', '19385', '21184', '22107', '23917')
-            ORDER BY 
-                transaction.createddate ASC`;
+            SELECT transaction.*
+            FROM transaction
+            WHERE transaction.ID IN (
+                SELECT DISTINCT transaction.ID
+                FROM transaction
+                INNER JOIN transactionLine ON transaction.ID = transactionLine.transaction
+                WHERE transactionLine.mainline = 'T'
+                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY') AND TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY')
+                AND transaction.id IN ('2226', '2326', '2426', '2526', '2626', '2726', '2861', '2862', '2864', '2865', '2874', '2875', '2876', '2908', '2997', '4941', '4956', '7875', '8776', '9185', '9429', '9433', '9436', '16140', '17071', '17189', '17293', '17293', '17399', '17918', '18321', '19350', '19356', '19368', '19385', '21184', '22107', '23917', '53679', '74034', '74035')
+)
+ORDER BY transaction.createddate ASC;`;
     const response = await fetchNetSuiteData(
       account,
       token,
