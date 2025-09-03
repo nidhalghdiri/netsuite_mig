@@ -683,7 +683,7 @@ export default function DashboardOverview() {
               transactionData,
               unitMapping,
               lotNumbers,
-              transformURL
+              url
             );
           }
         } else {
