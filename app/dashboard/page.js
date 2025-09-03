@@ -388,6 +388,7 @@ export default function DashboardOverview() {
     Check: "bank-check",
     Deposit: "deposit",
     ItemRcpt: "item-receipt",
+    CustCred: "credit-memo",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
@@ -400,6 +401,7 @@ export default function DashboardOverview() {
     Check: "check",
     Deposit: "deposit",
     ItemRcpt: "itemReceipt",
+    CustCred: "creditMemo",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
