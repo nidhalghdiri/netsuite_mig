@@ -35,7 +35,9 @@ export async function POST(request) {
       tranDate: recordData.tranDate,
       memo: recordData.memo,
       currency: { id: recordData.currency.id },
-      department: { id: recordData.department.new_id },
+      ...(recordData.department && {
+        department: { id: recordData.department.new_id },
+      }),
       firmed: recordData.firmed,
       incoTerm: { id: recordData.incoTerm.id },
       location: { id: recordData.location.new_id },
@@ -49,7 +51,7 @@ export async function POST(request) {
       item: {
         items: recordData.item.items.map((item) => ({
           item: { id: item.item.new_id },
-          cseg2: { id: item.cseg2.id },
+          ...(item.cseg2 && { cseg2: { id: item.cseg2.id } }),
           description: item.description
             ? item.description.substring(0, 40)
             : "",
