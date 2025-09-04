@@ -1051,7 +1051,7 @@ export default function DashboardOverview() {
                 ) {
                   const lotAssignment =
                     problemItem.inventoryDetail.inventoryAssignment.items[0];
-                  lotId = lotAssignment.issueInventoryNumber.new_id;
+                  lotId = lotAssignment.issueInventoryNumber.id;
                   lotName = lotAssignment.issueInventoryNumber.refName;
                   console.log("Handle Lot Not Exist Data : ", {
                     transactionData,
@@ -1388,7 +1388,7 @@ export default function DashboardOverview() {
       // Build the inventory adjustment object
       var invAdjustData = {
         externalId: `IANEW-${newItemId}-${oldLotId}`,
-        tranId: `IANEW-${newItemId}-${newLotId}`,
+        tranId: `IANEW-${newItemId}-${oldLotId}`,
         tranDate: transactionData.tranDate,
         memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
         subsidiary: {
@@ -1420,7 +1420,6 @@ export default function DashboardOverview() {
                 inventoryAssignment: {
                   items: [
                     {
-                      internalId: newLotId,
                       quantity: adjustmentQty,
                       receiptInventoryNumber: newLotName,
                     },
