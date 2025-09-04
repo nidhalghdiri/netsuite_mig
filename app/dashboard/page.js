@@ -1416,10 +1416,12 @@ export default function DashboardOverview() {
               description: newItemName,
               memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
               units: foundItem.units,
+              line: foundItem.line,
               inventoryDetail: {
                 inventoryAssignment: {
                   items: [
                     {
+                      internalId: oldLotId,
                       quantity: adjustmentQty,
                       receiptInventoryNumber: newLotName,
                     },
