@@ -920,8 +920,7 @@ export default function DashboardOverview() {
               // Find the item in transactionData
               const foundItem = transactionData[sublist_name].items.find(
                 (item) =>
-                  item[sublist_name].refName.includes(itemId) ||
-                  item[sublist_name].id == itemId
+                  item.item.refName.includes(itemId) || item.item.id == itemId
               );
 
               if (!foundItem) {
@@ -930,10 +929,10 @@ export default function DashboardOverview() {
                 );
               }
               // Get the new item ID
-              const newItemId = foundItem[sublist_name].new_id;
-              const newItemName = foundItem[sublist_name].refName;
+              const newItemId = foundItem.item.new_id;
+              const newItemName = foundItem.item.refName;
               console.log(
-                `Found item: ${foundItem[sublist_name].refName}, New ID: ${newItemId}`
+                `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
               );
 
               // Find the lot in inventory assignments
