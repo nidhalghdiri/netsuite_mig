@@ -909,10 +909,19 @@ export default function DashboardOverview() {
                 `Negative inventory for Item [${itemId}] error: Requested ${requestedQty} for Lot Number [${lotNumber}]`
               );
 
+              let sublist_name;
+
+              if (transactionData?.inventory) {
+                sublist_name = "inventory";
+              } else {
+                sublist_name = "item";
+              }
+
               // Find the item in transactionData
-              const foundItem = transactionData.item.items.find(
+              const foundItem = transactionData[sublist_name].items.find(
                 (item) =>
-                  item.item.refName.includes(itemId) || item.item.id == itemId
+                  item[sublist_name].refName.includes(itemId) ||
+                  item[sublist_name].id == itemId
               );
 
               if (!foundItem) {
@@ -921,10 +930,10 @@ export default function DashboardOverview() {
                 );
               }
               // Get the new item ID
-              const newItemId = foundItem.item.new_id;
-              const newItemName = foundItem.item.refName;
+              const newItemId = foundItem[sublist_name].new_id;
+              const newItemName = foundItem[sublist_name].refName;
               console.log(
-                `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
+                `Found item: ${foundItem[sublist_name].refName}, New ID: ${newItemId}`
               );
 
               // Find the lot in inventory assignments
@@ -1491,7 +1500,7 @@ export default function DashboardOverview() {
 
       console.info(
         "Create InvAdjst Transaction [" +
-          transactionData.tranId +
+          newTransaction.tranId +
           "] Process Done!!"
       );
 
