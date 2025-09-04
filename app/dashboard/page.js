@@ -858,6 +858,11 @@ export default function DashboardOverview() {
               "You cannot create an inventory detail for this item"
             );
 
+            // Pattern 4: "Please enter value(s) for: Serial/Lot Number."
+            const inventoryAsseignNotExist = errorMessage.includes(
+              "Please enter value(s) for: Serial/Lot Number."
+            );
+
             if (availableMatch) {
               const availableQty = parseInt(availableMatch[1]);
               console.log(
@@ -1012,6 +1017,73 @@ export default function DashboardOverview() {
                 console.log(
                   `Creating inventory adjustment for item ${itemId}, Location ${locationId}, quantity: ${quantity}`
                 );
+              }
+            } else if (inventoryAsseignNotExist) {
+              console.log(
+                "Inventory Asseigment doesn't exist for this item, creating inventory adjustment"
+              );
+              const errorPath =
+                errorDetails.details["o:errorDetails"][0]["o:errorPath"];
+              const indexMatch = errorPath.match(/inventory\.items\[(\d+)\]/);
+              if (indexMatch) {
+                const itemIndex = parseInt(indexMatch[1]);
+                // Get the problematic item from transaction data
+                const problemItem = transactionData.inventory.items[itemIndex];
+                if (!problemItem || !problemItem.inventoryDetail) {
+                  throw new Error("Could not find item with inventory detail");
+                }
+                // Extract necessary information for inventory adjustment
+                const itemId = problemItem.item.new_id;
+                const itemName = problemItem.item.refName;
+                const locationId = problemItem.inventoryDetail.location.new_id;
+                const locationName =
+                  problemItem.inventoryDetail.location.refName;
+                const quantity = problemItem.inventoryDetail.quantity;
+
+                // Extract lot information if available
+                let lotId = null;
+                let lotName = null;
+
+                if (
+                  problemItem.inventoryDetail.inventoryAssignment &&
+                  problemItem.inventoryDetail.inventoryAssignment.items.length >
+                    0
+                ) {
+                  const lotAssignment =
+                    problemItem.inventoryDetail.inventoryAssignment.items[0];
+                  lotId = lotAssignment.issueInventoryNumber.new_id;
+                  lotName = lotAssignment.issueInventoryNumber.refName;
+                  console.log("Handle Lot Not Exist Data : ", {
+                    transactionData,
+                    problemItem,
+                    itemId,
+                    itemName,
+                    lotId,
+                    lotName,
+                    locationId,
+                    locationName,
+                    quantity,
+                    unitMapping,
+                    lotNumbers,
+                  });
+                  await handleLotNotExist(
+                    transactionData,
+                    problemItem,
+                    itemId,
+                    itemName,
+                    lotId,
+                    lotName,
+                    locationId,
+                    locationName,
+                    quantity,
+                    unitMapping,
+                    lotNumbers,
+                    oldAccountID,
+                    oldToken,
+                    newAccountID,
+                    newToken
+                  );
+                }
               }
             }
           }
@@ -1293,6 +1365,141 @@ export default function DashboardOverview() {
     } catch (error) {
       console.error("Handle Negative Inventory Adjustment ERROR: ", error);
       throw new Error(`Inventory adjustment failed: ${error.message}`);
+    }
+  }
+  async function handleLotNotExist(
+    transactionData,
+    foundItem,
+    newItemId,
+    newItemName,
+    oldLotId,
+    newLotName,
+    locationId,
+    locationName,
+    adjustmentQty,
+    unitMapping,
+    lotNumbers,
+    oldAccountID,
+    oldToken,
+    newAccountID,
+    newToken
+  ) {
+    try {
+      // Build the inventory adjustment object
+      var invAdjustData = {
+        externalId: `IANEW-${newItemId}-${oldLotId}`,
+        tranId: `IANEW-${newItemId}-${newLotId}`,
+        tranDate: transactionData.tranDate,
+        memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
+        subsidiary: {
+          new_id: transactionData.subsidiary.new_id,
+        },
+        account: {
+          new_id: "3843",
+        },
+        adjLocation: {
+          id: locationId,
+          refName: locationName,
+          new_id: locationId,
+        },
+        inventory: {
+          items: [
+            {
+              item: {
+                new_id: newItemId,
+              },
+              location: {
+                new_id: locationId,
+              },
+              adjustQtyBy: adjustmentQty,
+              // unitCost: 48.68,
+              description: newItemName,
+              memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
+              units: foundItem.units,
+              inventoryDetail: {
+                inventoryAssignment: {
+                  items: [
+                    {
+                      internalId: newLotId,
+                      quantity: adjustmentQty,
+                      receiptInventoryNumber: newLotName,
+                    },
+                  ],
+                },
+                itemDescription: newItemName,
+                quantity: adjustmentQty,
+                unit: foundItem.units,
+              },
+            },
+          ],
+        },
+      };
+      console.log("INVAdjust Data: ", invAdjustData);
+
+      const createdTransactionURL = await createTransaction(
+        oldAccountID,
+        oldToken,
+        newAccountID,
+        newToken,
+        "InvAdjst",
+        RECORDS_TYPE["InvAdjst"],
+        invAdjustData,
+        unitMapping,
+        lotNumbers
+      );
+      console.log(
+        "create InvAdjst Transaction URL",
+        createdTransactionURL.jobUrl
+      );
+      console.log("MSG InvAdjst: ", createdTransactionURL.message);
+      const createdTransactionId = await getInternalID(
+        createdTransactionURL.jobUrl,
+        newToken,
+        RECORDS_TYPE["InvAdjst"]
+      );
+
+      console.log("create InvAdjst Transactio ID", createdTransactionId);
+      const newTransaction = await fetchNewTransaction(
+        "InvAdjst",
+        newAccountID,
+        newToken,
+        createdTransactionId.internalId
+      );
+      console.log("newTransaction InvAdjst Data", newTransaction);
+
+      const lotNumbersToMap = createdTransactionURL.lotNumbersToMap;
+      console.log("lotNumbersToMap InvAdjst:  ", lotNumbersToMap);
+
+      const newLotNumbers = await getLotNumbers(
+        newAccountID,
+        newToken,
+        newTransaction.id
+      );
+      console.log("newLotNumbers InvAdjst: ", newLotNumbers);
+
+      if (lotNumbersToMap.length > 0) {
+        await createLotNumberMappings(
+          oldAccountID,
+          oldToken,
+          newTransaction,
+          lotNumbersToMap,
+          newLotNumbers,
+          "InvAdjst"
+        );
+      }
+
+      console.info(
+        "Create InvAdjst Transaction [" +
+          transactionData.tranId +
+          "] Process Done!!"
+      );
+
+      return { success: true, adjustmentId: createdTransactionId.internalId };
+    } catch (error) {
+      console.error("Handle No Lot Number Exist ERROR: ", error);
+      throw new Error(
+        `No Lot Number Exist,  Inventory adjustment failed: ${error.message}`
+      );
     }
   }
 

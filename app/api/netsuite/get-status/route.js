@@ -47,10 +47,18 @@ export async function POST(request) {
             "You cannot create an inventory detail for this item"
           )
       );
+
+      const hasInventoryErrorPattern4 = errorDetails["o:errorDetails"]?.some(
+        (detail) =>
+          detail.detail?.includes(
+            "Please enter value(s) for: Serial/Lot Number."
+          )
+      );
       const isInventoryError =
         hasInventoryErrorPattern1 ||
         hasInventoryErrorPattern2 ||
-        hasInventoryErrorPattern3;
+        hasInventoryErrorPattern3 ||
+        hasInventoryErrorPattern4;
 
       console.log("[Get-Status] isInventoryError: ", isInventoryError);
 
