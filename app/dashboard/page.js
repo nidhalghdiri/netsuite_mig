@@ -930,6 +930,7 @@ export default function DashboardOverview() {
               }
               // Get the new item ID
               const newItemId = foundItem.item.new_id;
+
               const newItemName = foundItem.item.refName;
               console.log(
                 `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
@@ -1177,6 +1178,7 @@ export default function DashboardOverview() {
       const assignmentName = assignment.refName;
       const shortfall = quantityNeeded - availableQty;
       const itemId = item.item.new_id;
+      const itemBaseUnit = item.item.baseunit;
       const itemName = item.item.refName;
       const locationId = item.inventoryDetail.location
         ? item.inventoryDetail.location.new_id
@@ -1216,6 +1218,7 @@ export default function DashboardOverview() {
             {
               item: {
                 new_id: itemId,
+                units: itemBaseUnit,
               },
               location: {
                 new_id: locationId,
@@ -1238,7 +1241,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: itemName,
                 quantity: shortfall,
-                unit: item.units,
+                unit: itemBaseUnit,
               },
             },
           ],
@@ -1324,7 +1327,8 @@ export default function DashboardOverview() {
               // unitCost: 48.68,
               description: newItemName,
               memo: `معالجة مخزون الصنف ${newItemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${newLotId} \n بكمية ${adjustmentQty}`,
-              units: foundItem.units,
+
+              units: foundItem.item.baseunit,
               inventoryDetail: {
                 inventoryAssignment: {
                   items: [
@@ -1338,7 +1342,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: newItemName,
                 quantity: adjustmentQty,
-                unit: foundItem.units,
+                unit: foundItem.item.baseunit,
               },
             },
           ],
@@ -1423,7 +1427,7 @@ export default function DashboardOverview() {
               // unitCost: 48.68,
               description: newItemName,
               memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
-              units: foundItem.units,
+              units: foundItem.item.baseunit,
               line: foundItem.line,
               inventoryDetail: {
                 inventoryAssignment: {
@@ -1437,7 +1441,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: newItemName,
                 quantity: adjustmentQty,
-                unit: foundItem.units,
+                unit: foundItem.item.baseunit,
               },
             },
           ],
