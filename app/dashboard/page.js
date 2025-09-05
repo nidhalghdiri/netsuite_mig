@@ -807,12 +807,12 @@ export default function DashboardOverview() {
           transactionData
         );
 
-        const updatedTransactionId = await getInternalID(
-          updatedTransaction.jobUrl,
-          oldToken,
-          RECORDS_TYPE[recordType]
-        );
-        console.log("Updated Transaction ID", updatedTransactionId);
+        // const updatedTransactionId = await getInternalID(
+        //   updatedTransaction.jobUrl,
+        //   oldToken,
+        //   RECORDS_TYPE[recordType]
+        // );
+        console.log("Updated Transaction ID", updatedTransaction);
 
         // Step 8: Compare transactions
         const comparisonResults = compareTransactions(
