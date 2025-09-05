@@ -16,41 +16,44 @@ export async function POST(request) {
     console.log("UPDATE Record [" + internalId + "]: ", "New ID : " + newId);
 
     // Create record in new instance
-    const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
+    // const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}/${internalId}`;
+    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1523&deploy=1`;
     console.log("UPDATE URL: ", url);
-    const idempotencyKey = randomUUID();
+    // const idempotencyKey = randomUUID();
 
     const response = await fetch(url, {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-        Prefer: "respond-async",
-        "X-NetSuite-Idempotency-Key": idempotencyKey,
-        "X-NetSuite-PropertyNameValidation": "Warning",
-        "X-NetSuite-PropertyValueValidation": "Warning",
+        // Prefer: "respond-async",
+        // "X-NetSuite-Idempotency-Key": idempotencyKey,
+        // "X-NetSuite-PropertyNameValidation": "Warning",
+        // "X-NetSuite-PropertyValueValidation": "Warning",
       },
       body: JSON.stringify({
-        custbody_mig_new_internal_id: parseFloat(newId) || 0.0,
+        type: recordType,
+        id: internalId,
+        new_internal_id: parseFloat(newId) || 0.0,
       }),
     });
 
-    // Handle 202 Accepted (async processing)
-    if (response.status === 202) {
-      const locationHeader = response.headers.get("Location");
+    // // Handle 202 Accepted (async processing)
+    // if (response.status === 202) {
+    //   const locationHeader = response.headers.get("Location");
 
-      if (!locationHeader) {
-        throw new Error("Location header not found in 202 response");
-      }
-      console.log("Async job started. Location:", locationHeader);
+    //   if (!locationHeader) {
+    //     throw new Error("Location header not found in 202 response");
+    //   }
+    //   console.log("Async job started. Location:", locationHeader);
 
-      return NextResponse.json({
-        status: "processing",
-        jobUrl: locationHeader,
-        message:
-          "Transaction Update in progress. Use the jobUrl to check status.",
-      });
-    }
+    //   return NextResponse.json({
+    //     status: "processing",
+    //     jobUrl: locationHeader,
+    //     message:
+    //       "Transaction Update in progress. Use the jobUrl to check status.",
+    //   });
+    // }
     // Handle sync response
     if (response.ok) {
       const result = await response.json();
@@ -59,12 +62,12 @@ export async function POST(request) {
         data: result,
         message: "Transaction updated successfully",
       });
+    } else {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to update record: ${response.status} - ${errorText}`
+      );
     }
-    // Handle errors
-    const errorText = await response.text();
-    throw new Error(
-      `Failed to update record: ${response.status} - ${errorText}`
-    );
   } catch (error) {
     console.error("Error updating record:", error);
     return NextResponse.json(
