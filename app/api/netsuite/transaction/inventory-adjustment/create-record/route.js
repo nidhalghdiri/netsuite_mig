@@ -65,11 +65,19 @@ export async function POST(request) {
                       // Check if we have a new_id for this lot number
                       if (ass.internalId && ass.new_id) {
                         // Use the new_id if available
-                        return {
-                          internalId: ass.new_id,
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
+                        if (parseFloat(item.inventoryDetail.quantity) > 0) {
+                          return {
+                            internalId: ass.new_id,
+                            quantity: ass.quantity,
+                            receiptInventoryNumber: ass.receiptInventoryNumber,
+                          };
+                        } else {
+                          return {
+                            internalId: ass.new_id,
+                            quantity: ass.quantity,
+                            issueInventoryNumber: ass.new_id,
+                          };
+                        }
                       } else if (ass.internalId) {
                         // If no new_id, we'll need to create a mapping later
                         lotNumbersToMap.push({
