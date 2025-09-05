@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, token, recordType, internalId, newId, newTransaction } =
+    const { accountId, token, recordType, internalId, newId } =
       await request.json();
 
     // Validate input
