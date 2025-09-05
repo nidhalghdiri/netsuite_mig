@@ -22,7 +22,7 @@ export async function POST(request) {
     // const idempotencyKey = randomUUID();
 
     const response = await fetch(url, {
-      method: "PATCH",
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
