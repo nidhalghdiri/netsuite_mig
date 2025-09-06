@@ -757,6 +757,7 @@ export default function DashboardOverview() {
       const newToken = newSession?.token;
 
       // Get transaction data if not already fetched
+      console.log("transactionDetails Data: ", transactionDetails);
       let transactionData = transactionDetails[transactionId]?.oldData;
       if (!transactionData) {
         transactionData = await fetchTransaction(transactionId, recordType);
