@@ -396,7 +396,14 @@ export default function DashboardOverview() {
     const targetDate = `${day}/${month}/${year}`;
 
     return migrationData.transactions.filter((trx) => {
-      return trx.trandate == targetDate;
+      const dateMatches = trx.trandate === targetDate;
+      const isAlreadyProcessed = trx.custbody_mig_new_internal_id;
+
+      if (includeProcessed) {
+        return dateMatches;
+      } else {
+        return dateMatches && !isAlreadyProcessed;
+      }
     });
   };
 
