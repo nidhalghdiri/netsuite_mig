@@ -414,16 +414,6 @@ export default function DashboardOverview() {
         throw new Error("No valid session token found");
       }
 
-      //       const RECORDS = {
-      //   InvAdjst: "inventory-adjustment",
-      //   TrnfrOrd: "transfer-order",
-      //   InvTrnfr: "inventory-transfer",
-      //   CustInvc: "invoice",
-      //   Journal: "journal",
-      //   CustPymt: "customer-payment",
-      //   RtnAuth: "return-authorization",
-      // };
-
       const sublists = [];
       // Get lot mapping if we have new credentials
       let lotMapping = {};
@@ -683,7 +673,7 @@ export default function DashboardOverview() {
 
             var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/${
               RECORDS_TYPE[transactionData?.orderType]
-            }/${orderNewId}/transform/${RECORDS_TYPE[recordType]}`;
+            }/${orderNewId}/!transform/${RECORDS_TYPE[recordType]}`;
             console.log("Transform URL: ", url);
 
             // Step 3 : Create New Transaction
