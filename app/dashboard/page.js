@@ -692,6 +692,33 @@ export default function DashboardOverview() {
               lotNumbers,
               url
             );
+          } else {
+            if (recordType == "CustCred") {
+              var orderUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/returnAuthorization/${transactionData?.createdFrom.id}`;
+              var orderData = await fetchSublistItem(
+                oldAccountID,
+                oldToken,
+                orderUrl,
+                "RtnAuth"
+              );
+              console.log("CreatedFrom Data: ", orderData);
+              var orderNewId = orderData.custbody_mig_new_internal_id;
+              console.log("CreatedFrom Data New Id: ", orderNewId);
+              var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/returnAuthorization/${orderNewId}/!transform/${RECORDS_TYPE[recordType]}`;
+              console.log("Transform URL: ", url);
+              createdTransactionURL = await transformTransaction(
+                oldAccountID,
+                oldToken,
+                newAccountID,
+                newToken,
+                recordType,
+                RECORDS_TYPE[recordType],
+                transactionData,
+                unitMapping,
+                lotNumbers,
+                url
+              );
+            }
           }
         } else {
           // Step 3 : Create New Transaction
