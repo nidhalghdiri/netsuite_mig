@@ -46,69 +46,69 @@ export async function POST(request) {
       currency: { id: recordData.currency.id },
 
       // postingPeriod: { id: "20" },
-      item: {
-        items: recordData.item.items.map((item) => ({
-          ...(item.account && { account: { id: item.account.new_id } }),
-          amount: parseFloat(item.amount) || 0.0,
-          costEstimate: parseFloat(item.costEstimate) || 0.0,
-          costEstimateRate: parseFloat(item.costEstimateRate) || 0.0,
-          costEstimateType: { id: item.costEstimateType.id },
-          description: item.description,
-          item: { id: item.item.new_id },
-          price: { id: item.price.id },
-          quantity: item.quantity,
-          rate: parseFloat(item.rate) || 0.0,
-          units: unitMapping[item.units],
-          inventoryDetail: item.inventoryDetail
-            ? {
-                quantity: item.inventoryDetail.quantity,
-                unit: unitMapping[item.inventoryDetail.unit],
-                inventoryAssignment: {
-                  items: item.inventoryDetail.inventoryAssignment.items.map(
-                    (ass) => {
-                      // Check if we have a new_id for this lot number
-                      if (ass.internalId && ass.new_id) {
-                        // Use the new_id if available
-                        return {
-                          internalId: ass.new_id,
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      } else if (ass.internalId) {
-                        // If no new_id, we'll need to create a mapping later
-                        lotNumbersToMap.push({
-                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
-                          refName: ass.receiptInventoryNumber,
-                          itemId: item.item.new_id,
-                          itemName: item.description
-                            ? item.description.substring(0, 40)
-                            : "",
-                          quantity: ass.quantity,
-                          line: item.line,
-                        });
+      // item: {
+      //   items: recordData.item.items.map((item) => ({
+      //     ...(item.account && { account: { id: item.account.new_id } }),
+      //     amount: parseFloat(item.amount) || 0.0,
+      //     costEstimate: parseFloat(item.costEstimate) || 0.0,
+      //     costEstimateRate: parseFloat(item.costEstimateRate) || 0.0,
+      //     costEstimateType: { id: item.costEstimateType.id },
+      //     description: item.description,
+      //     item: { id: item.item.new_id },
+      //     price: { id: item.price.id },
+      //     quantity: item.quantity,
+      //     rate: parseFloat(item.rate) || 0.0,
+      //     units: unitMapping[item.units],
+      //     inventoryDetail: item.inventoryDetail
+      //       ? {
+      //           quantity: item.inventoryDetail.quantity,
+      //           unit: unitMapping[item.inventoryDetail.unit],
+      //           inventoryAssignment: {
+      //             items: item.inventoryDetail.inventoryAssignment.items.map(
+      //               (ass) => {
+      //                 // Check if we have a new_id for this lot number
+      //                 if (ass.internalId && ass.new_id) {
+      //                   // Use the new_id if available
+      //                   return {
+      //                     internalId: ass.new_id,
+      //                     quantity: ass.quantity,
+      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
+      //                   };
+      //                 } else if (ass.internalId) {
+      //                   // If no new_id, we'll need to create a mapping later
+      //                   lotNumbersToMap.push({
+      //                     old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
+      //                     refName: ass.receiptInventoryNumber,
+      //                     itemId: item.item.new_id,
+      //                     itemName: item.description
+      //                       ? item.description.substring(0, 40)
+      //                       : "",
+      //                     quantity: ass.quantity,
+      //                     line: item.line,
+      //                   });
 
-                        // Don't include internalId for new creation
-                        return {
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      }
-                      return {
-                        quantity: ass.quantity,
-                        receiptInventoryNumber: ass.receiptInventoryNumber,
-                      };
-                    }
+      //                   // Don't include internalId for new creation
+      //                   return {
+      //                     quantity: ass.quantity,
+      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
+      //                   };
+      //                 }
+      //                 return {
+      //                   quantity: ass.quantity,
+      //                   receiptInventoryNumber: ass.receiptInventoryNumber,
+      //                 };
+      //               }
 
-                    //   ({
-                    //   quantity: ass.quantity,
-                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
-                    // })
-                  ),
-                },
-              }
-            : null,
-        })),
-      },
+      //               //   ({
+      //               //   quantity: ass.quantity,
+      //               //   receiptInventoryNumber: ass.receiptInventoryNumber,
+      //               // })
+      //             ),
+      //           },
+      //         }
+      //       : null,
+      //   })),
+      // },
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
