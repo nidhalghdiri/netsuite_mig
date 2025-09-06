@@ -54,7 +54,7 @@ export async function POST(request) {
         recordData.custbody_ogg_transaction_printed,
       dueDate: recordData.dueDate,
       salesEffectiveDate: recordData.salesEffectiveDate,
-      salesRep: { id: recordData.salesRep.new_id },
+      // salesRep: { id: recordData.salesRep.new_id },
       location: { id: recordData.location.new_id },
       shipAddress: recordData.shipAddress,
       subsidiary: { id: recordData.subsidiary.new_id },
