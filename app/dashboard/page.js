@@ -388,7 +388,7 @@ export default function DashboardOverview() {
     return matchesStatus && matchesType && matchesSearch;
   });
 
-  const filterTransactionsByDate = (selectedDate) => {
+  const filterTransactionsByDate = (selectedDate, includeProcessed = false) => {
     if (!selectedDate) return migrationData.transactions;
 
     // Convert selectedDate (YYYY-MM-DD) to DD/MM/YYYY format
