@@ -623,7 +623,7 @@ export default function DashboardOverview() {
 
           if (hasInventoryDetails) {
             lotMapping = await getLotMapping(accountID, oldSession.token);
-            console.log("lotMapping", lotMapping);
+            console.log("Fetching lotMapping", lotMapping);
           }
         } catch (error) {
           console.error(
@@ -639,7 +639,7 @@ export default function DashboardOverview() {
         record,
         RECORDS[recordType]
       );
-      console.log("lotMapping: ", lotMapping);
+      console.log("Fetching lotMapping 2: ", lotMapping);
       // Apply lot mapping to inventory details
       if (Object.keys(lotMapping).length > 0) {
         const lotNumbers = await getLotNumbers(
@@ -647,7 +647,10 @@ export default function DashboardOverview() {
           oldSession.token,
           internalId
         );
-        console.log("lotNumbers : ", JSON.stringify(lotNumbers, null, 2));
+        console.log(
+          "fetching lotNumbers : ",
+          JSON.stringify(lotNumbers, null, 2)
+        );
         applyLotMapping(expandedRecord, lotMapping, lotNumbers, recordType);
       }
 
