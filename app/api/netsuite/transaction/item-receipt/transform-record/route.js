@@ -52,7 +52,6 @@ export async function POST(request) {
           item: { id: item.item.new_id },
           location: { id: item.location.new_id },
           quantity: item.quantity,
-          quantity: item.quantity,
           units: unitMapping[item.units],
           inventoryDetail: item.inventoryDetail
             ? {

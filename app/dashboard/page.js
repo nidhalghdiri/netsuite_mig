@@ -16,6 +16,10 @@ import {
   FiPlay,
   FiStopCircle,
   FiCircle,
+  FiCalendar,
+  FiPause,
+  FiPlay,
+  FiSkipForward,
 } from "react-icons/fi";
 import {
   applyLotMapping,
