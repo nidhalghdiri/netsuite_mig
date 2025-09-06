@@ -388,11 +388,15 @@ export default function DashboardOverview() {
     return matchesStatus && matchesType && matchesSearch;
   });
 
-  const filterTransactionsByDate = (date) => {
-    if (!date) return migrationData.transactions;
+  const filterTransactionsByDate = (selectedDate) => {
+    if (!selectedDate) return migrationData.transactions;
+
+    // Convert selectedDate (YYYY-MM-DD) to DD/MM/YYYY format
+    const [year, month, day] = selectedDate.split("-");
+    const targetDate = `${day}/${month}/${year}`;
 
     return migrationData.transactions.filter((trx) => {
-      return trx.trandate === date;
+      return trx.trandate == targetDate;
     });
   };
 
@@ -401,7 +405,7 @@ export default function DashboardOverview() {
       toast.error("Please select a date first");
       return;
     }
-
+    console.log("selectedDate: ", selectedDate);
     setIsAutoProcessing(true);
     setAutoProcessStatus("running");
     setCurrentProcessingIndex(0);
@@ -410,7 +414,7 @@ export default function DashboardOverview() {
 
     // Get transactions for the selected date
     const dateTransactions = filterTransactionsByDate(selectedDate);
-
+    console.log("dateTransactions: ", dateTransactions);
     // Process transactions sequentially
     for (let i = 0; i < dateTransactions.length; i++) {
       if (autoProcessStatus === "paused") {
@@ -422,7 +426,6 @@ export default function DashboardOverview() {
 
       try {
         // Process the transaction
-        await processTransaction(trx, trx.type);
 
         // Mark as processed
         setProcessedTransactions((prev) => [...prev, trx.id]);
