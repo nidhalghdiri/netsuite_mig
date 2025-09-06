@@ -4,20 +4,20 @@ const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
 
 export async function POST(request) {
   const { accountId, token, internalId } = await request.json();
-  console.log("[itemReceipt] AccountId: ", accountId);
-  console.log("[itemReceipt] token: ", token);
-  console.log("[itemReceipt] internalId: ", internalId);
+  console.log("[creditMemo] AccountId: ", accountId);
+  console.log("[creditMemo] token: ", token);
+  console.log("[creditMemo] internalId: ", internalId);
 
   try {
     // Fetch Inventory Adjustment Fields
     const record = await fetchRecord(
       accountId,
       token,
-      "itemReceipt",
+      "creditMemo",
       internalId
     );
 
-    console.log("[itemReceipt] New Record : ", record);
+    console.log("[creditMemo] New Record : ", record);
 
     // Fetch Inventory Items
     // if (record.inventory?.links) {
