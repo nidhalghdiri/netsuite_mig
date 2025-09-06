@@ -219,7 +219,7 @@ const fetchMigrationData = async () => {
       statistics: getDefaultStatistics(),
       transactions: [],
       total: 0,
-      error: error.message,
+      error: error.message, // Changed from 'err' to 'error'
     };
   }
 };
@@ -313,6 +313,14 @@ export default function DashboardOverview() {
     type: "all",
     search: "",
   });
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [isAutoProcessing, setIsAutoProcessing] = useState(false);
+  const [currentProcessingIndex, setCurrentProcessingIndex] = useState(0);
+  const [autoProcessStatus, setAutoProcessStatus] = useState("idle"); // idle, running, paused, completed, error
+  const [processedTransactions, setProcessedTransactions] = useState([]);
+  const [failedTransactions, setFailedTransactions] = useState([]);
+
   const [error, setError] = useState(null);
   const [transactionDetails, setTransactionDetails] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
@@ -379,6 +387,107 @@ export default function DashboardOverview() {
 
     return matchesStatus && matchesType && matchesSearch;
   });
+
+  const filterTransactionsByDate = (date) => {
+    if (!date) return migrationData.transactions;
+
+    return migrationData.transactions.filter((trx) => {
+      return trx.trandate === date;
+    });
+  };
+
+  const startAutoProcessing = async () => {
+    if (!selectedDate) {
+      toast.error("Please select a date first");
+      return;
+    }
+
+    setIsAutoProcessing(true);
+    setAutoProcessStatus("running");
+    setCurrentProcessingIndex(0);
+    setProcessedTransactions([]);
+    setFailedTransactions([]);
+
+    // Get transactions for the selected date
+    const dateTransactions = filterTransactionsByDate(selectedDate);
+
+    // Process transactions sequentially
+    for (let i = 0; i < dateTransactions.length; i++) {
+      if (autoProcessStatus === "paused") {
+        break;
+      }
+
+      setCurrentProcessingIndex(i);
+      const trx = dateTransactions[i];
+
+      try {
+        // Process the transaction
+        await processTransaction(trx, trx.type);
+
+        // Mark as processed
+        setProcessedTransactions((prev) => [...prev, trx.id]);
+      } catch (error) {
+        console.error(`Failed to process transaction ${trx.id}:`, error);
+
+        // Add to failed transactions and pause processing
+        setFailedTransactions((prev) => [
+          ...prev,
+          {
+            id: trx.id,
+            error: error.message,
+          },
+        ]);
+
+        setAutoProcessStatus("paused");
+        break;
+      }
+
+      // Small delay between transactions
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    if (autoProcessStatus !== "paused") {
+      setAutoProcessStatus("completed");
+      toast.success(
+        `Finished processing ${dateTransactions.length} transactions`
+      );
+    }
+
+    setIsAutoProcessing(false);
+  };
+  const pauseAutoProcessing = () => {
+    setAutoProcessStatus("paused");
+    setIsAutoProcessing(false);
+  };
+  const resumeAutoProcessing = () => {
+    if (failedTransactions.length > 0) {
+      // If we have failures, start from the first failed transaction
+      const failedId = failedTransactions[0].id;
+      const dateTransactions = filterTransactionsByDate(selectedDate);
+      const failedIndex = dateTransactions.findIndex(
+        (trx) => trx.id === failedId
+      );
+
+      if (failedIndex !== -1) {
+        setCurrentProcessingIndex(failedIndex);
+      }
+    }
+
+    setAutoProcessStatus("running");
+    setIsAutoProcessing(true);
+    startAutoProcessing();
+  };
+  const skipFailedTransaction = () => {
+    if (failedTransactions.length === 0) return;
+
+    // Remove the first failed transaction
+    const newFailedTransactions = [...failedTransactions];
+    newFailedTransactions.shift();
+    setFailedTransactions(newFailedTransactions);
+
+    // Resume processing
+    resumeAutoProcessing();
+  };
 
   const RECORDS = {
     InvAdjst: "inventory-adjustment",
@@ -1155,6 +1264,7 @@ export default function DashboardOverview() {
       }));
       throw error;
     } finally {
+      // ADDED: Finally block to ensure processing state is reset
       setIsProcessing(false);
       setProcessingId(null);
     }
@@ -1658,6 +1768,106 @@ export default function DashboardOverview() {
               </div>
               <p className="text-sm text-gray-600">Completion</p>
             </div>
+          </div>
+
+          <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+            <h3 className="font-medium mb-3">Day-by-Day Processing</h3>
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Date to Process
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full border rounded-md pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isAutoProcessing}
+                  />
+                  <FiCalendar className="absolute right-3 top-2.5 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                {autoProcessStatus === "running" ? (
+                  <button
+                    onClick={pauseAutoProcessing}
+                    className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
+                  >
+                    <FiPause className="mr-1" /> Pause
+                  </button>
+                ) : (
+                  <button
+                    onClick={
+                      autoProcessStatus === "paused"
+                        ? resumeAutoProcessing
+                        : startAutoProcessing
+                    }
+                    disabled={!selectedDate || isAutoProcessing}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FiPlay className="mr-1" />
+                    {autoProcessStatus === "paused"
+                      ? "Resume"
+                      : "Start Processing"}
+                  </button>
+                )}
+
+                {autoProcessStatus === "paused" &&
+                  failedTransactions.length > 0 && (
+                    <button
+                      onClick={skipFailedTransaction}
+                      className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                    >
+                      <FiSkipForward className="mr-1" /> Skip Failed
+                    </button>
+                  )}
+              </div>
+            </div>
+
+            {selectedDate && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600">
+                  Found {filterTransactionsByDate(selectedDate).length}{" "}
+                  transactions for {selectedDate}
+                </p>
+
+                {isAutoProcessing && (
+                  <div className="mt-2 flex items-center">
+                    <FiRefreshCw className="animate-spin mr-2 text-blue-500" />
+                    <span>
+                      Processing {currentProcessingIndex + 1} of{" "}
+                      {filterTransactionsByDate(selectedDate).length}
+                    </span>
+                  </div>
+                )}
+
+                {autoProcessStatus === "paused" &&
+                  failedTransactions.length > 0 && (
+                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-red-700 font-medium">
+                        Processing paused due to error:
+                      </p>
+                      <p className="text-red-600 text-sm">
+                        Transaction {failedTransactions[0].id}:{" "}
+                        {failedTransactions[0].error}
+                      </p>
+                    </div>
+                  )}
+
+                {autoProcessStatus === "completed" && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-green-700 font-medium">
+                      Processing completed successfully!
+                    </p>
+                    <p className="text-green-600 text-sm">
+                      Processed {processedTransactions.length} transactions
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mb-6">
