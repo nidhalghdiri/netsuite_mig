@@ -426,6 +426,19 @@ export default function DashboardOverview() {
 
       try {
         // Process the transaction
+        console.log(
+          `Processing transaction ${i + 1}/${dateTransactions.length}: ${
+            trx.id
+          }`
+        );
+        console.log("Fetching transaction details...");
+        await fetchTransaction(trx.id, trx.type);
+        // Small delay to ensure state is updated
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // STEP 2: Process the transaction (this will use the fetched data from transactionDetails)
+        console.log("Processing transaction...");
+        await processTransaction(trx, trx.type);
 
         // Mark as processed
         setProcessedTransactions((prev) => [...prev, trx.id]);
@@ -438,6 +451,7 @@ export default function DashboardOverview() {
           {
             id: trx.id,
             error: error.message,
+            step: error.step || "unknown", // Track which step failed
           },
         ]);
 
