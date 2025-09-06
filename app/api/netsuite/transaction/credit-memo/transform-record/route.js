@@ -42,17 +42,22 @@ export async function POST(request) {
       subsidiary: { id: recordData.subsidiary.new_id },
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       location: { id: recordData.location.new_id },
-      landedCostMethod: { id: recordData.landedCostMethod.id },
-      entity: { id: recordData.entity.new_id },
-      employee: { id: recordData.employee.new_id },
+      ...(recordData.entity && { entity: { id: recordData.entity.new_id } }),
       currency: { id: recordData.currency.id },
+
       // postingPeriod: { id: "20" },
       item: {
         items: recordData.item.items.map((item) => ({
+          ...(item.account && { account: { id: item.account.new_id } }),
+          amount: parseFloat(item.amount) || 0.0,
+          costEstimate: parseFloat(item.costEstimate) || 0.0,
+          costEstimateRate: parseFloat(item.costEstimateRate) || 0.0,
+          costEstimateType: { id: item.costEstimateType.id },
+          description: item.description,
           item: { id: item.item.new_id },
-          location: { id: item.location.new_id },
+          price: { id: item.price.id },
           quantity: item.quantity,
-          quantity: item.quantity,
+          rate: parseFloat(item.rate) || 0.0,
           units: unitMapping[item.units],
           inventoryDetail: item.inventoryDetail
             ? {
@@ -115,8 +120,8 @@ export async function POST(request) {
     // Create record in new instance
     const url = transformURL;
     const idempotencyKey = randomUUID();
-    console.log("Create ITEMRECEIPT URL ", url);
-    console.log("Create ITEMRECEIPT idempotencyKey ", idempotencyKey);
+    console.log("Create CREDITMEMO URL ", url);
+    console.log("Create CREDITMEMO idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",

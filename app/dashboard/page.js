@@ -433,7 +433,8 @@ export default function DashboardOverview() {
         recordType == "TrnfrOrd" ||
         recordType == "CustInvc" ||
         recordType == "RtnAuth" ||
-        recordType == "ItemRcpt"
+        recordType == "ItemRcpt" ||
+        recordType == "CustCred"
       ) {
         sublists.push("item");
       } else if (recordType == "CustPymt") {
@@ -667,7 +668,7 @@ export default function DashboardOverview() {
             transactionData?.createdFrom
           );
           if (transactionData?.orderId && transactionData?.orderType) {
-            var url = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/${
+            var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/${
               RECORDS_TYPE[transactionData?.orderType]
             }/${transactionData?.orderId}/transform/${
               RECORDS_TYPE[recordType]
