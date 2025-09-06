@@ -431,10 +431,10 @@ export default function DashboardOverview() {
             trx.id
           }`
         );
-        console.log("Fetching transaction details...");
-        await fetchTransaction(trx.id, trx.type);
-        // Small delay to ensure state is updated
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // console.log("Fetching transaction details...");
+        // await fetchTransaction(trx.id, trx.type);
+        // // Small delay to ensure state is updated
+        // await new Promise((resolve) => setTimeout(resolve, 300));
 
         // STEP 2: Process the transaction (this will use the fetched data from transactionDetails)
         console.log("Processing transaction...");
