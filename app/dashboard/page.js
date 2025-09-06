@@ -668,11 +668,22 @@ export default function DashboardOverview() {
             transactionData?.createdFrom
           );
           if (transactionData?.orderId && transactionData?.orderType) {
+            var orderUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/${
+              RECORDS_TYPE[transactionData?.orderType]
+            }/${transactionData?.orderId}`;
+            var orderData = await fetchSublistItem(
+              oldAccountID,
+              oldToken,
+              orderUrl,
+              transactionData?.orderType
+            );
+            console.log("CreatedFrom Data: ", orderData);
+            var orderNewId = orderData.custbody_mig_new_internal_id;
+            console.log("CreatedFrom Data New Id: ", orderNewId);
+
             var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/${
               RECORDS_TYPE[transactionData?.orderType]
-            }/${transactionData?.orderId}/transform/${
-              RECORDS_TYPE[recordType]
-            }`;
+            }/${orderNewId}/transform/${RECORDS_TYPE[recordType]}`;
             console.log("Transform URL: ", url);
 
             // Step 3 : Create New Transaction
