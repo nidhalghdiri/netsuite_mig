@@ -13,7 +13,6 @@ import {
   FiFileText,
   FiChevronDown,
   FiChevronUp,
-  FiPlay,
   FiStopCircle,
   FiCircle,
   FiCalendar,
