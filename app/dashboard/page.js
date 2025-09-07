@@ -328,10 +328,14 @@ export default function DashboardOverview() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingId, setProcessingId] = useState(null);
 
-  const oldSession = getSession("old");
-  const newSession = getSession("new");
-  const isOldConnected = isSessionValid(oldSession) && oldSession.token;
-  const isNewConnected = isSessionValid(newSession) && newSession.token;
+  const oldSession = typeof window !== "undefined" ? getSession("old") : null;
+  const newSession = typeof window !== "undefined" ? getSession("new") : null;
+  const isOldConnected =
+    oldSession && isSessionValid(oldSession) && oldSession.token;
+  const isNewConnected =
+    newSession && isSessionValid(newSession) && newSession.token;
+  const [isClient, setIsClient] = useState(false);
+
   const loadMigrationData = async () => {
     setLoading(true);
     setError(null);
@@ -349,6 +353,9 @@ export default function DashboardOverview() {
     }
   };
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   useEffect(() => {
     if (isOldConnected && isNewConnected) {
       loadMigrationData();
@@ -1820,7 +1827,19 @@ export default function DashboardOverview() {
       );
     }
   }
-
+  if (!isClient) {
+    return (
+      <div className="max-w-6xl mx-auto text-black">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Loading Dashboard...</h2>
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-6xl mx-auto text-black">
       {/* Connection Status */}
@@ -1855,7 +1874,7 @@ export default function DashboardOverview() {
             </div>
             <p className="text-sm text-gray-600">
               {isOldConnected
-                ? `Connected to ${oldSession.account}`
+                ? `Connected to ${oldSession?.account || "Old Instance"}`
                 : "Not connected. Please connect from the home page."}
             </p>
           </div>
@@ -1877,7 +1896,7 @@ export default function DashboardOverview() {
             </div>
             <p className="text-sm text-gray-600">
               {isNewConnected
-                ? `Connected to ${newSession.account}`
+                ? `Connected to ${newSession?.account || "New Instance"}`
                 : "Not connected. Please connect from the home page."}
             </p>
           </div>
