@@ -36,6 +36,8 @@ import {
   transformTransaction,
   updateTransaction,
 } from "@/lib/utils";
+import { apiRequest } from "@/lib/apiClient";
+import { getValidToken, refreshTokenIfNeeded } from "@/lib/tokenManager";
 
 // Mock data service
 const fetchMigrationData = async () => {
@@ -48,7 +50,7 @@ const fetchMigrationData = async () => {
       throw new Error("No valid session token found");
     }
 
-    const response = await fetch(
+    const response = await apiRequest(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction`,
       {
         method: "POST",
@@ -328,9 +330,14 @@ export default function DashboardOverview() {
 
   const oldSession = getSession("old");
   const newSession = getSession("new");
-  const isOldConnected = isSessionValid(oldSession) && oldSession.token;
-  const isNewConnected = isSessionValid(newSession) && newSession.token;
-
+  const isOldConnected = () => {
+    const session = getSession("old");
+    return session && session.token && !isTokenExpired(session);
+  };
+  const isNewConnected = () => {
+    const session = getSession("new");
+    return session && session.token && !isTokenExpired(session);
+  };
   const loadMigrationData = async () => {
     setLoading(true);
     setError(null);
@@ -409,10 +416,18 @@ export default function DashboardOverview() {
 
   const startAutoProcessing = async () => {
     if (!selectedDate) {
-      toast.error("Please select a date first");
+      console.error("Please select a date first");
       return;
     }
     console.log("selectedDate: ", selectedDate);
+
+    try {
+      await getValidToken("old");
+      await getValidToken("new");
+    } catch (error) {
+      console.error("Authentication failed. Please check your connections.");
+      return;
+    }
     setIsAutoProcessing(true);
     setAutoProcessStatus("running");
     setCurrentProcessingIndex(0);
@@ -425,6 +440,23 @@ export default function DashboardOverview() {
     // Process transactions sequentially
     for (let i = 0; i < dateTransactions.length; i++) {
       if (autoProcessStatus === "paused") {
+        break;
+      }
+      // Check token validity before each transaction
+      try {
+        await refreshTokenIfNeeded("old");
+        await refreshTokenIfNeeded("new");
+      } catch (error) {
+        console.error("Token refresh failed:", error);
+        setFailedTransactions((prev) => [
+          ...prev,
+          {
+            id: trx.id,
+            error: "Authentication failed. Please reconnect and resume.",
+            step: "authentication",
+          },
+        ]);
+        setAutoProcessStatus("paused");
         break;
       }
 
@@ -472,7 +504,7 @@ export default function DashboardOverview() {
 
     if (autoProcessStatus !== "paused") {
       setAutoProcessStatus("completed");
-      toast.success(
+      console.success(
         `Finished processing ${dateTransactions.length} transactions`
       );
     }
@@ -575,7 +607,7 @@ export default function DashboardOverview() {
         sublists.push("payment");
       }
 
-      const response = await fetch(
+      const response = await apiRequest(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/transaction/${RECORDS[recordType]}/fetch-record`,
         {
           method: "POST",
@@ -1288,7 +1320,21 @@ export default function DashboardOverview() {
             }
 
             if (negativeItems.length > 0) {
+              // Group items by itemId and lotNumber, summing requested quantities
+              const groupedItems = {};
+
               for (const item of negativeItems) {
+                const key = `${item.itemId}-${item.lotNumber}`;
+                if (!groupedItems[key]) {
+                  groupedItems[key] = { ...item };
+                } else {
+                  groupedItems[key].requestedQty += item.requestedQty;
+                }
+              }
+
+              for (const key of Object.keys(groupedItems)) {
+                const item = groupedItems[key];
+
                 console.log(
                   `Processing negative inventory for Item ${item.itemId}, Lot ${item.lotNumber}`
                 );
@@ -1800,7 +1846,7 @@ export default function DashboardOverview() {
         <div className="grid grid-cols-2 gap-4">
           <div
             className={`border rounded-lg p-4 ${
-              isOldConnected
+              isOldConnected()
                 ? "border-green-200 bg-green-50"
                 : "border-red-200 bg-red-50"
             }`}
