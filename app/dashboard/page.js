@@ -346,8 +346,8 @@ export default function DashboardOverview() {
         setError(data.error);
       }
     } catch (error) {
-      setError(err.message);
-      console.error("Failed to load migration data:", err);
+      setError(error.message);
+      console.error("Failed to load migration data:", error);
     } finally {
       setLoading(false);
     }
@@ -505,7 +505,7 @@ export default function DashboardOverview() {
 
     if (autoProcessStatus !== "paused") {
       setAutoProcessStatus("completed");
-      console.success(
+      console.log(
         `Finished processing ${dateTransactions.length} transactions`
       );
     }
@@ -1859,7 +1859,7 @@ export default function DashboardOverview() {
         <div className="grid grid-cols-2 gap-4">
           <div
             className={`border rounded-lg p-4 ${
-              isOldConnected()
+              isOldConnected
                 ? "border-green-200 bg-green-50"
                 : "border-red-200 bg-red-50"
             }`}
