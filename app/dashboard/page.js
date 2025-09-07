@@ -330,14 +330,8 @@ export default function DashboardOverview() {
 
   const oldSession = getSession("old");
   const newSession = getSession("new");
-  const isOldConnected = () => {
-    const session = getSession("old");
-    return session && session.token && !isTokenExpired(session);
-  };
-  const isNewConnected = () => {
-    const session = getSession("new");
-    return session && session.token && !isTokenExpired(session);
-  };
+  const isOldConnected = isSessionValid(oldSession) && oldSession.token;
+  const isNewConnected = isSessionValid(newSession) && newSession.token;
   const loadMigrationData = async () => {
     setLoading(true);
     setError(null);
