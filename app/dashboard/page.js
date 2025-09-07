@@ -1020,10 +1020,27 @@ export default function DashboardOverview() {
             const availableMatch = errorMessage.match(
               /You only have (\d+) available/
             );
-            // Pattern 2: "Inventory numbers are not available" with details
-            const negativeInventoryMatch = errorMessage.match(
-              /Item:(\d+), Number:([^,]+), Quantity:(\d+), On Hand:(-?\d+), Committed:/
-            );
+            // // Pattern 2: "Inventory numbers are not available" with details
+            // const negativeInventoryMatch = errorMessage.match(
+            //   /Item:(\d+), Number:([^,]+), Quantity:(\d+), On Hand:(-?\d+), Committed:/
+            // );
+            // Handle Pattern 2: Multiple negative inventory items
+            const negativeInventoryRegex =
+              /\[Item:(\d+), Number:([^,]+), Quantity:(\d+), On Hand:(-?\d+), Committed:\]/g;
+            let negativeInventoryMatch;
+            const negativeItems = [];
+
+            while (
+              (negativeInventoryMatch =
+                negativeInventoryRegex.exec(errorMessage)) !== null
+            ) {
+              negativeItems.push({
+                itemId: negativeInventoryMatch[1],
+                lotNumber: negativeInventoryMatch[2],
+                requestedQty: parseInt(negativeInventoryMatch[3]),
+                onHand: parseInt(negativeInventoryMatch[4]),
+              });
+            }
 
             // Pattern 3: "You cannot create an inventory detail for this item"
             const inventoryDetailError = errorMessage.includes(
@@ -1072,87 +1089,89 @@ export default function DashboardOverview() {
 
               // Optionally retry the transaction or take other action
               return; // Exit early since we're handling this specially
-            } else if (negativeInventoryMatch) {
-              // Handle the new negative inventory pattern
-              const itemId = negativeInventoryMatch[1];
-              const lotNumber = negativeInventoryMatch[2];
-              const requestedQty = parseInt(negativeInventoryMatch[3]);
-              console.log(
-                `Negative inventory for Item [${itemId}] error: Requested ${requestedQty} for Lot Number [${lotNumber}]`
-              );
+            }
+            // else if (negativeInventoryMatch) {
+            //   // Handle the new negative inventory pattern
+            //   const itemId = negativeInventoryMatch[1];
+            //   const lotNumber = negativeInventoryMatch[2];
+            //   const requestedQty = parseInt(negativeInventoryMatch[3]);
+            //   console.log(
+            //     `Negative inventory for Item [${itemId}] error: Requested ${requestedQty} for Lot Number [${lotNumber}]`
+            //   );
 
-              let sublist_name;
+            //   let sublist_name;
 
-              if (transactionData?.inventory) {
-                sublist_name = "inventory";
-              } else {
-                sublist_name = "item";
-              }
+            //   if (transactionData?.inventory) {
+            //     sublist_name = "inventory";
+            //   } else {
+            //     sublist_name = "item";
+            //   }
 
-              // Find the item in transactionData
-              const foundItem = transactionData[sublist_name].items.find(
-                (item) =>
-                  item.item.refName.includes(itemId) || item.item.id == itemId
-              );
+            //   // Find the item in transactionData
+            //   const foundItem = transactionData[sublist_name].items.find(
+            //     (item) =>
+            //       item.item.refName.includes(itemId) || item.item.id == itemId
+            //   );
 
-              if (!foundItem) {
-                throw new Error(
-                  `Item with ID ${itemId} not found in transaction data`
-                );
-              }
-              // Get the new item ID
-              const newItemId = foundItem.item.new_id;
+            //   if (!foundItem) {
+            //     throw new Error(
+            //       `Item with ID ${itemId} not found in transaction data`
+            //     );
+            //   }
+            //   // Get the new item ID
+            //   const newItemId = foundItem.item.new_id;
 
-              const newItemName = foundItem.item.refName;
-              console.log(
-                `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
-              );
+            //   const newItemName = foundItem.item.refName;
+            //   console.log(
+            //     `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
+            //   );
 
-              // Find the lot in inventory assignments
-              let oldLotId = null;
-              let newLotId = null;
-              let newLotName = null;
-              let locationId = null;
-              let locationName = null;
-              if (
-                foundItem.inventoryDetail &&
-                foundItem.inventoryDetail.inventoryAssignment
-              ) {
-                const foundLot =
-                  foundItem.inventoryDetail.inventoryAssignment.items.find(
-                    (lot) => lot.issueInventoryNumber.refName == lotNumber
-                  );
-                if (foundLot) {
-                  oldLotId = foundLot.old_id;
-                  newLotId = foundLot.new_id;
-                  newLotName = foundLot.refName;
-                  console.log(`Found lot: ${lotNumber}, New ID: ${newLotId}`);
-                }
-                locationId = foundItem.inventoryDetail.location.new_id;
-                locationName = foundItem.inventoryDetail.location.refName;
-              }
-              const adjustmentQty = requestedQty;
-              // Call function to create inventory adjustment
+            //   // Find the lot in inventory assignments
+            //   let oldLotId = null;
+            //   let newLotId = null;
+            //   let newLotName = null;
+            //   let locationId = null;
+            //   let locationName = null;
+            //   if (
+            //     foundItem.inventoryDetail &&
+            //     foundItem.inventoryDetail.inventoryAssignment
+            //   ) {
+            //     const foundLot =
+            //       foundItem.inventoryDetail.inventoryAssignment.items.find(
+            //         (lot) => lot.issueInventoryNumber.refName == lotNumber
+            //       );
+            //     if (foundLot) {
+            //       oldLotId = foundLot.old_id;
+            //       newLotId = foundLot.new_id;
+            //       newLotName = foundLot.refName;
+            //       console.log(`Found lot: ${lotNumber}, New ID: ${newLotId}`);
+            //     }
+            //     locationId = foundItem.inventoryDetail.location.new_id;
+            //     locationName = foundItem.inventoryDetail.location.refName;
+            //   }
+            //   const adjustmentQty = requestedQty;
+            //   // Call function to create inventory adjustment
 
-              await handleNegativeInventoryAdjustment(
-                transactionData,
-                foundItem,
-                newItemId,
-                newItemName,
-                oldLotId,
-                newLotId,
-                newLotName,
-                locationId,
-                locationName,
-                adjustmentQty,
-                unitMapping,
-                lotNumbers,
-                oldAccountID,
-                oldToken,
-                newAccountID,
-                newToken
-              );
-            } else if (inventoryDetailError) {
+            //   await handleNegativeInventoryAdjustment(
+            //     transactionData,
+            //     foundItem,
+            //     newItemId,
+            //     newItemName,
+            //     oldLotId,
+            //     newLotId,
+            //     newLotName,
+            //     locationId,
+            //     locationName,
+            //     adjustmentQty,
+            //     unitMapping,
+            //     lotNumbers,
+            //     oldAccountID,
+            //     oldToken,
+            //     newAccountID,
+            //     newToken
+            //   );
+            // }
+            else if (inventoryDetailError) {
               // Handle pattern 3: Create inventory adjustment for this item
               console.log(
                 "Inventory detail not allowed for this item, creating inventory adjustment"
@@ -1267,11 +1286,84 @@ export default function DashboardOverview() {
                 }
               }
             }
+
+            if (negativeItems.length > 0) {
+              for (const item of negativeItems) {
+                console.log(
+                  `Processing negative inventory for Item ${item.itemId}, Lot ${item.lotNumber}`
+                );
+                // Find item in transaction data (similar to your existing logic)
+                let sublist_name = transactionData?.inventory
+                  ? "inventory"
+                  : "item";
+                const foundItem = transactionData[sublist_name].items.find(
+                  (i) =>
+                    i.item.refName.includes(item.itemId) ||
+                    i.item.id == item.itemId
+                );
+                if (!foundItem) {
+                  console.error(
+                    `Item ${item.itemId} not found in transaction data`
+                  );
+                  continue;
+                }
+                const newItemId = foundItem.item.new_id;
+                const newItemName = foundItem.item.refName;
+                console.log(
+                  `Found item: ${foundItem.item.refName}, New ID: ${newItemId}`
+                );
+                let oldLotId = null;
+                let newLotId = null;
+                let newLotName = null;
+                let locationId = null;
+                let locationName = null;
+                if (
+                  foundItem.inventoryDetail &&
+                  foundItem.inventoryDetail.inventoryAssignment
+                ) {
+                  const foundLot =
+                    foundItem.inventoryDetail.inventoryAssignment.items.find(
+                      (lot) =>
+                        lot.issueInventoryNumber.refName == item.lotNumber
+                    );
+                  if (foundLot) {
+                    oldLotId = foundLot.old_id;
+                    newLotId = foundLot.new_id;
+                    newLotName = foundLot.refName;
+                    console.log(
+                      `Found lot: ${item.lotNumber}, New ID: ${newLotId}`
+                    );
+                  }
+                  locationId = foundItem.inventoryDetail.location.new_id;
+                  locationName = foundItem.inventoryDetail.location.refName;
+                }
+                const adjustmentQty = item.requestedQty;
+                await handleNegativeInventoryAdjustment(
+                  transactionData,
+                  foundItem,
+                  newItemId,
+                  newItemName,
+                  oldLotId,
+                  newLotId,
+                  newLotName,
+                  locationId,
+                  locationName,
+                  adjustmentQty,
+                  unitMapping,
+                  lotNumbers,
+                  oldAccountID,
+                  oldToken,
+                  newAccountID,
+                  newToken
+                );
+              }
+              return;
+            }
           }
           // If not an inventory error, rethrow
           throw error;
         } catch (parseError) {
-          console.error("parseError: ", parseError);
+          console.error("Error parsing inventory error: ", parseError);
           // If we can't parse the error, just rethrow the original
           throw error;
         }
