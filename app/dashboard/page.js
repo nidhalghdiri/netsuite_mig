@@ -917,7 +917,7 @@ export default function DashboardOverview() {
         console.log("createTransaction URL", createdTransactionURL.jobUrl);
         console.log("MSG: ", createdTransactionURL.message);
 
-        await delay(3000);
+        await delay(5000);
         console.log("Let's check Creation transaction Status.");
         const createdTransactionId = await getInternalID(
           createdTransactionURL.jobUrl,
