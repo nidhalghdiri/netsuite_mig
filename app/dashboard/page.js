@@ -26,6 +26,7 @@ import {
   createTransaction,
   expandReferences,
   fetchNewTransaction,
+  fetchPurchaseId,
   fetchSublist,
   fetchSublistItem,
   getInternalID,
@@ -558,6 +559,8 @@ export default function DashboardOverview() {
     Deposit: "deposit",
     ItemRcpt: "item-receipt",
     CustCred: "credit-memo",
+    PurchOrd: "purchase-order",
+    VendBill: "vendor-bill",
   };
   const RECORDS_TYPE = {
     InvAdjst: "inventoryAdjustment",
@@ -571,6 +574,8 @@ export default function DashboardOverview() {
     Deposit: "deposit",
     ItemRcpt: "itemReceipt",
     CustCred: "creditMemo",
+    PurchOrd: "purchaseOrder",
+    VendBill: "vendorBill",
   };
 
   const fetchTransaction = async (internalId, recordType) => {
@@ -593,6 +598,8 @@ export default function DashboardOverview() {
         recordType == "CustInvc" ||
         recordType == "RtnAuth" ||
         recordType == "ItemRcpt" ||
+        recordType == "PurchOrd" ||
+        recordType == "VendBill" ||
         recordType == "CustCred"
       ) {
         sublists.push("item");
@@ -900,6 +907,15 @@ export default function DashboardOverview() {
               );
             }
           }
+        } else if (recordType == "VendBill") {
+          // Here we need to get Purchase Order ID
+          var purchase = await fetchPurchaseId(
+            oldAccountID,
+            oldToken,
+            transactionData.id,
+            "vendorBill"
+          );
+          console.log("Purchase Data: ", purchase);
         } else {
           // Step 3 : Create New Transaction
           createdTransactionURL = await createTransaction(

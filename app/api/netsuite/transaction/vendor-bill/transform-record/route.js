@@ -12,6 +12,7 @@ export async function POST(request) {
       recordData,
       unitMapping,
       lotNumbers,
+      transformURL,
     } = await request.json();
 
     // Validate input
@@ -46,62 +47,62 @@ export async function POST(request) {
       employee: { id: recordData.employee.new_id },
       currency: { id: recordData.currency.id },
       // postingPeriod: { id: "20" },
-      item: {
-        items: recordData.item.items.map((item) => ({
-          item: { id: item.item.new_id },
-          location: { id: item.location.new_id },
-          quantity: item.quantity,
-          units: unitMapping[item.units],
-          inventoryDetail: item.inventoryDetail
-            ? {
-                quantity: item.inventoryDetail.quantity,
-                unit: unitMapping[item.inventoryDetail.unit],
-                inventoryAssignment: {
-                  items: item.inventoryDetail.inventoryAssignment.items.map(
-                    (ass) => {
-                      // Check if we have a new_id for this lot number
-                      if (ass.internalId && ass.new_id) {
-                        // Use the new_id if available
-                        return {
-                          internalId: ass.new_id,
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      } else if (ass.internalId) {
-                        // If no new_id, we'll need to create a mapping later
-                        lotNumbersToMap.push({
-                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
-                          refName: ass.receiptInventoryNumber,
-                          itemId: item.item.new_id,
-                          itemName: item.description
-                            ? item.description.substring(0, 40)
-                            : "",
-                          quantity: ass.quantity,
-                          line: item.line,
-                        });
+      // item: {
+      //   items: recordData.item.items.map((item) => ({
+      //     item: { id: item.item.new_id },
+      //     location: { id: item.location.new_id },
+      //     quantity: item.quantity,
+      //     units: unitMapping[item.units],
+      //     inventoryDetail: item.inventoryDetail
+      //       ? {
+      //           quantity: item.inventoryDetail.quantity,
+      //           unit: unitMapping[item.inventoryDetail.unit],
+      //           inventoryAssignment: {
+      //             items: item.inventoryDetail.inventoryAssignment.items.map(
+      //               (ass) => {
+      //                 // Check if we have a new_id for this lot number
+      //                 if (ass.internalId && ass.new_id) {
+      //                   // Use the new_id if available
+      //                   return {
+      //                     internalId: ass.new_id,
+      //                     quantity: ass.quantity,
+      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
+      //                   };
+      //                 } else if (ass.internalId) {
+      //                   // If no new_id, we'll need to create a mapping later
+      //                   lotNumbersToMap.push({
+      //                     old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
+      //                     refName: ass.receiptInventoryNumber,
+      //                     itemId: item.item.new_id,
+      //                     itemName: item.description
+      //                       ? item.description.substring(0, 40)
+      //                       : "",
+      //                     quantity: ass.quantity,
+      //                     line: item.line,
+      //                   });
 
-                        // Don't include internalId for new creation
-                        return {
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      }
-                      return {
-                        quantity: ass.quantity,
-                        receiptInventoryNumber: ass.receiptInventoryNumber,
-                      };
-                    }
+      //                   // Don't include internalId for new creation
+      //                   return {
+      //                     quantity: ass.quantity,
+      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
+      //                   };
+      //                 }
+      //                 return {
+      //                   quantity: ass.quantity,
+      //                   receiptInventoryNumber: ass.receiptInventoryNumber,
+      //                 };
+      //               }
 
-                    //   ({
-                    //   quantity: ass.quantity,
-                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
-                    // })
-                  ),
-                },
-              }
-            : null,
-        })),
-      },
+      //               //   ({
+      //               //   quantity: ass.quantity,
+      //               //   receiptInventoryNumber: ass.receiptInventoryNumber,
+      //               // })
+      //             ),
+      //           },
+      //         }
+      //       : null,
+      //   })),
+      // },
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
@@ -111,10 +112,10 @@ export async function POST(request) {
     );
 
     // Create record in new instance
-    const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
+    const url = transformURL;
     const idempotencyKey = randomUUID();
-    console.log("Create INVADJUST URL ", url);
-    console.log("Create INVADJUST idempotencyKey ", idempotencyKey);
+    console.log("Create ITEMRECEIPT URL ", url);
+    console.log("Create ITEMRECEIPT idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",
