@@ -1552,8 +1552,8 @@ export default function DashboardOverview() {
       });
 
       var invAdjustData = {
-        externalId: `IANEW-${itemId}-${assignmentId}`,
-        tranId: `IANEW-${itemId}-${assignmentId}`,
+        externalId: `IANEW-${transactionData.tranId}-${itemId}-${assignmentId}`,
+        tranId: `IANEW-${transactionData.tranId}-${itemId}-${assignmentId}`,
         tranDate: transactionData.tranDate,
         memo: `معالجة مخزون الصنف ${itemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${assignmentId} \n بكمية ${shortfall}`,
         subsidiary: {
@@ -1662,8 +1662,8 @@ export default function DashboardOverview() {
     try {
       // Build the inventory adjustment object
       var invAdjustData = {
-        externalId: `IANEW-${newItemId}-${newLotId}`,
-        tranId: `IANEW-${newItemId}-${newLotId}`,
+        externalId: `IANEW-${transactionData.tranId}-${newItemId}-${newLotId}`,
+        tranId: `IANEW-${transactionData.tranId}-${newItemId}-${newLotId}`,
         tranDate: transactionData.tranDate,
         memo: `معالجة مخزون الصنف ${newItemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${newLotId} \n بكمية ${adjustmentQty}`,
         subsidiary: {
@@ -1762,8 +1762,8 @@ export default function DashboardOverview() {
     try {
       // Build the inventory adjustment object
       var invAdjustData = {
-        externalId: `IANEW-${newItemId}-${oldLotId}`,
-        tranId: `IANEW-${newItemId}-${oldLotId}`,
+        externalId: `IANEW-${transactionData.tranId}-${newItemId}-${oldLotId}`,
+        tranId: `IANEW-${transactionData.tranId}-${newItemId}-${oldLotId}`,
         tranDate: transactionData.tranDate,
         memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
         subsidiary: {
