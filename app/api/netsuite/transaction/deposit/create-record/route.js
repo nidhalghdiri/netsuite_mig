@@ -52,7 +52,8 @@ export async function POST(request) {
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
 
     // Create record in new instance
-    const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
+    // const url = `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/${recordType}`;
+    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1054&deploy=1`;
     const idempotencyKey = randomUUID();
     console.log("Create  URL ", url);
     console.log("Create  idempotencyKey ", idempotencyKey);
@@ -62,31 +63,33 @@ export async function POST(request) {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-        Prefer: "respond-async",
-        "X-NetSuite-Idempotency-Key": idempotencyKey,
-        "X-NetSuite-PropertyNameValidation": "Warning",
-        "X-NetSuite-PropertyValueValidation": "Warning",
+        // Prefer: "respond-async",
+        // "X-NetSuite-Idempotency-Key": idempotencyKey,
+        // "X-NetSuite-PropertyNameValidation": "Warning",
+        // "X-NetSuite-PropertyValueValidation": "Warning",
       },
-      body: JSON.stringify(transformedData),
+      body: JSON.stringify({
+        data: transformedData,
+      }),
     });
 
     // Handle 202 Accepted (async processing)
-    if (response.status === 202) {
-      const locationHeader = response.headers.get("Location");
+    // if (response.status === 202) {
+    //   const locationHeader = response.headers.get("Location");
 
-      if (!locationHeader) {
-        throw new Error("Location header not found in 202 response");
-      }
-      console.log("Async job started. Location:", locationHeader);
+    //   if (!locationHeader) {
+    //     throw new Error("Location header not found in 202 response");
+    //   }
+    //   console.log("Async job started. Location:", locationHeader);
 
-      return NextResponse.json({
-        status: "processing",
-        jobUrl: locationHeader,
-        lotNumbersToMap,
-        message:
-          "Transaction creation in progress. Use the jobUrl to check status.",
-      });
-    }
+    //   return NextResponse.json({
+    //     status: "processing",
+    //     jobUrl: locationHeader,
+    //     lotNumbersToMap,
+    //     message:
+    //       "Transaction creation in progress. Use the jobUrl to check status.",
+    //   });
+    // }
     // Handle sync response
     if (response.ok) {
       const result = await response.json();
