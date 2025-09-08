@@ -775,7 +775,12 @@ export default function DashboardOverview() {
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const processTransaction = async (transactionData, recordType) => {
+  const processTransaction = async (
+    transactionData,
+    recordType,
+    retryCount = 0
+  ) => {
+    const MAX_RETRIES = 3;
     var transactionId = transactionData.id;
     if (!transactionId) {
       throw new Error("No transaction ID provided");
@@ -784,7 +789,10 @@ export default function DashboardOverview() {
     setIsProcessing(true);
     setProcessingId(transactionId);
     try {
-      console.log("Starting transaction processing...");
+      console.log(
+        "Starting transaction processing..." +
+          (retryCount > 0 ? ` (Retry ${retryCount})` : "")
+      );
       const newAccountID = "11661334-sb1";
       const newSession = getSession("new");
       const oldAccountID = "5319757";
@@ -823,6 +831,8 @@ export default function DashboardOverview() {
       console.log("lotNumbers", lotNumbers);
 
       await delay(1000);
+      let retryNeeded = false;
+      let adjustmentInfo = null;
       try {
         let createdTransactionURL;
         if (transactionData?.createdFrom && transactionData?.createdFrom?.id) {
@@ -1120,8 +1130,7 @@ export default function DashboardOverview() {
                 },
               }));
 
-              // Optionally retry the transaction or take other action
-              return; // Exit early since we're handling this specially
+              retryNeeded = true;
             }
             // else if (negativeInventoryMatch) {
             //   // Handle the new negative inventory pattern
@@ -1251,6 +1260,8 @@ export default function DashboardOverview() {
                   `Creating inventory adjustment for item ${itemId}, Location ${locationId}, quantity: ${quantity}`
                 );
               }
+
+              retryNeeded = true;
             } else if (inventoryAsseignNotExist) {
               console.log(
                 "Inventory Asseigment doesn't exist for this item, creating inventory adjustment"
@@ -1318,9 +1329,8 @@ export default function DashboardOverview() {
                   );
                 }
               }
-            }
-
-            if (negativeItems.length > 0) {
+              retryNeeded = true;
+            } else if (negativeItems.length > 0) {
               // Group items by itemId and lotNumber, summing requested quantities
               const groupedItems = {};
 
@@ -1404,7 +1414,37 @@ export default function DashboardOverview() {
                   newToken
                 );
               }
-              return;
+              retryNeeded = true;
+            }
+
+            if (retryNeeded) {
+              setTransactionDetails((prev) => ({
+                ...prev,
+                [transactionId]: {
+                  ...prev[transactionId],
+                  inventoryAdjustments: [
+                    ...(prev[transactionId]?.inventoryAdjustments || []),
+                    adjustmentInfo,
+                  ],
+                },
+              }));
+              if (retryCount < MAX_RETRIES) {
+                console.log(
+                  `Inventory adjustment created, retrying transaction (${
+                    retryCount + 1
+                  }/${MAX_RETRIES})`
+                );
+                await delay(2000);
+                return await processTransaction(
+                  transactionData,
+                  recordType,
+                  retryCount + 1
+                );
+              } else {
+                throw new Error(
+                  "Max retry attempts exceeded after inventory adjustments"
+                );
+              }
             }
           }
           // If not an inventory error, rethrow
@@ -1434,9 +1474,11 @@ export default function DashboardOverview() {
       }));
       throw error;
     } finally {
-      // ADDED: Finally block to ensure processing state is reset
-      setIsProcessing(false);
-      setProcessingId(null);
+      if (retryCount === 0) {
+        // Only reset processing state if not in a retry
+        setIsProcessing(false);
+        setProcessingId(null);
+      }
     }
   };
 
@@ -1584,10 +1626,19 @@ export default function DashboardOverview() {
         RECORDS_TYPE["InvAdjst"]
       );
       console.log("create InvAdjst Transactio ID", createdTransactionId);
-      return { success: true, adjustmentId: createdTransactionId.internalId };
+      return {
+        success: true,
+        adjustmentId: createdTransactionId.internalId,
+        type: "quantity",
+        timestamp: new Date(),
+      };
     } catch (error) {
       console.error("Handle Inventory Adjustment ERROR: ", error);
-      throw new Error(`Inventory adjustment failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+        type: "quantity",
+      };
     }
   };
   async function handleNegativeInventoryAdjustment(
