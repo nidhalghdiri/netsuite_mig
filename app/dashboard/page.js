@@ -913,7 +913,7 @@ export default function DashboardOverview() {
             oldAccountID,
             oldToken,
             transactionData.id,
-            "vendorBill"
+            "VendBill"
           );
           console.log("Purchase Data: ", purchase);
         } else {
