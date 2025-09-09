@@ -43,65 +43,65 @@ export async function POST(request) {
       currency: { id: recordData.currency.id },
       account: { id: recordData.account.new_id },
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-      // item: {
-      //   items: recordData.item.items.map((item) => ({
-      //     item: { id: item.item.new_id },
-      //     amount: parseFloat(item.amount) || 0.0,
-      //     cseg2: { id: item.cseg2.id },
-      //     description: item.description
-      //       ? item.description.substring(0, 40)
-      //       : "",
-      //     rate: parseFloat(item.rate) || 0.0,
-      //     units: unitMapping[item.inventoryDetail.unit],
-      //     quantity: item.quantity,
-      //     inventoryDetail: item.inventoryDetail
-      //       ? {
-      //           item: { id: item.inventoryDetail.item.new_id },
-      //           itemDescription: item.inventoryDetail.itemDescription,
-      //           location: { id: item.inventoryDetail.location.new_id },
-      //           quantity: item.inventoryDetail.quantity,
-      //           unit: unitMapping[item.inventoryDetail.unit],
-      //           inventoryAssignment: {
-      //             items: item.inventoryDetail.inventoryAssignment.items.map(
-      //               (ass) => {
-      //                 // Check if we have a new_id for this lot number
-      //                 if (ass.internalId && ass.new_id) {
-      //                   // Use the new_id if available
-      //                   return {
-      //                     internalId: ass.new_id,
-      //                     quantity: ass.quantity,
-      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
-      //                   };
-      //                 } else if (ass.internalId) {
-      //                   // If no new_id, we'll need to create a mapping later
-      //                   lotNumbersToMap.push({
-      //                     old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
-      //                     refName: ass.receiptInventoryNumber,
-      //                     itemId: item.item.new_id,
-      //                     itemName: item.description
-      //                       ? item.description.substring(0, 40)
-      //                       : "",
-      //                     quantity: ass.quantity,
-      //                     line: item.line,
-      //                   });
+      item: {
+        items: recordData.item.items.map((item) => ({
+          item: { id: item.item.new_id },
+          amount: parseFloat(item.amount) || 0.0,
+          cseg2: { id: item.cseg2.id },
+          description: item.description
+            ? item.description.substring(0, 40)
+            : "",
+          rate: parseFloat(item.rate) || 0.0,
+          units: unitMapping[item.inventoryDetail.unit],
+          quantity: item.quantity,
+          inventoryDetail: item.inventoryDetail
+            ? {
+                item: { id: item.inventoryDetail.item.new_id },
+                itemDescription: item.inventoryDetail.itemDescription,
+                location: { id: item.inventoryDetail.location.new_id },
+                quantity: item.inventoryDetail.quantity,
+                unit: unitMapping[item.inventoryDetail.unit],
+                inventoryAssignment: {
+                  items: item.inventoryDetail.inventoryAssignment.items.map(
+                    (ass) => {
+                      // Check if we have a new_id for this lot number
+                      if (ass.internalId && ass.new_id) {
+                        // Use the new_id if available
+                        return {
+                          internalId: ass.new_id,
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      } else if (ass.internalId) {
+                        // If no new_id, we'll need to create a mapping later
+                        lotNumbersToMap.push({
+                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
+                          refName: ass.receiptInventoryNumber,
+                          itemId: item.item.new_id,
+                          itemName: item.description
+                            ? item.description.substring(0, 40)
+                            : "",
+                          quantity: ass.quantity,
+                          line: item.line,
+                        });
 
-      //                   // Don't include internalId for new creation
-      //                   return {
-      //                     quantity: ass.quantity,
-      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
-      //                   };
-      //                 }
-      //                 return {
-      //                   quantity: ass.quantity,
-      //                   receiptInventoryNumber: ass.receiptInventoryNumber,
-      //                 };
-      //               }
-      //             ),
-      //           },
-      //         }
-      //       : null,
-      //   })),
-      // },
+                        // Don't include internalId for new creation
+                        return {
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      }
+                      return {
+                        quantity: ass.quantity,
+                        receiptInventoryNumber: ass.receiptInventoryNumber,
+                      };
+                    }
+                  ),
+                },
+              }
+            : null,
+        })),
+      },
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
