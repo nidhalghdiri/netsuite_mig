@@ -947,7 +947,7 @@ export default function DashboardOverview() {
                   "Transaform to Item Receipt Then we can transform to Vendor Bill"
                 );
                 if (purchase.data.receipt) {
-                  receipt_id = purchase.data.receipt;
+                  var receipt_id = purchase.data.receipt;
                   // Fetch Purchase Order
                   var receiptUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/itemReceipt/${receipt_id}`;
                   var receiptData = await fetchSublistItem(
