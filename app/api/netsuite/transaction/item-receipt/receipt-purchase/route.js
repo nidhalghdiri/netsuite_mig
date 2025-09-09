@@ -6,7 +6,7 @@ export async function POST(request) {
     const { accountId, token, purchase_id, recordData } = await request.json();
 
     // Validate input
-    if (!accountId || !token || !purchase_id || !receipt_data) {
+    if (!accountId || !token || !purchase_id || !recordData) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 }
