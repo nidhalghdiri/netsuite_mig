@@ -915,7 +915,26 @@ export default function DashboardOverview() {
             transactionData.id,
             "VendBill"
           );
+          var purchase_id;
           console.log("Purchase Data: ", purchase);
+          if (purchase.data && purchase.data.success) {
+            purchase_id = purchase.data.purchase;
+            console.log("CreatedFrom Data New Id: ", purchase_id);
+            var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
+            console.log("Transform URL: ", url);
+            createdTransactionURL = await transformTransaction(
+              oldAccountID,
+              oldToken,
+              newAccountID,
+              newToken,
+              recordType,
+              RECORDS_TYPE[recordType],
+              transactionData,
+              unitMapping,
+              lotNumbers,
+              url
+            );
+          }
         } else {
           // Step 3 : Create New Transaction
           createdTransactionURL = await createTransaction(
