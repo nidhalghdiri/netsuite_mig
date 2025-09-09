@@ -926,7 +926,7 @@ export default function DashboardOverview() {
           ) {
             purchase_id = purchase.data.purchase;
             // Fetch Purchase Order
-            var purchaseOrderUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}`;
+            var purchaseOrderUrl = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}`;
             var purchaseOrderData = await fetchSublistItem(
               newAccountID,
               newToken,
@@ -969,7 +969,7 @@ export default function DashboardOverview() {
             }
 
             console.log("CreatedFrom Data New Id: ", purchase_id);
-            var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
+            var url = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
             console.log("Transform URL: ", url);
             createdTransactionURL = await transformTransaction(
               oldAccountID,
