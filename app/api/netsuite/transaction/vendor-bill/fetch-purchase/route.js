@@ -39,7 +39,7 @@ export async function POST(request) {
   console.log("[PurchOrd] internalId: ", internalId);
 
   try {
-    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1056&deploy=1`;
+    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1525&deploy=1`;
     console.log("Fetch Purchase URL: ", url);
     const response = await fetch(url, {
       method: "POST",
