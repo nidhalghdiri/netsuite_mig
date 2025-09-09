@@ -34,6 +34,7 @@ import {
   getLotNumbers,
   getUnitMapping,
   processInventoryItems,
+  transformPurchaseToReceipt,
   transformTransaction,
   updateTransaction,
 } from "@/lib/utils";
@@ -924,6 +925,49 @@ export default function DashboardOverview() {
             purchase.data.purchase
           ) {
             purchase_id = purchase.data.purchase;
+            // Fetch Purchase Order
+            var purchaseOrderUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}`;
+            var purchaseOrderData = await fetchSublistItem(
+              newAccountID,
+              newToken,
+              purchaseOrderUrl,
+              "PurchOrd"
+            );
+            console.log("Purchase Order Data: ", purchaseOrderData);
+            if (purchaseOrderData) {
+              if (
+                purchaseOrderData.orderStatus.id == "E" ||
+                purchaseOrderData.orderStatus.id == "F"
+              ) {
+                // #### Transform To Vendor Bill
+                console.log("Transform To Vendor Bill");
+              } else if (purchaseOrderData.orderStatus.id == "B") {
+                // #### Transaform to Item Receipt Then we can transform to Vendor Bill
+                console.log(
+                  "Transaform to Item Receipt Then we can transform to Vendor Bill"
+                );
+                if (purchase.data.receipt) {
+                  receipt_id = purchase.data.receipt;
+                  // Fetch Purchase Order
+                  var receiptUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/itemReceipt/${receipt_id}`;
+                  var receiptData = await fetchSublistItem(
+                    oldAccountID,
+                    oldToken,
+                    receiptUrl,
+                    "ItemRcpt"
+                  );
+                  console.log("Purchase Order Receipt Data: ", receiptData);
+                  await transformPurchaseToReceipt(
+                    newAccountID,
+                    newToken,
+                    purchase_id,
+                    receiptData,
+                    "ItemRcpt"
+                  );
+                }
+              }
+            }
+
             console.log("CreatedFrom Data New Id: ", purchase_id);
             var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
             console.log("Transform URL: ", url);

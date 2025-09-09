@@ -6,7 +6,7 @@ export async function POST(request) {
     const { accountId, token, purchase_id, recordData } = await request.json();
 
     // Validate input
-    if (!accountId || !token || !purchase_id || !vendor_bill_data) {
+    if (!accountId || !token || !purchase_id || !receipt_data) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 }
@@ -52,7 +52,7 @@ export async function POST(request) {
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
     const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1057&deploy=1`;
-    console.log("Transform Purchase To Bill URL: ", url);
+    console.log("Transform Purchase To Receipt URL: ", url);
 
     const response = await fetch(url, {
       method: "POST",
@@ -62,7 +62,7 @@ export async function POST(request) {
       },
       body: JSON.stringify({
         purchase_id: purchase_id,
-        vendor_bill_data: transformedData,
+        receipt_data: transformedData,
       }),
     });
 
@@ -71,18 +71,21 @@ export async function POST(request) {
       return NextResponse.json({
         status: "completed",
         data: result,
-        message: "Transform Purchase To Bill Successfully",
+        message: "Transform Purchase To receipt Successfully",
       });
     } else {
       const errorText = await response.text();
       throw new Error(
-        `Failed to transform purchase to bill ${response.status} - ${errorText}`
+        `Failed to transform purchase to receipt ${response.status} - ${errorText}`
       );
     }
   } catch (error) {
-    console.error("Error transform purchase to bill:", error);
+    console.error("Error transform purchase to receipt:", error);
     return NextResponse.json(
-      { error: "Failed to transform purchase to bill", details: error.message },
+      {
+        error: "Failed to transform purchase to receipt",
+        details: error.message,
+      },
       { status: 500 }
     );
   }
