@@ -32,77 +32,41 @@ export async function POST(request) {
     // Transform data using NetSuite's structure
     const lotNumbersToMap = [];
 
+    // Add these defensive checks before accessing properties
     const transformedData = {
       ...(recordData.externalId && { externalId: recordData.externalId }),
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
+      tranId: recordData.tranId || "",
+      tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
       ...(recordData.memo && {
         memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       }),
-      subsidiary: { id: recordData.subsidiary.new_id },
-      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-      location: { id: recordData.location.new_id },
-      landedCostMethod: { id: recordData.landedCostMethod.id },
-      entity: { id: recordData.entity.new_id },
-      employee: { id: recordData.employee.new_id },
-      currency: { id: recordData.currency.id },
-      // postingPeriod: { id: "20" },
-      // item: {
-      //   items: recordData.item.items.map((item) => ({
-      //     item: { id: item.item.new_id },
-      //     location: { id: item.location.new_id },
-      //     quantity: item.quantity,
-      //     units: unitMapping[item.units],
-      //     inventoryDetail: item.inventoryDetail
-      //       ? {
-      //           quantity: item.inventoryDetail.quantity,
-      //           unit: unitMapping[item.inventoryDetail.unit],
-      //           inventoryAssignment: {
-      //             items: item.inventoryDetail.inventoryAssignment.items.map(
-      //               (ass) => {
-      //                 // Check if we have a new_id for this lot number
-      //                 if (ass.internalId && ass.new_id) {
-      //                   // Use the new_id if available
-      //                   return {
-      //                     internalId: ass.new_id,
-      //                     quantity: ass.quantity,
-      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
-      //                   };
-      //                 } else if (ass.internalId) {
-      //                   // If no new_id, we'll need to create a mapping later
-      //                   lotNumbersToMap.push({
-      //                     old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
-      //                     refName: ass.receiptInventoryNumber,
-      //                     itemId: item.item.new_id,
-      //                     itemName: item.description
-      //                       ? item.description.substring(0, 40)
-      //                       : "",
-      //                     quantity: ass.quantity,
-      //                     line: item.line,
-      //                   });
-
-      //                   // Don't include internalId for new creation
-      //                   return {
-      //                     quantity: ass.quantity,
-      //                     receiptInventoryNumber: ass.receiptInventoryNumber,
-      //                   };
-      //                 }
-      //                 return {
-      //                   quantity: ass.quantity,
-      //                   receiptInventoryNumber: ass.receiptInventoryNumber,
-      //                 };
-      //               }
-
-      //               //   ({
-      //               //   quantity: ass.quantity,
-      //               //   receiptInventoryNumber: ass.receiptInventoryNumber,
-      //               // })
-      //             ),
-      //           },
-      //         }
-      //       : null,
-      //   })),
-      // },
+      ...(recordData.subsidiary &&
+        recordData.subsidiary.new_id && {
+          subsidiary: { id: recordData.subsidiary.new_id },
+        }),
+      ...(recordData.id && {
+        custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
+      }),
+      ...(recordData.location &&
+        recordData.location.new_id && {
+          location: { id: recordData.location.new_id },
+        }),
+      ...(recordData.landedCostMethod &&
+        recordData.landedCostMethod.id && {
+          landedCostMethod: { id: recordData.landedCostMethod.id },
+        }),
+      ...(recordData.entity &&
+        recordData.entity.new_id && {
+          entity: { id: recordData.entity.new_id },
+        }),
+      ...(recordData.employee &&
+        recordData.employee.new_id && {
+          employee: { id: recordData.employee.new_id },
+        }),
+      ...(recordData.currency &&
+        recordData.currency.id && {
+          currency: { id: recordData.currency.id },
+        }),
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));

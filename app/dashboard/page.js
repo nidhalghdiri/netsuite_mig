@@ -917,7 +917,12 @@ export default function DashboardOverview() {
           );
           var purchase_id;
           console.log("Purchase Data: ", purchase);
-          if (purchase.data && purchase.data.success) {
+          if (
+            purchase &&
+            purchase.data &&
+            purchase.data.success &&
+            purchase.data.purchase
+          ) {
             purchase_id = purchase.data.purchase;
             console.log("CreatedFrom Data New Id: ", purchase_id);
             var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
@@ -933,6 +938,11 @@ export default function DashboardOverview() {
               unitMapping,
               lotNumbers,
               url
+            );
+          } else {
+            console.error("Invalid purchase data structure:", purchase);
+            throw new Error(
+              "Failed to get valid purchase data for transformation"
             );
           }
         } else {
