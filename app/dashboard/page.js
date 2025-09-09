@@ -907,47 +907,45 @@ export default function DashboardOverview() {
               );
             }
           }
-        }
-        // else if (recordType == "VendBill") {
-        //   // Here we need to get Purchase Order ID
-        //   var purchase = await fetchPurchaseId(
-        //     oldAccountID,
-        //     oldToken,
-        //     transactionData.id,
-        //     "VendBill"
-        //   );
-        //   var purchase_id;
-        //   console.log("Purchase Data: ", purchase);
-        //   if (
-        //     purchase &&
-        //     purchase.data &&
-        //     purchase.data.success &&
-        //     purchase.data.purchase
-        //   ) {
-        //     purchase_id = purchase.data.purchase;
-        //     console.log("CreatedFrom Data New Id: ", purchase_id);
-        //     var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
-        //     console.log("Transform URL: ", url);
-        //     createdTransactionURL = await transformTransaction(
-        //       oldAccountID,
-        //       oldToken,
-        //       newAccountID,
-        //       newToken,
-        //       recordType,
-        //       RECORDS_TYPE[recordType],
-        //       transactionData,
-        //       unitMapping,
-        //       lotNumbers,
-        //       url
-        //     );
-        //   } else {
-        //     console.error("Invalid purchase data structure:", purchase);
-        //     throw new Error(
-        //       "Failed to get valid purchase data for transformation"
-        //     );
-        //   }
-        // }
-        else {
+        } else if (recordType == "VendBill") {
+          // Here we need to get Purchase Order ID
+          var purchase = await fetchPurchaseId(
+            oldAccountID,
+            oldToken,
+            transactionData.id,
+            "VendBill"
+          );
+          var purchase_id;
+          console.log("Purchase Data: ", purchase);
+          if (
+            purchase &&
+            purchase.data &&
+            purchase.data.success &&
+            purchase.data.purchase
+          ) {
+            purchase_id = purchase.data.purchase;
+            console.log("CreatedFrom Data New Id: ", purchase_id);
+            var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
+            console.log("Transform URL: ", url);
+            createdTransactionURL = await transformTransaction(
+              oldAccountID,
+              oldToken,
+              newAccountID,
+              newToken,
+              recordType,
+              RECORDS_TYPE[recordType],
+              transactionData,
+              unitMapping,
+              lotNumbers,
+              url
+            );
+          } else {
+            console.error("Invalid purchase data structure:", purchase);
+            throw new Error(
+              "Failed to get valid purchase data for transformation"
+            );
+          }
+        } else {
           // Step 3 : Create New Transaction
           createdTransactionURL = await createTransaction(
             oldAccountID,
