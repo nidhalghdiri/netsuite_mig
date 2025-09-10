@@ -1206,6 +1206,7 @@ export default function DashboardOverview() {
                   },
                 },
               }));
+              return;
             }
 
             // console.log("CreatedFrom Data New Id: ", purchase_id);

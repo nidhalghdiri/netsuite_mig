@@ -114,7 +114,7 @@ export async function POST(request) {
             if (item.amount) {
               return {
                 category: { id: item.category.id },
-                amount: parseFloat(item.category.amount) || 0.0,
+                amount: parseFloat(item.amount) || 0.0,
               };
             }
           }),
