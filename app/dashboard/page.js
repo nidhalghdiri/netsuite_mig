@@ -949,13 +949,17 @@ export default function DashboardOverview() {
                 if (purchase.data.receipt) {
                   var receipt_id = purchase.data.receipt;
                   // Fetch Purchase Order
-                  var receiptUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/itemReceipt/${receipt_id}`;
-                  var receiptData = await fetchSublistItem(
-                    oldAccountID,
-                    oldToken,
-                    receiptUrl,
+                  // var receiptUrl = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/itemReceipt/${receipt_id}`;
+                  var receiptData = await fetchTransaction(
+                    receipt_id,
                     "ItemRcpt"
                   );
+                  // var receiptData = await fetchSublistItem(
+                  //   oldAccountID,
+                  //   oldToken,
+                  //   receiptUrl,
+                  //   "ItemRcpt"
+                  // );
                   console.log("Purchase Order Receipt Data: ", receiptData);
                   await transformPurchaseToReceipt(
                     newAccountID,
