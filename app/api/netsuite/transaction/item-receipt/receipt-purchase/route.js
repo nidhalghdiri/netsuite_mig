@@ -48,6 +48,28 @@ export async function POST(request) {
         recordData.currency.id && {
           currency: { id: recordData.currency.id },
         }),
+      item: {
+        items: recordData.item.items.map((item) => ({
+          item: { id: item.item.new_id },
+          location: { id: item.location.new_id },
+          quantity: item.quantity,
+          inventoryDetail: item.inventoryDetail
+            ? {
+                quantity: item.inventoryDetail.quantity,
+                inventoryAssignment: {
+                  items: item.inventoryDetail.inventoryAssignment.items.map(
+                    (ass) => {
+                      return {
+                        quantity: ass.quantity,
+                        receiptInventoryNumber: ass.receiptInventoryNumber,
+                      };
+                    }
+                  ),
+                },
+              }
+            : null,
+        })),
+      },
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
