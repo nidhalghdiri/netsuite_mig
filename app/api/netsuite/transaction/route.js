@@ -77,7 +77,7 @@ async function fetchAllTransactions(account, token) {
                 INNER JOIN transactionLine ON transaction.ID = transactionLine.transaction
                 WHERE transactionLine.mainline = 'T'
                 AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY') AND TO_TIMESTAMP('31/01/2020', 'DD/MM/YYYY')
-                AND NOT (transaction.type IN ('Deposit'))
+                AND NOT (transaction.type IN ('Deposit', 'FxReval'))
 )
 ORDER BY transaction.createddate ASC;`;
     const response = await fetchNetSuiteData(
