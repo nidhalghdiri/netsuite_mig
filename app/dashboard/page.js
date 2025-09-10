@@ -961,6 +961,12 @@ export default function DashboardOverview() {
                   //   "ItemRcpt"
                   // );
                   console.log("Purchase Order Receipt Data: ", receiptData);
+                  const receiptLotNumbers = await getLotNumbers(
+                    oldAccountID,
+                    oldToken,
+                    receipt_id
+                  );
+                  console.log("receiptLotNumbers", receiptLotNumbers);
                   const transformedReceipt = await transformPurchaseToReceipt(
                     newAccountID,
                     newToken,
@@ -968,7 +974,7 @@ export default function DashboardOverview() {
                     receiptData,
                     "ItemRcpt",
                     unitMapping,
-                    lotNumbers
+                    receiptLotNumbers
                   );
                   console.log(
                     "Transformed Receipt Response : ",
