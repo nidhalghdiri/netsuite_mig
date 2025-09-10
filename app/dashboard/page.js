@@ -34,6 +34,7 @@ import {
   getLotNumbers,
   getUnitMapping,
   processInventoryItems,
+  transformPurchaseToBill,
   transformPurchaseToReceipt,
   transformTransaction,
   updateTransaction,
@@ -1063,23 +1064,48 @@ export default function DashboardOverview() {
                   );
                 }
               }
+
+              // Transaform Purchase Order To Vendor Bill
+              console.log("Transaform Purchase Order to Vendor Bill");
+              var billData = await fetchTransaction(
+                transactionData.id,
+                "VendBill"
+              );
+              console.log("Purchase Order Bill Data: ", billData);
+              const billLotNumbers = await getLotNumbers(
+                oldAccountID,
+                oldToken,
+                transactionData.id
+              );
+              console.log("billLotNumbers", billLotNumbers);
+
+              const transformedBill = await transformPurchaseToBill(
+                newAccountID,
+                newToken,
+                purchase_id,
+                billData,
+                "VendBill",
+                unitMapping,
+                billLotNumbers
+              );
+              console.log("transformedBill: ", transformedBill);
             }
 
-            console.log("CreatedFrom Data New Id: ", purchase_id);
-            var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
-            console.log("Transform URL: ", url);
-            createdTransactionURL = await transformTransaction(
-              oldAccountID,
-              oldToken,
-              newAccountID,
-              newToken,
-              recordType,
-              RECORDS_TYPE[recordType],
-              transactionData,
-              unitMapping,
-              lotNumbers,
-              url
-            );
+            // console.log("CreatedFrom Data New Id: ", purchase_id);
+            // var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
+            // console.log("Transform URL: ", url);
+            // createdTransactionURL = await transformTransaction(
+            //   oldAccountID,
+            //   oldToken,
+            //   newAccountID,
+            //   newToken,
+            //   recordType,
+            //   RECORDS_TYPE[recordType],
+            //   transactionData,
+            //   unitMapping,
+            //   lotNumbers,
+            //   url
+            // );
           } else {
             console.error("Invalid purchase data structure:", purchase);
             throw new Error(
