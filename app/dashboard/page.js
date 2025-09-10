@@ -1089,6 +1089,50 @@ export default function DashboardOverview() {
                 billLotNumbers
               );
               console.log("transformedBill: ", transformedBill);
+              await delay(1000);
+              const newTransaction = await fetchNewTransaction(
+                "VendBill",
+                newAccountID,
+                newToken,
+                transformedReceipt.data.bill_id
+              );
+              console.log("newTransaction Data", newTransaction);
+              if (newTransaction) {
+                // Update transaction details with new data
+                setTransactionDetails((prev) => ({
+                  ...prev,
+                  [receipt_id]: {
+                    ...prev[receipt_id],
+                    newData: newTransaction,
+                    steps: {
+                      ...prev[receipt_id]?.steps,
+                      relate: {
+                        status: "completed",
+                        timestamp: new Date(),
+                      },
+                    },
+                  },
+                }));
+              } else {
+                // Update transaction details with error
+                setTransactionDetails((prev) => ({
+                  ...prev,
+                  [receipt_id]: {
+                    ...prev[receipt_id],
+                    steps: {
+                      ...prev[receipt_id]?.steps,
+                      relate: {
+                        status: "error",
+                        error: "ERROR ERROR",
+                        timestamp: new Date(),
+                      },
+                    },
+                  },
+                }));
+              }
+              console.info(
+                "Create Transaction [" + billData.tranId + "] Process Done!!"
+              );
             }
 
             // console.log("CreatedFrom Data New Id: ", purchase_id);
