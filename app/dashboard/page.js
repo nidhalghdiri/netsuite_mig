@@ -615,6 +615,8 @@ export default function DashboardOverview() {
         sublists.push("cashback");
         sublists.push("other");
         sublists.push("payment");
+      } else if (recordType == "ItemRcpt") {
+        sublists.push("landedCosts");
       }
 
       const response = await apiRequest(
@@ -1062,6 +1064,40 @@ export default function DashboardOverview() {
                       receiptData.tranId +
                       "] Process Done!!"
                   );
+                  var updatedTransaction = await updateTransaction(
+                    oldAccountID,
+                    oldToken,
+                    "ItemRcpt",
+                    RECORDS_TYPE["ItemRcpt"],
+                    receiptData.id,
+                    newTransaction
+                  );
+                  console.log("Updated Transaction ID", updatedTransaction);
+
+                  // Step 8: Compare transactions
+                  const comparisonResults = compareTransactions(
+                    receiptData,
+                    newTransaction
+                  );
+                  setTransactionDetails((prev) => ({
+                    ...prev,
+                    [transactionId]: {
+                      ...prev[receiptData.id],
+                      comparison: comparisonResults,
+                      steps: {
+                        ...prev[receiptData.id]?.steps,
+                        compare: {
+                          status: comparisonResults.every(
+                            (r) => r.status === "match"
+                          )
+                            ? "completed"
+                            : "completed-with-issues",
+                          timestamp: new Date(),
+                          results: comparisonResults,
+                        },
+                      },
+                    },
+                  }));
                 }
               }
 
@@ -1094,7 +1130,7 @@ export default function DashboardOverview() {
                 "VendBill",
                 newAccountID,
                 newToken,
-                transformedReceipt.data.bill_id
+                transformedBill.data.bill_id
               );
               console.log("newTransaction Data", newTransaction);
               if (newTransaction) {
@@ -1133,6 +1169,41 @@ export default function DashboardOverview() {
               console.info(
                 "Create Transaction [" + billData.tranId + "] Process Done!!"
               );
+
+              var updatedTransaction = await updateTransaction(
+                oldAccountID,
+                oldToken,
+                "VendBill",
+                RECORDS_TYPE["VendBill"],
+                billData.id,
+                newTransaction
+              );
+              console.log("Updated Transaction ID", updatedTransaction);
+
+              // Step 8: Compare transactions
+              const comparisonResults = compareTransactions(
+                billData,
+                newTransaction
+              );
+              setTransactionDetails((prev) => ({
+                ...prev,
+                [transactionId]: {
+                  ...prev[billData.id],
+                  comparison: comparisonResults,
+                  steps: {
+                    ...prev[billData.id]?.steps,
+                    compare: {
+                      status: comparisonResults.every(
+                        (r) => r.status === "match"
+                      )
+                        ? "completed"
+                        : "completed-with-issues",
+                      timestamp: new Date(),
+                      results: comparisonResults,
+                    },
+                  },
+                },
+              }));
             }
 
             // console.log("CreatedFrom Data New Id: ", purchase_id);
@@ -1277,12 +1348,6 @@ export default function DashboardOverview() {
           transactionId,
           newTransaction
         );
-
-        // const updatedTransactionId = await getInternalID(
-        //   updatedTransaction.jobUrl,
-        //   oldToken,
-        //   RECORDS_TYPE[recordType]
-        // );
         console.log("Updated Transaction ID", updatedTransaction);
 
         // Step 8: Compare transactions

@@ -36,6 +36,10 @@ export async function POST(request) {
         recordData.subsidiary.new_id && {
           subsidiary: { id: recordData.subsidiary.new_id },
         }),
+      ...(recordData.account &&
+        recordData.account.new_id && {
+          account: { id: recordData.account.new_id },
+        }),
       ...(recordData.id && {
         custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
       }),
