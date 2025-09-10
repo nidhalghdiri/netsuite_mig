@@ -337,7 +337,7 @@ async function createLotNumberMappings(
             if (oldLot) {
               newLotMappings.push({
                 old_id: oldLot.old_id,
-                new_id: newLotNumbers[item.line].inventorynumberid,
+                new_id: [item.line].inventorynumberid,
                 refName: oldLot.refName,
               });
             }
