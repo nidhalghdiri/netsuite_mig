@@ -108,6 +108,18 @@ export async function POST(request) {
             : null,
         })),
       },
+      ...(recordData.landedCosts && {
+        landedCosts: {
+          items: recordData.landedCosts.items.map((item) => {
+            if (item.amount) {
+              return {
+                category: { id: item.category },
+                amount: parseFloat(item.amount) || 0.0,
+              };
+            }
+          }),
+        },
+      }),
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
