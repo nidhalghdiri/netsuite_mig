@@ -584,7 +584,7 @@ export default function DashboardOverview() {
     try {
       const accountID = "5319757";
       const oldSession = getSession("old");
-      console.log("fetchMigrationData oldSession", oldSession);
+      // console.log("fetchMigrationData oldSession", oldSession);
 
       if (!oldSession?.token) {
         throw new Error("No valid session token found");
@@ -599,7 +599,6 @@ export default function DashboardOverview() {
         recordType == "TrnfrOrd" ||
         recordType == "CustInvc" ||
         recordType == "RtnAuth" ||
-        recordType == "ItemRcpt" ||
         recordType == "PurchOrd" ||
         recordType == "VendBill" ||
         recordType == "CustCred"
@@ -616,6 +615,7 @@ export default function DashboardOverview() {
         sublists.push("other");
         sublists.push("payment");
       } else if (recordType == "ItemRcpt") {
+        sublists.push("item");
         sublists.push("landedCosts");
       }
 
@@ -642,7 +642,9 @@ export default function DashboardOverview() {
       for (let i = 0; i < sublists.length; i++) {
         const sublistName = sublists[i];
         if (record[sublistName]?.links) {
-          console.log("Found inventory links, proceeding to fetch sublist");
+          console.log(
+            "Found " + sublistName + " links, proceeding to fetch sublist"
+          );
           const sublistUrl = record[sublistName].links.find(
             (l) => l.rel === "self"
           )?.href;
