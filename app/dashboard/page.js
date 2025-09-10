@@ -1066,7 +1066,7 @@ export default function DashboardOverview() {
             }
 
             console.log("CreatedFrom Data New Id: ", purchase_id);
-            var url = `https://${oldAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
+            var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/${purchase_id}/!transform/vendorBill`;
             console.log("Transform URL: ", url);
             createdTransactionURL = await transformTransaction(
               oldAccountID,
