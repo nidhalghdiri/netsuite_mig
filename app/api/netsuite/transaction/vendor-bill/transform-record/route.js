@@ -3,17 +3,35 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, token, purchase_id, recordData } = await request.json();
+    const {
+      accountId,
+      oldAccountId,
+      token,
+      oldToken,
+      recordType,
+      recordData,
+      unitMapping,
+      lotNumbers,
+      transformURL,
+    } = await request.json();
 
     // Validate input
-    if (!accountId || !token || !purchase_id || !recordData) {
+    if (!accountId || !token || !recordType || !recordData) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 }
       );
     }
 
-    // Add these defensive checks before accessing properties
+    // const unitMapping = await getUnitMapping(oldAccountId, oldToken);
+    console.log("unitMapping", unitMapping);
+    console.log("lotNumbers", lotNumbers);
+
+    // Transform inventory adjustment data for new instance
+    // const transformedData = transformInventoryAdjustment(recordData);
+    // Transform data using NetSuite's structure
+    const lotNumbersToMap = [];
+
     const transformedData = {
       ...(recordData.externalId && { externalId: recordData.externalId }),
       tranId: recordData.tranId || "",
@@ -51,38 +69,65 @@ export async function POST(request) {
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
-    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1057&deploy=1`;
-    console.log("Transform Purchase To Bill URL: ", url);
+    console.log(
+      "Lot numbers to map:",
+      JSON.stringify(lotNumbersToMap, null, 2)
+    );
+
+    // Create record in new instance
+    const url = transformURL;
+    const idempotencyKey = randomUUID();
+    console.log("Create VENDORBILL URL ", url);
+    console.log("Create VENDORBILL idempotencyKey ", idempotencyKey);
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        Prefer: "respond-async",
+        "X-NetSuite-Idempotency-Key": idempotencyKey,
+        "X-NetSuite-PropertyNameValidation": "Warning",
+        "X-NetSuite-PropertyValueValidation": "Warning",
       },
-      body: JSON.stringify({
-        purchase_id: purchase_id,
-        vendor_bill_data: transformedData,
-      }),
+      body: JSON.stringify(transformedData),
     });
 
+    // Handle 202 Accepted (async processing)
+    if (response.status === 202) {
+      const locationHeader = response.headers.get("Location");
+
+      if (!locationHeader) {
+        throw new Error("Location header not found in 202 response");
+      }
+      console.log("Async job started. Location:", locationHeader);
+
+      return NextResponse.json({
+        status: "processing",
+        jobUrl: locationHeader,
+        lotNumbersToMap,
+        message:
+          "Transaction creation in progress. Use the jobUrl to check status.",
+      });
+    }
+    // Handle sync response
     if (response.ok) {
       const result = await response.json();
       return NextResponse.json({
         status: "completed",
         data: result,
-        message: "Transform Purchase To Bill Successfully",
+        message: "Transaction created successfully",
       });
-    } else {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to transform purchase to bill ${response.status} - ${errorText}`
-      );
     }
+    // Handle errors
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to create record: ${response.status} - ${errorText}`
+    );
   } catch (error) {
-    console.error("Error transform purchase to bill:", error);
+    console.error("Error creating record:", error);
     return NextResponse.json(
-      { error: "Failed to transform purchase to bill", details: error.message },
+      { error: "Failed to create record", details: error.message },
       { status: 500 }
     );
   }

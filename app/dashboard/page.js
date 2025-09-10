@@ -935,13 +935,14 @@ export default function DashboardOverview() {
             );
             console.log("Purchase Order Data: ", purchaseOrderData);
             if (purchaseOrderData) {
-              if (
-                purchaseOrderData.orderStatus.id == "E" ||
-                purchaseOrderData.orderStatus.id == "F"
-              ) {
-                // #### Transform To Vendor Bill
-                console.log("Transform To Vendor Bill");
-              } else if (purchaseOrderData.orderStatus.id == "B") {
+              // if (
+              //   purchaseOrderData.orderStatus.id == "E" ||
+              //   purchaseOrderData.orderStatus.id == "F"
+              // ) {
+              //   // #### Transform To Vendor Bill
+              //   console.log("Transform To Vendor Bill");
+              // } else
+              if (purchaseOrderData.orderStatus.id == "B") {
                 // #### Transaform to Item Receipt Then we can transform to Vendor Bill
                 console.log(
                   "Transaform to Item Receipt Then we can transform to Vendor Bill"
