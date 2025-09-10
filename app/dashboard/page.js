@@ -961,12 +961,98 @@ export default function DashboardOverview() {
                   //   "ItemRcpt"
                   // );
                   console.log("Purchase Order Receipt Data: ", receiptData);
-                  await transformPurchaseToReceipt(
+                  const transformedReceipt = await transformPurchaseToReceipt(
                     newAccountID,
                     newToken,
                     purchase_id,
                     receiptData,
-                    "ItemRcpt"
+                    "ItemRcpt",
+                    unitMapping,
+                    lotNumbers
+                  );
+                  console.log(
+                    "Transformed Receipt Response : ",
+                    transformedReceipt
+                  );
+                  await delay(1000);
+
+                  // Step 4 : Ftech New Transaction
+
+                  const newTransaction = await fetchNewTransaction(
+                    "ItemRcpt",
+                    newAccountID,
+                    newToken,
+                    transformedReceipt.data.receipt_id
+                  );
+                  console.log("newTransaction Data", newTransaction);
+                  if (newTransaction) {
+                    // Update transaction details with new data
+                    setTransactionDetails((prev) => ({
+                      ...prev,
+                      [receipt_id]: {
+                        ...prev[receipt_id],
+                        newData: newTransaction,
+                        steps: {
+                          ...prev[receipt_id]?.steps,
+                          relate: {
+                            status: "completed",
+                            timestamp: new Date(),
+                          },
+                        },
+                      },
+                    }));
+                  } else {
+                    // Update transaction details with error
+                    setTransactionDetails((prev) => ({
+                      ...prev,
+                      [receipt_id]: {
+                        ...prev[receipt_id],
+                        steps: {
+                          ...prev[receipt_id]?.steps,
+                          relate: {
+                            status: "error",
+                            error: "ERROR ERROR",
+                            timestamp: new Date(),
+                          },
+                        },
+                      },
+                    }));
+                  }
+                  // Create Lot Mapping for Receipt if Exist
+                  const lotNumbersToMapReceipt =
+                    transformedReceipt.lotNumbersToMap;
+                  console.log(
+                    "Receipt lotNumbersToMap: ",
+                    lotNumbersToMapReceipt
+                  );
+                  if (lotNumbersToMapReceipt.length > 0) {
+                    await delay(1000);
+
+                    // Step 5 : get Lot Numbers (New System)
+                    const newLotNumbers = await getLotNumbers(
+                      newAccountID,
+                      newToken,
+                      newTransaction.id
+                    );
+                    console.log("Receipt newLotNumbers", newLotNumbers);
+
+                    await delay(1000);
+
+                    // Step 6 : create Lot Number Mappings
+
+                    await createLotNumberMappings(
+                      oldAccountID,
+                      oldToken,
+                      newTransaction,
+                      lotNumbersToMapReceipt,
+                      newLotNumbers,
+                      "ItemRcpt"
+                    );
+                  }
+                  console.info(
+                    "Create Transaction [" +
+                      receiptData.tranId +
+                      "] Process Done!!"
                   );
                 }
               }

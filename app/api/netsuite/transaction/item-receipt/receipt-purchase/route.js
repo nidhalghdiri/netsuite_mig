@@ -3,7 +3,14 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
-    const { accountId, token, purchase_id, recordData } = await request.json();
+    const {
+      accountId,
+      token,
+      purchase_id,
+      recordData,
+      unitMapping,
+      lotNumbers,
+    } = await request.json();
 
     // Validate input
     if (!accountId || !token || !purchase_id || !recordData) {
@@ -12,6 +19,11 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    console.log("unitMapping", unitMapping);
+    console.log("lotNumbers", lotNumbers);
+
+    const lotNumbersToMap = [];
 
     // Add these defensive checks before accessing properties
     const transformedData = {
@@ -59,6 +71,32 @@ export async function POST(request) {
                 inventoryAssignment: {
                   items: item.inventoryDetail.inventoryAssignment.items.map(
                     (ass) => {
+                      if (ass.internalId && ass.new_id) {
+                        // Use the new_id if available
+                        return {
+                          internalId: ass.new_id,
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      } else if (ass.internalId) {
+                        // If no new_id, we'll need to create a mapping later
+                        lotNumbersToMap.push({
+                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
+                          refName: ass.receiptInventoryNumber,
+                          itemId: item.item.new_id,
+                          itemName: item.description
+                            ? item.description.substring(0, 40)
+                            : "",
+                          quantity: ass.quantity,
+                          line: item.line,
+                        });
+
+                        // Don't include internalId for new creation
+                        return {
+                          quantity: ass.quantity,
+                          receiptInventoryNumber: ass.receiptInventoryNumber,
+                        };
+                      }
                       return {
                         quantity: ass.quantity,
                         receiptInventoryNumber: ass.receiptInventoryNumber,
@@ -73,6 +111,10 @@ export async function POST(request) {
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
+    console.log(
+      "Lot numbers to map:",
+      JSON.stringify(lotNumbersToMap, null, 2)
+    );
     const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1057&deploy=1`;
     console.log("Transform Purchase To Receipt URL: ", url);
 
@@ -94,6 +136,7 @@ export async function POST(request) {
         status: "completed",
         data: result,
         message: "Transform Purchase To receipt Successfully",
+        lotNumbersToMap,
       });
     } else {
       const errorText = await response.text();
