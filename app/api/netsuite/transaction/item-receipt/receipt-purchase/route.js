@@ -113,8 +113,8 @@ export async function POST(request) {
           items: recordData.landedCosts.items.map((item) => {
             if (item.amount) {
               return {
-                category: { id: item.category },
-                amount: parseFloat(item.amount) || 0.0,
+                category: { id: item.category.id },
+                amount: parseFloat(item.category.amount) || 0.0,
               };
             }
           }),
