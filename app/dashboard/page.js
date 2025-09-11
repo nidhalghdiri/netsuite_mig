@@ -432,14 +432,15 @@ export default function DashboardOverview() {
     setProcessedTransactions([]);
     setFailedTransactions([]);
 
-    const unprocessedTransactions = [...migrationData.transactions]
-      .filter((trx) => !trx.custbody_mig_new_internal_id)
-      .sort((a, b) => {
-        // Convert DD/MM/YYYY to YYYY-MM-DD for proper date comparison
-        const dateA = a.trandate.split("/").reverse().join("-");
-        const dateB = b.trandate.split("/").reverse().join("-");
-        return new Date(dateA) - new Date(dateB);
-      });
+    const unprocessedTransactions = [...migrationData.transactions].filter(
+      (trx) => !trx.custbody_mig_new_internal_id
+    );
+    // .sort((a, b) => {
+    //   // Convert DD/MM/YYYY to YYYY-MM-DD for proper date comparison
+    //   const dateA = a.trandate.split("/").reverse().join("-");
+    //   const dateB = b.trandate.split("/").reverse().join("-");
+    //   return new Date(dateA) - new Date(dateB);
+    // });
     console.log(
       "Processing all transactions sorted by date:",
       unprocessedTransactions.length
