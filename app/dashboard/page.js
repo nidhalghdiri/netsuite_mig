@@ -2049,7 +2049,7 @@ export default function DashboardOverview() {
               description: newItemName,
               memo: `معالجة مخزون الصنف ${newItemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${newLotId} \n بكمية ${adjustmentQty}`,
 
-              units: foundItem.item.baseunit,
+              units: foundItem.units,
               inventoryDetail: {
                 inventoryAssignment: {
                   items: [
@@ -2063,7 +2063,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: newItemName,
                 quantity: adjustmentQty,
-                unit: foundItem.item.baseunit,
+                unit: foundItem.units,
               },
             },
           ],
