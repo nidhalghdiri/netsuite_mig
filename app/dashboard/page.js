@@ -1606,13 +1606,31 @@ export default function DashboardOverview() {
               console.log(
                 "Inventory Asseigment doesn't exist for this item, creating inventory adjustment"
               );
+              var sublistName = "inventory";
+              if (
+                recordType == "TrnfrOrd" ||
+                recordType == "CustInvc" ||
+                recordType == "RtnAuth" ||
+                recordType == "ItemRcpt" ||
+                recordType == "PurchOrd" ||
+                recordType == "VendBill" ||
+                recordType == "CustCred"
+              ) {
+                sublistName = "item";
+              }
               const errorPath =
                 errorDetails.details["o:errorDetails"][0]["o:errorPath"];
-              const indexMatch = errorPath.match(/inventory\.items\[(\d+)\]/);
+              var indexMatch;
+              if (sublistName == "inventory") {
+                indexMatch = errorPath.match(/inventory\.items\[(\d+)\]/); // Here
+              } else {
+                indexMatch = errorPath.match(/item\.items\[(\d+)\]/);
+              }
               if (indexMatch) {
                 const itemIndex = parseInt(indexMatch[1]);
                 // Get the problematic item from transaction data
-                const problemItem = transactionData.inventory.items[itemIndex];
+                const problemItem =
+                  transactionData[sublistName].items[itemIndex]; // Here
                 if (!problemItem || !problemItem.inventoryDetail) {
                   throw new Error("Could not find item with inventory detail");
                 }
