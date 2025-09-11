@@ -22,8 +22,8 @@ export async function POST(request) {
       );
     }
 
-    console.log("unitMapping", unitMapping);
-    console.log("lotNumbers", lotNumbers);
+    // console.log("unitMapping", unitMapping);
+    // console.log("lotNumbers", lotNumbers);
 
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);

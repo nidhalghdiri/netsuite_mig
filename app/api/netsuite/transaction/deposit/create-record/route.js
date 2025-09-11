@@ -28,25 +28,47 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     var transformedData = {
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
-      account: { id: recordData.account?.new_id },
-      currency: { id: recordData.currency.id },
-      entity: { id: recordData.entity?.new_id },
-      landedCostMethod: { id: recordData.landedCostMethod.id },
+      // Basic fields with defaults
+      tranId: recordData.tranId || "",
+      tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
-      subsidiary: { id: recordData.subsidiary?.new_id },
       total: parseFloat(recordData.total) || 0.0,
-      // postingPeriod: { id: "20" },
-      expense: {
-        items: recordData.expense.items.map((line) => ({
-          account: { id: line.account?.new_id },
-          amount: parseFloat(line.amount) || 0.0,
-          isBillable: line.isBillable,
-          location: { id: line.location?.new_id },
-          memo: line.memo ? line.memo.substring(0, 4000) : "",
-        })),
-      },
+
+      // Object fields with safety checks
+      ...(recordData.account?.new_id && {
+        account: { id: recordData.account.new_id },
+      }),
+      ...(recordData.currency?.id && {
+        currency: { id: recordData.currency.id },
+      }),
+      ...(recordData.entity?.new_id && {
+        entity: { id: recordData.entity.new_id },
+      }),
+      ...(recordData.landedCostMethod?.id && {
+        landedCostMethod: { id: recordData.landedCostMethod.id },
+      }),
+      ...(recordData.subsidiary?.new_id && {
+        subsidiary: { id: recordData.subsidiary.new_id },
+      }),
+
+      // Expense array with comprehensive safety
+      ...(recordData.expense?.items && {
+        expense: {
+          items: (recordData.expense.items || [])
+            .filter((line) => line !== null && line !== undefined)
+            .map((line) => ({
+              amount: parseFloat(line.amount) || 0.0,
+              isBillable: Boolean(line.isBillable),
+              memo: line.memo ? line.memo.substring(0, 4000) : "",
+              ...(line.account?.new_id && {
+                account: { id: line.account.new_id },
+              }),
+              ...(line.location?.new_id && {
+                location: { id: line.location.new_id },
+              }),
+            })),
+        },
+      }),
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));

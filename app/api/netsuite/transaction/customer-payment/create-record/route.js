@@ -28,29 +28,48 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     var transformedData = {
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
-      undepFunds: { id: recordData.undepFunds.id },
-      subsidiary: { id: recordData.subsidiary?.new_id },
-      status: { id: recordData.status.id },
-      prevDate: recordData.prevDate,
+      // Basic fields with defaults
+      tranId: recordData.tranId || "",
+      tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
+      prevDate: recordData.prevDate || "",
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
-      customer: { id: recordData.customer?.new_id },
-      currency: { id: recordData.currency.id },
-      aracct: { id: recordData.aracct?.new_id },
-      account: { id: recordData.account?.new_id },
       payment: parseFloat(recordData.payment) || 0.0,
 
-      // postingPeriod: { id: "20" },
-      apply: {
-        items: recordData.apply.items.map((line) => ({
-          apply: line.apply,
-          amount: parseFloat(line.amount) || 0.0,
-          applyDate: line.applyDate,
-          ...(line.doc && { doc: { id: line.doc.new_id } }),
-          type: line.type,
-        })),
-      },
+      // Object fields with safety checks
+      ...(recordData.undepFunds?.id && {
+        undepFunds: { id: recordData.undepFunds.id },
+      }),
+      ...(recordData.subsidiary?.new_id && {
+        subsidiary: { id: recordData.subsidiary.new_id },
+      }),
+      ...(recordData.status?.id && { status: { id: recordData.status.id } }),
+      ...(recordData.customer?.new_id && {
+        customer: { id: recordData.customer.new_id },
+      }),
+      ...(recordData.currency?.id && {
+        currency: { id: recordData.currency.id },
+      }),
+      ...(recordData.aracct?.new_id && {
+        aracct: { id: recordData.aracct.new_id },
+      }),
+      ...(recordData.account?.new_id && {
+        account: { id: recordData.account.new_id },
+      }),
+
+      // Apply array with comprehensive safety
+      ...(recordData.apply?.items && {
+        apply: {
+          items: (recordData.apply.items || [])
+            .filter((line) => line !== null && line !== undefined)
+            .map((line) => ({
+              apply: Boolean(line.apply),
+              amount: parseFloat(line.amount) || 0.0,
+              applyDate: line.applyDate || "",
+              type: line.type || "",
+              ...(line.doc?.new_id && { doc: { id: line.doc.new_id } }),
+            })),
+        },
+      }),
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));

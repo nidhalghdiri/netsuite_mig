@@ -22,8 +22,8 @@ export async function POST(request) {
       );
     }
 
-    console.log("unitMapping", unitMapping);
-    console.log("lotNumbers", lotNumbers);
+    // console.log("unitMapping", unitMapping);
+    // console.log("lotNumbers", lotNumbers);
 
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);
@@ -31,75 +31,87 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     const transformedData = {
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
-      memo: recordData.memo,
+      // Basic fields with defaults
+      tranId: recordData.tranId || "",
+      tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
+      memo: recordData.memo || "",
       customForm: { id: "52" }, // Standard Inventory Transfer Form
-      // currency: { id: recordData.currency.id },
-      ...(recordData.department && {
+      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
+
+      // Conditional object fields with safety checks
+      ...(recordData.department?.new_id && {
         department: { id: recordData.department.new_id },
       }),
-      // firmed: recordData.firmed,
-      // incoTerm: { id: recordData.incoTerm.id },
-      ...(recordData.location && {
+      ...(recordData.location?.new_id && {
         location: { id: recordData.location.new_id },
       }),
-      // shipAddress: recordData.shipAddress,
-      ...(recordData.subsidiary && {
+      ...(recordData.subsidiary?.new_id && {
         subsidiary: { id: recordData.subsidiary.new_id },
       }),
-      ...(recordData.transferLocation && {
+      ...(recordData.transferLocation?.new_id && {
         transferLocation: { id: recordData.transferLocation.new_id },
       }),
-      // useItemCostAsTransferCost: recordData.useItemCostAsTransferCost,
-      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-      // postingPeriod: { id: "20" },
-      inventory: {
-        items: recordData.inventory.items.map((item) => ({
-          item: { id: item.item.new_id },
-          // cseg2: { id: item.cseg2.id },
-          description: item.description
-            ? item.description.substring(0, 40)
-            : "",
-          // exchangeRate: item.exchangeRate,
-          memo: item.memo ? item.memo.substring(0, 4000) : "",
-          units: unitMapping[item.inventoryDetail.unit],
-          adjustQtyBy: item.adjustQtyBy,
-          // rate: item.rate,
-          // amount: item.amount,
-          inventoryDetail: item.inventoryDetail
-            ? {
-                quantity: item.inventoryDetail.quantity,
-                unit: unitMapping[item.inventoryDetail.unit],
-                location: { id: item.inventoryDetail.location.new_id },
-                toLocation: { id: item.inventoryDetail.toLocation.new_id },
-                inventoryAssignment: {
-                  items: item.inventoryDetail.inventoryAssignment.items.map(
-                    (ass) => {
-                      // Check if we have a new_id for this lot number
-                      if (ass.new_id) {
-                        // Use the new_id if available
-                        return {
-                          internalId: ass.new_id,
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.refName.toString(),
-                        };
-                      }
-                      return {
-                        quantity: ass.quantity,
-                      };
-                    }
 
-                    //   ({
-                    //   quantity: ass.quantity,
-                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
-                    // })
-                  ),
-                },
+      // Inventory array with comprehensive safety
+      ...(recordData.inventory?.items && {
+        inventory: {
+          items: (recordData.inventory.items || [])
+            .filter((item) => item !== null && item !== undefined)
+            .map((item) => {
+              const mappedItem = {
+                description: item.description
+                  ? item.description.substring(0, 40)
+                  : "",
+                memo: item.memo ? item.memo.substring(0, 4000) : "",
+                adjustQtyBy: parseFloat(item.adjustQtyBy) || 0,
+                ...(item.item?.new_id && { item: { id: item.item.new_id } }),
+                ...(item.inventoryDetail?.unit &&
+                  unitMapping[item.inventoryDetail.unit] && {
+                    units: unitMapping[item.inventoryDetail.unit],
+                  }),
+              };
+
+              // Handle inventoryDetail only if it exists and has valid data
+              if (item.inventoryDetail) {
+                const inventoryAssignmentItems = (
+                  item.inventoryDetail.inventoryAssignment?.items || []
+                )
+                  .filter((ass) => ass !== null && ass !== undefined)
+                  .map((ass) => ({
+                    quantity: parseFloat(ass.quantity) || 0,
+                    ...(ass.new_id && {
+                      internalId: ass.new_id,
+                      receiptInventoryNumber: ass.refName
+                        ? ass.refName.toString()
+                        : "",
+                    }),
+                  }));
+
+                // Only include inventoryDetail if it has required location fields
+                if (
+                  item.inventoryDetail.location?.new_id &&
+                  item.inventoryDetail.toLocation?.new_id
+                ) {
+                  mappedItem.inventoryDetail = {
+                    quantity: parseFloat(item.inventoryDetail.quantity) || 0,
+                    ...(item.inventoryDetail.unit &&
+                      unitMapping[item.inventoryDetail.unit] && {
+                        unit: unitMapping[item.inventoryDetail.unit],
+                      }),
+                    location: { id: item.inventoryDetail.location.new_id },
+                    toLocation: { id: item.inventoryDetail.toLocation.new_id },
+                    inventoryAssignment: {
+                      items: inventoryAssignmentItems,
+                    },
+                  };
+                }
               }
-            : null,
-        })),
-      },
+
+              return mappedItem;
+            })
+            .filter((item) => item.item && item.item.id), // Only include items with valid item IDs
+        },
+      }),
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));

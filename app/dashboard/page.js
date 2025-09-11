@@ -847,7 +847,7 @@ export default function DashboardOverview() {
 
       // Step 1: get Unit Mapping
       const unitMapping = await getUnitMapping(oldAccountID, oldToken);
-      console.log("unitMapping", unitMapping);
+      // console.log("unitMapping", unitMapping);
 
       await delay(1000);
 

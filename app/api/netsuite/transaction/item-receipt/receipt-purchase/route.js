@@ -20,8 +20,8 @@ export async function POST(request) {
       );
     }
 
-    console.log("unitMapping", unitMapping);
-    console.log("lotNumbers", lotNumbers);
+    // console.log("unitMapping", unitMapping);
+    // console.log("lotNumbers", lotNumbers);
 
     const lotNumbersToMap = [];
 

@@ -22,8 +22,8 @@ export async function POST(request) {
       );
     }
 
-    console.log("unitMapping", unitMapping);
-    console.log("lotNumbers", lotNumbers);
+    // console.log("unitMapping", unitMapping);
+    // console.log("lotNumbers", lotNumbers);
 
     // Transform inventory adjustment data for new instance
     // const transformedData = transformInventoryAdjustment(recordData);
@@ -31,85 +31,121 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     const transformedData = {
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
-      memo: recordData.memo,
-      account: { id: recordData.account.new_id },
-      entity: { id: recordData.entity.new_id },
-      billAddress: recordData.billAddress,
-      billingAddress_text: recordData.billingAddress_text,
-      currency: { id: recordData.currency.id },
-      custbody_customer_type: { id: recordData.custbody_customer_type.id },
-      custbody_og_invoice_date: recordData.custbody_og_invoice_date,
+      // Basic fields with defaults
+      tranId: recordData.tranId || "",
+      tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
+      memo: recordData.memo || "",
+      billAddress: recordData.billAddress || "",
+      billingAddress_text: recordData.billingAddress_text || "",
+      custbody_og_invoice_date: recordData.custbody_og_invoice_date || "",
       custbody_og_sales_discount_item:
-        recordData.custbody_og_sales_discount_item,
-      custbody_og_sales_subtotal: recordData.custbody_og_sales_subtotal,
-      custbody_og_sales_total: recordData.custbody_og_sales_total,
+        recordData.custbody_og_sales_discount_item || "",
+      custbody_og_sales_subtotal:
+        parseFloat(recordData.custbody_og_sales_subtotal) || 0.0,
+      custbody_og_sales_total:
+        parseFloat(recordData.custbody_og_sales_total) || 0.0,
       custbody_og_sales_total_lindscnt:
-        recordData.custbody_og_sales_total_lindscnt,
+        parseFloat(recordData.custbody_og_sales_total_lindscnt) || 0.0,
       custbody_og_total_sales_quantity:
-        recordData.custbody_og_total_sales_quantity,
-      custbody_og_trans_amount_words: recordData.custbody_og_trans_amount_words,
+        parseFloat(recordData.custbody_og_total_sales_quantity) || 0.0,
+      custbody_og_trans_amount_words:
+        recordData.custbody_og_trans_amount_words || "",
       custbody_ogg_transaction_printed:
-        recordData.custbody_ogg_transaction_printed,
-      dueDate: recordData.dueDate,
-      salesEffectiveDate: recordData.salesEffectiveDate,
-      // salesRep: { id: recordData.salesRep.new_id },
-      location: { id: recordData.location.new_id },
-      shipAddress: recordData.shipAddress,
-      subsidiary: { id: recordData.subsidiary.new_id },
-      // terms: { id: recordData.terms.id },
+        recordData.custbody_ogg_transaction_printed || "",
+      dueDate: recordData.dueDate || "",
+      salesEffectiveDate: recordData.salesEffectiveDate || "",
+      shipAddress: recordData.shipAddress || "",
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-      // postingPeriod: { id: "20" },
-      item: {
-        items: recordData.item.items.map((item) => ({
-          item: { id: item.item.new_id },
-          account: { id: item.account.new_id },
-          costEstimateType: { id: item.costEstimateType.id },
-          cseg2: { id: item.cseg2.id },
-          location: { id: item.location.new_id },
-          price: { id: item.price.id },
-          description: item.description
-            ? item.description.substring(0, 40)
-            : "",
-          // exchangeRate: item.exchangeRate,
-          memo: item.memo ? item.memo.substring(0, 4000) : "",
-          units: unitMapping[item.inventoryDetail.unit],
-          rate: parseFloat(item.rate) || 0.0,
-          amount: parseFloat(item.amount) || 0.0,
-          quantity: item.quantity,
-          inventoryDetail: item.inventoryDetail
-            ? {
-                quantity: item.inventoryDetail.quantity,
-                unit: unitMapping[item.inventoryDetail.unit],
-                location: { id: item.inventoryDetail.location.new_id },
-                inventoryAssignment: {
-                  items: item.inventoryDetail.inventoryAssignment.items.map(
-                    (ass) => {
-                      // Check if we have a new_id for this lot number
-                      if (ass.new_id) {
-                        // Use the new_id if available
-                        return {
-                          internalId: ass.new_id,
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.refName.toString(),
-                        };
-                      }
-                      return {
-                        quantity: ass.quantity,
-                      };
-                    }
 
-                    //   ({
-                    //   quantity: ass.quantity,
-                    //   receiptInventoryNumber: ass.receiptInventoryNumber,
-                    // })
-                  ),
-                },
+      // Conditional object fields with safety checks
+      ...(recordData.account?.new_id && {
+        account: { id: recordData.account.new_id },
+      }),
+      ...(recordData.entity?.new_id && {
+        entity: { id: recordData.entity.new_id },
+      }),
+      ...(recordData.currency?.id && {
+        currency: { id: recordData.currency.id },
+      }),
+      ...(recordData.custbody_customer_type?.id && {
+        custbody_customer_type: { id: recordData.custbody_customer_type.id },
+      }),
+      ...(recordData.location?.new_id && {
+        location: { id: recordData.location.new_id },
+      }),
+      ...(recordData.subsidiary?.new_id && {
+        subsidiary: { id: recordData.subsidiary.new_id },
+      }),
+
+      // Item array with comprehensive safety
+      ...(recordData.item?.items && {
+        item: {
+          items: (recordData.item.items || [])
+            .filter((item) => item !== null && item !== undefined)
+            .map((item) => {
+              const mappedItem = {
+                description: item.description
+                  ? item.description.substring(0, 40)
+                  : "",
+                memo: item.memo ? item.memo.substring(0, 4000) : "",
+                rate: parseFloat(item.rate) || 0.0,
+                amount: parseFloat(item.amount) || 0.0,
+                quantity: parseFloat(item.quantity) || 0.0,
+                ...(item.item?.new_id && { item: { id: item.item.new_id } }),
+                ...(item.account?.new_id && {
+                  account: { id: item.account.new_id },
+                }),
+                ...(item.costEstimateType?.id && {
+                  costEstimateType: { id: item.costEstimateType.id },
+                }),
+                ...(item.cseg2?.id && { cseg2: { id: item.cseg2.id } }),
+                ...(item.location?.new_id && {
+                  location: { id: item.location.new_id },
+                }),
+                ...(item.price?.id && { price: { id: item.price.id } }),
+                ...(item.inventoryDetail?.unit &&
+                  unitMapping[item.inventoryDetail.unit] && {
+                    units: unitMapping[item.inventoryDetail.unit],
+                  }),
+              };
+
+              // Handle inventoryDetail only if it exists and has valid data
+              if (item.inventoryDetail) {
+                const inventoryAssignmentItems = (
+                  item.inventoryDetail.inventoryAssignment?.items || []
+                )
+                  .filter((ass) => ass !== null && ass !== undefined)
+                  .map((ass) => ({
+                    quantity: parseFloat(ass.quantity) || 0,
+                    ...(ass.new_id && {
+                      internalId: ass.new_id,
+                      receiptInventoryNumber: ass.refName
+                        ? ass.refName.toString()
+                        : "",
+                    }),
+                  }));
+
+                // Only include inventoryDetail if it has required fields
+                if (item.inventoryDetail.location?.new_id) {
+                  mappedItem.inventoryDetail = {
+                    quantity: parseFloat(item.inventoryDetail.quantity) || 0,
+                    ...(item.inventoryDetail.unit &&
+                      unitMapping[item.inventoryDetail.unit] && {
+                        unit: unitMapping[item.inventoryDetail.unit],
+                      }),
+                    location: { id: item.inventoryDetail.location.new_id },
+                    inventoryAssignment: {
+                      items: inventoryAssignmentItems,
+                    },
+                  };
+                }
               }
-            : null,
-        })),
-      },
+
+              return mappedItem;
+            })
+            .filter((item) => item.item && item.item.id), // Only include items with valid item IDs
+        },
+      }),
     };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
