@@ -419,12 +419,6 @@ export default function DashboardOverview() {
   };
 
   const startAutoProcessing = async () => {
-    if (!selectedDate) {
-      console.error("Please select a date first");
-      return;
-    }
-    console.log("selectedDate: ", selectedDate);
-
     try {
       await getValidToken("old");
       await getValidToken("new");
@@ -438,11 +432,26 @@ export default function DashboardOverview() {
     setProcessedTransactions([]);
     setFailedTransactions([]);
 
-    // Get transactions for the selected date
-    const dateTransactions = filterTransactionsByDate(selectedDate);
-    console.log("dateTransactions: ", dateTransactions);
-    // Process transactions sequentially
-    for (let i = 0; i < dateTransactions.length; i++) {
+    const unprocessedTransactions = [...migrationData.transactions]
+      .filter((trx) => !trx.custbody_mig_new_internal_id)
+      .sort((a, b) => {
+        // Convert DD/MM/YYYY to YYYY-MM-DD for proper date comparison
+        const dateA = a.trandate.split("/").reverse().join("-");
+        const dateB = b.trandate.split("/").reverse().join("-");
+        return new Date(dateA) - new Date(dateB);
+      });
+    console.log(
+      "Processing all transactions sorted by date:",
+      unprocessedTransactions.length
+    );
+    if (unprocessedTransactions.length === 0) {
+      console.log("No transactions to process");
+      setIsAutoProcessing(false);
+      setAutoProcessStatus("completed");
+      return;
+    }
+
+    for (let i = 0; i < unprocessedTransactions.length; i++) {
       if (autoProcessStatus === "paused") {
         break;
       }
@@ -455,7 +464,7 @@ export default function DashboardOverview() {
         setFailedTransactions((prev) => [
           ...prev,
           {
-            id: trx.id,
+            id: unprocessedTransactions[i].id,
             error: "Authentication failed. Please reconnect and resume.",
             step: "authentication",
           },
@@ -465,14 +474,14 @@ export default function DashboardOverview() {
       }
 
       setCurrentProcessingIndex(i);
-      const trx = dateTransactions[i];
+      const trx = unprocessedTransactions[i];
 
       try {
         // Process the transaction
         console.log(
-          `Processing transaction ${i + 1}/${dateTransactions.length}: ${
+          `Processing transaction ${i + 1}/${unprocessedTransactions.length}: ${
             trx.id
-          }`
+          } (${trx.trandate})`
         );
         // console.log("Fetching transaction details...");
         // await fetchTransaction(trx.id, trx.type);
@@ -509,7 +518,7 @@ export default function DashboardOverview() {
     if (autoProcessStatus !== "paused") {
       setAutoProcessStatus("completed");
       console.log(
-        `Finished processing ${dateTransactions.length} transactions`
+        `Finished processing ${unprocessedTransactions.length} transactions`
       );
     }
 
@@ -523,8 +532,14 @@ export default function DashboardOverview() {
     if (failedTransactions.length > 0) {
       // If we have failures, start from the first failed transaction
       const failedId = failedTransactions[0].id;
-      const dateTransactions = filterTransactionsByDate(selectedDate);
-      const failedIndex = dateTransactions.findIndex(
+      const unprocessedTransactions = [...migrationData.transactions]
+        .filter((trx) => !trx.custbody_mig_new_internal_id)
+        .sort((a, b) => {
+          const dateA = a.trandate.split("/").reverse().join("-");
+          const dateB = b.trandate.split("/").reverse().join("-");
+          return new Date(dateA) - new Date(dateB);
+        });
+      const failedIndex = unprocessedTransactions.findIndex(
         (trx) => trx.id === failedId
       );
 
@@ -2282,7 +2297,6 @@ export default function DashboardOverview() {
       {migrationData && (
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Migration Statistics</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <div className="border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
@@ -2326,24 +2340,23 @@ export default function DashboardOverview() {
               <p className="text-sm text-gray-600">Completion</p>
             </div>
           </div>
-
           <div className="mt-6 p-4 border rounded-lg bg-gray-50">
-            <h3 className="font-medium mb-3">Day-by-Day Processing</h3>
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <h3 className="font-medium mb-3">Transaction Processing</h3>
+
+            <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Date to Process
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full border rounded-md pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isAutoProcessing}
-                  />
-                  <FiCalendar className="absolute right-3 top-2.5 text-gray-400" />
-                </div>
+                <p className="text-sm text-gray-600 mb-2">
+                  {
+                    migrationData.transactions.filter(
+                      (trx) => !trx.custbody_mig_new_internal_id
+                    ).length
+                  }{" "}
+                  unprocessed transactions ready for migration
+                </p>
+                <p className="text-xs text-gray-500">
+                  Transactions will be processed in chronological order (oldest
+                  first)
+                </p>
               </div>
 
               <div className="flex gap-2">
@@ -2352,7 +2365,7 @@ export default function DashboardOverview() {
                     onClick={pauseAutoProcessing}
                     className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
                   >
-                    <FiPause className="mr-1" /> Pause
+                    <FiPause className="mr-1" /> Pause Processing
                   </button>
                 ) : (
                   <button
@@ -2361,12 +2374,17 @@ export default function DashboardOverview() {
                         ? resumeAutoProcessing
                         : startAutoProcessing
                     }
-                    disabled={!selectedDate || isAutoProcessing}
+                    disabled={
+                      isAutoProcessing ||
+                      migrationData.transactions.filter(
+                        (trx) => !trx.custbody_mig_new_internal_id
+                      ).length === 0
+                    }
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FiPlay className="mr-1" />
                     {autoProcessStatus === "paused"
-                      ? "Resume"
+                      ? "Resume Processing"
                       : "Start Processing"}
                   </button>
                 )}
@@ -2383,50 +2401,57 @@ export default function DashboardOverview() {
               </div>
             </div>
 
-            {selectedDate && (
-              <div className="mt-4">
-                <p className="text-sm text-gray-600">
-                  Found {filterTransactionsByDate(selectedDate).length}{" "}
-                  transactions for {selectedDate}
-                </p>
+            {/* Progress and status display */}
+            <div className="mt-4">
+              {isAutoProcessing && (
+                <div className="mt-2 flex items-center">
+                  <FiRefreshCw className="animate-spin mr-2 text-blue-500" />
+                  <span>
+                    Processing {currentProcessingIndex + 1} of{" "}
+                    {
+                      migrationData.transactions.filter(
+                        (trx) => !trx.custbody_mig_new_internal_id
+                      ).length
+                    }
+                    {migrationData.transactions[currentProcessingIndex] && (
+                      <span className="text-gray-500 ml-2">
+                        (Date:{" "}
+                        {
+                          migrationData.transactions[currentProcessingIndex]
+                            .trandate
+                        }
+                        )
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
 
-                {isAutoProcessing && (
-                  <div className="mt-2 flex items-center">
-                    <FiRefreshCw className="animate-spin mr-2 text-blue-500" />
-                    <span>
-                      Processing {currentProcessingIndex + 1} of{" "}
-                      {filterTransactionsByDate(selectedDate).length}
-                    </span>
-                  </div>
-                )}
-
-                {autoProcessStatus === "paused" &&
-                  failedTransactions.length > 0 && (
-                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-red-700 font-medium">
-                        Processing paused due to error:
-                      </p>
-                      <p className="text-red-600 text-sm">
-                        Transaction {failedTransactions[0].id}:{" "}
-                        {failedTransactions[0].error}
-                      </p>
-                    </div>
-                  )}
-
-                {autoProcessStatus === "completed" && (
-                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-green-700 font-medium">
-                      Processing completed successfully!
+              {autoProcessStatus === "paused" &&
+                failedTransactions.length > 0 && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-red-700 font-medium">
+                      Processing paused due to error:
                     </p>
-                    <p className="text-green-600 text-sm">
-                      Processed {processedTransactions.length} transactions
+                    <p className="text-red-600 text-sm">
+                      Transaction {failedTransactions[0].id}:{" "}
+                      {failedTransactions[0].error}
                     </p>
                   </div>
                 )}
-              </div>
-            )}
+
+              {autoProcessStatus === "completed" && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-green-700 font-medium">
+                    Processing completed successfully!
+                  </p>
+                  <p className="text-green-600 text-sm">
+                    Processed {processedTransactions.length} transactions
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-
           <div className="mb-6">
             <h3 className="font-medium mb-3">Transactions by Type</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -2442,7 +2467,6 @@ export default function DashboardOverview() {
               )}
             </div>
           </div>
-
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-blue-600 h-2.5 rounded-full"
