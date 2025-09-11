@@ -105,59 +105,64 @@ export async function POST(request) {
                   quantity: item.quantity || 0,
                 };
 
-                // Add inventoryDetail if it exists
+                // Add inventoryDetail only if it exists AND inventoryAssignment has items
                 if (item.inventoryDetail) {
-                  mappedItem.inventoryDetail = {
-                    ...(item.inventoryDetail.item &&
-                      item.inventoryDetail.item.new_id && {
-                        item: { id: item.inventoryDetail.item.new_id },
-                      }),
-                    itemDescription: item.inventoryDetail.itemDescription || "",
-                    ...(item.inventoryDetail.location &&
-                      item.inventoryDetail.location.new_id && {
-                        location: { id: item.inventoryDetail.location.new_id },
-                      }),
-                    quantity: item.inventoryDetail.quantity || 0,
-                    ...(item.inventoryDetail.unit &&
-                      unitMapping[item.inventoryDetail.unit] && {
-                        unit: unitMapping[item.inventoryDetail.unit],
-                      }),
-                    inventoryAssignment: {
-                      items: (
-                        (item.inventoryDetail.inventoryAssignment &&
-                          item.inventoryDetail.inventoryAssignment.items) ||
-                        []
-                      )
-                        .filter((ass) => ass !== null && ass !== undefined)
-                        .map((ass) => {
-                          const assignment = {
-                            quantity: ass.quantity || 0,
-                            receiptInventoryNumber:
-                              ass.receiptInventoryNumber || "",
-                          };
+                  const inventoryAssignmentItems = (
+                    (item.inventoryDetail.inventoryAssignment &&
+                      item.inventoryDetail.inventoryAssignment.items) ||
+                    []
+                  )
+                    .filter((ass) => ass !== null && ass !== undefined)
+                    .map((ass) => {
+                      const assignment = {
+                        quantity: ass.quantity || 0,
+                        receiptInventoryNumber:
+                          ass.receiptInventoryNumber || "",
+                      };
 
-                          // Add internalId if we have a new_id
-                          if (ass.internalId && ass.new_id) {
-                            assignment.internalId = ass.new_id;
-                          } else if (ass.internalId) {
-                            // If no new_id, add to mapping list
-                            lotNumbersToMap.push({
-                              old_id: ass.internalId,
-                              refName: ass.receiptInventoryNumber || "",
-                              itemId: (item.item && item.item.new_id) || "",
-                              itemName: (item.description || "").substring(
-                                0,
-                                40
-                              ),
-                              quantity: ass.quantity || 0,
-                              line: item.line || 0,
-                            });
-                          }
+                      // Add internalId if we have a new_id
+                      if (ass.internalId && ass.new_id) {
+                        assignment.internalId = ass.new_id;
+                      } else if (ass.internalId) {
+                        // If no new_id, add to mapping list
+                        lotNumbersToMap.push({
+                          old_id: ass.internalId,
+                          refName: ass.receiptInventoryNumber || "",
+                          itemId: (item.item && item.item.new_id) || "",
+                          itemName: (item.description || "").substring(0, 40),
+                          quantity: ass.quantity || 0,
+                          line: item.line || 0,
+                        });
+                      }
 
-                          return assignment;
+                      return assignment;
+                    });
+
+                  // Only include inventoryDetail if inventoryAssignment has items
+                  if (inventoryAssignmentItems.length > 0) {
+                    mappedItem.inventoryDetail = {
+                      ...(item.inventoryDetail.item &&
+                        item.inventoryDetail.item.new_id && {
+                          item: { id: item.inventoryDetail.item.new_id },
                         }),
-                    },
-                  };
+                      itemDescription:
+                        item.inventoryDetail.itemDescription || "",
+                      ...(item.inventoryDetail.location &&
+                        item.inventoryDetail.location.new_id && {
+                          location: {
+                            id: item.inventoryDetail.location.new_id,
+                          },
+                        }),
+                      quantity: item.inventoryDetail.quantity || 0,
+                      ...(item.inventoryDetail.unit &&
+                        unitMapping[item.inventoryDetail.unit] && {
+                          unit: unitMapping[item.inventoryDetail.unit],
+                        }),
+                      inventoryAssignment: {
+                        items: inventoryAssignmentItems,
+                      },
+                    };
+                  }
                 }
 
                 return mappedItem;
