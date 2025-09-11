@@ -2414,16 +2414,6 @@ export default function DashboardOverview() {
                         (trx) => !trx.custbody_mig_new_internal_id
                       ).length
                     }
-                    {migrationData.transactions[currentProcessingIndex] && (
-                      <span className="text-gray-500 ml-2">
-                        (Date:{" "}
-                        {
-                          migrationData.transactions[currentProcessingIndex]
-                            .trandate
-                        }
-                        )
-                      </span>
-                    )}
                   </span>
                 </div>
               )}
