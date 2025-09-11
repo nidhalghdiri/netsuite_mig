@@ -1450,7 +1450,8 @@ export default function DashboardOverview() {
                 oldAccountID,
                 oldToken,
                 newAccountID,
-                newToken
+                newToken,
+                recordType
               );
 
               // Update step status to indicate inventory adjustment was handled
@@ -1849,13 +1850,32 @@ export default function DashboardOverview() {
     oldAccountID,
     oldToken,
     newAccountID,
-    newToken
+    newToken,
+    recordType
   ) => {
     try {
       console.log("Handling inventory adjustment:", availableQty, errorPath);
+      var sublistName = "inventory";
+      if (
+        recordType == "TrnfrOrd" ||
+        recordType == "CustInvc" ||
+        recordType == "RtnAuth" ||
+        recordType == "ItemRcpt" ||
+        recordType == "PurchOrd" ||
+        recordType == "VendBill" ||
+        recordType == "CustCred"
+      ) {
+        sublistName = "item";
+      }
 
       // Parse the error path to extract the item index and assignment ID
-      const itemMatch = errorPath.match(/item\.items\[(\d+)\]/);
+      var itemMatch;
+      if (sublistName == "inventory") {
+        itemMatch = errorPath.match(/inventory\.items\[(\d+)\]/);
+      } else {
+        itemMatch = errorPath.match(/item\.items\[(\d+)\]/);
+      }
+      // const itemMatch = errorPath.match(/item\.items\[(\d+)\]/);
       const assignmentMatch = errorPath.match(/internalId==(\d+)/);
 
       const itemIndex = itemMatch ? parseInt(itemMatch[1]) : 0;
@@ -1864,7 +1884,7 @@ export default function DashboardOverview() {
         : null;
 
       // Get the specific item from the transaction data
-      const item = transactionData.item.items[itemIndex];
+      const item = transactionData[sublistName].items[itemIndex];
 
       if (
         !item ||
@@ -1953,7 +1973,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: itemName,
                 quantity: shortfall,
-                unit: itemBaseUnit,
+                unit: item.units,
               },
             },
           ],
@@ -2049,7 +2069,7 @@ export default function DashboardOverview() {
               description: newItemName,
               memo: `معالجة مخزون الصنف ${newItemId} \n رقم الفاتورة ${transactionData.tranId} \n رقم التاكيد ${newLotId} \n بكمية ${adjustmentQty}`,
 
-              units: foundItem.units,
+              units: foundItem.item.baseunit,
               inventoryDetail: {
                 inventoryAssignment: {
                   items: [
@@ -2063,7 +2083,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: newItemName,
                 quantity: adjustmentQty,
-                unit: foundItem.units,
+                unit: foundItem.item.baseunit,
               },
             },
           ],
@@ -2148,7 +2168,7 @@ export default function DashboardOverview() {
               // unitCost: 48.68,
               description: newItemName,
               memo: `اضافة تاكيد الى مخزون الصنف ${newItemId} \n رقم التحويل المخزني ${transactionData.tranId} \n رقم التاكيد ${oldLotId} \n بكمية ${adjustmentQty}`,
-              units: foundItem.item.baseunit,
+              units: foundItem.units,
               line: foundItem.line,
               inventoryDetail: {
                 inventoryAssignment: {
@@ -2162,7 +2182,7 @@ export default function DashboardOverview() {
                 },
                 itemDescription: newItemName,
                 quantity: adjustmentQty,
-                unit: foundItem.item.baseunit,
+                unit: foundItem.units,
               },
             },
           ],
