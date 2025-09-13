@@ -31,93 +31,236 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     const transformedData = {
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
-      subsidiary: { id: recordData.subsidiary.new_id },
-      status: { id: recordData.status.id },
-      shippingAddress_text: recordData.shippingAddress_text,
-      shipAddress: recordData.shipAddress,
-      salesRep: { id: recordData.salesRep.new_id },
-      salesEffectiveDate: recordData.salesEffectiveDate,
-      prevRep: recordData.prevRep,
-      orderStatus: { id: "B" },
-      memo: recordData.memo,
-      location: { id: recordData.location.new_id },
-      entity: { id: recordData.entity.new_id },
+      // Basic fields with defaults
+      tranId: recordData?.tranId || "",
+      tranDate: recordData?.tranDate || "",
+      shippingAddress_text: recordData?.shippingAddress_text || "",
+      shipAddress: recordData?.shipAddress || "",
+      salesEffectiveDate: recordData?.salesEffectiveDate || "",
+      prevRep: recordData?.prevRep || "",
+      memo: recordData?.memo || "",
       custbody_og_sales_discount_item:
-        recordData.custbody_og_sales_discount_item,
-      custbody_og_sales_subtotal: recordData.custbody_og_sales_subtotal,
-      custbody_og_sales_total: recordData.custbody_og_sales_total,
-      custbody_og_invoice_date: recordData.custbody_og_invoice_date,
-      custbody_og_invtype: { id: recordData.custbody_og_invtype.id },
-      currency: { id: recordData.currency.id },
-      billAddress: recordData.billAddress,
-      billingAddress_text: recordData.billingAddress_text,
-      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-      // postingPeriod: { id: "20" },
-      item: {
-        items: recordData.item.items.map((item) => ({
-          item: { id: item.item.new_id },
-          costEstimateType: { id: item.costEstimateType.id },
-          amount: parseFloat(item.amount) || 0.0,
-          custcol_og_item_number: item.custcol_og_item_number,
-          description: item.description
-            ? item.description.substring(0, 40)
-            : "",
-          location: { id: item.location.new_id },
-          price: { id: item.price.id },
-          quantity: item.quantity,
-          rate: parseFloat(item.rate) || 0.0,
-          units: unitMapping[item.inventoryDetail.unit],
-          inventoryDetail: item.inventoryDetail
-            ? {
-                item: { id: item.inventoryDetail.item.new_id },
-                itemDescription: item.inventoryDetail.itemDescription,
-                location: { id: item.inventoryDetail.location.new_id },
-                quantity: item.inventoryDetail.quantity,
-                unit: unitMapping[item.inventoryDetail.unit],
-                inventoryAssignment: {
-                  items: item.inventoryDetail.inventoryAssignment.items.map(
-                    (ass) => {
-                      // Check if we have a new_id for this lot number
-                      if (ass.internalId && ass.new_id) {
-                        // Use the new_id if available
-                        return {
-                          internalId: ass.new_id,
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      } else if (ass.internalId) {
-                        // If no new_id, we'll need to create a mapping later
-                        lotNumbersToMap.push({
-                          old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
-                          refName: ass.receiptInventoryNumber,
-                          itemId: item.item.new_id,
-                          itemName: item.description
-                            ? item.description.substring(0, 40)
-                            : "",
-                          quantity: ass.quantity,
-                          line: item.line,
-                        });
+        recordData?.custbody_og_sales_discount_item || "",
+      custbody_og_sales_subtotal: recordData?.custbody_og_sales_subtotal || "",
+      custbody_og_sales_total: recordData?.custbody_og_sales_total || "",
+      custbody_og_invoice_date: recordData?.custbody_og_invoice_date || "",
+      billAddress: recordData?.billAddress || "",
+      billingAddress_text: recordData?.billingAddress_text || "",
+      custbody_mig_old_internal_id: parseFloat(recordData?.id) || 0.0,
 
-                        // Don't include internalId for new creation
-                        return {
-                          quantity: ass.quantity,
-                          receiptInventoryNumber: ass.receiptInventoryNumber,
-                        };
-                      }
+      // Conditional object fields with safety checks
+      ...(recordData?.subsidiary?.new_id && {
+        subsidiary: { id: recordData.subsidiary.new_id },
+      }),
+      ...(recordData?.status?.id && {
+        status: { id: recordData.status.id },
+      }),
+      ...(recordData?.salesRep?.new_id && {
+        salesRep: { id: recordData.salesRep.new_id },
+      }),
+      ...(recordData?.location?.new_id && {
+        location: { id: recordData.location.new_id },
+      }),
+      ...(recordData?.entity?.new_id && {
+        entity: { id: recordData.entity.new_id },
+      }),
+      ...(recordData?.custbody_og_invtype?.id && {
+        custbody_og_invtype: { id: recordData.custbody_og_invtype.id },
+      }),
+      ...(recordData?.currency?.id && {
+        currency: { id: recordData.currency.id },
+      }),
+
+      // Static field
+      orderStatus: { id: "B" },
+
+      // Item array with comprehensive safety
+      ...(recordData?.item?.items && {
+        item: {
+          items: (recordData.item.items || [])
+            .filter((item) => item !== null && item !== undefined)
+            .map((item) => {
+              const mappedItem = {
+                amount: parseFloat(item?.amount) || 0.0,
+                custcol_og_item_number: item?.custcol_og_item_number || "",
+                description: item?.description
+                  ? item.description.substring(0, 40)
+                  : "",
+                quantity: parseFloat(item?.quantity) || 0.0,
+                rate: parseFloat(item?.rate) || 0.0,
+                ...(item?.item?.new_id && { item: { id: item.item.new_id } }),
+                ...(item?.costEstimateType?.id && {
+                  costEstimateType: { id: item.costEstimateType.id },
+                }),
+                ...(item?.location?.new_id && {
+                  location: { id: item.location.new_id },
+                }),
+                ...(item?.price?.id && { price: { id: item.price.id } }),
+                ...(item?.inventoryDetail?.unit &&
+                  unitMapping?.[item.inventoryDetail.unit] && {
+                    units: unitMapping[item.inventoryDetail.unit],
+                  }),
+              };
+
+              // Handle inventoryDetail only if it exists and has valid data
+              if (item?.inventoryDetail) {
+                const inventoryAssignmentItems = (
+                  item.inventoryDetail.inventoryAssignment?.items || []
+                )
+                  .filter((ass) => ass !== null && ass !== undefined)
+                  .map((ass) => {
+                    // Check if we have a new_id for this lot number
+                    if (ass?.internalId && ass?.new_id) {
                       return {
-                        quantity: ass.quantity,
-                        receiptInventoryNumber: ass.receiptInventoryNumber,
+                        internalId: ass.new_id,
+                        quantity: parseFloat(ass?.quantity) || 0,
+                        receiptInventoryNumber:
+                          ass?.receiptInventoryNumber || "",
+                      };
+                    } else if (ass?.internalId) {
+                      // If no new_id, we'll need to create a mapping later
+                      lotNumbersToMap.push({
+                        old_id:
+                          lotNumbers?.[item?.line]?.inventorynumberid ||
+                          ass.internalId,
+                        refName: ass?.receiptInventoryNumber || "",
+                        itemId: item?.item?.new_id || "",
+                        itemName: item?.description
+                          ? item.description.substring(0, 40)
+                          : "",
+                        quantity: parseFloat(ass?.quantity) || 0,
+                        line: item?.line || 0,
+                      });
+
+                      // Don't include internalId for new creation
+                      return {
+                        quantity: parseFloat(ass?.quantity) || 0,
+                        receiptInventoryNumber:
+                          ass?.receiptInventoryNumber || "",
                       };
                     }
-                  ),
-                },
+                    return {
+                      quantity: parseFloat(ass?.quantity) || 0,
+                      receiptInventoryNumber: ass?.receiptInventoryNumber || "",
+                    };
+                  });
+
+                // Only include inventoryDetail if it has required fields
+                if (
+                  item.inventoryDetail.item?.new_id &&
+                  item.inventoryDetail.location?.new_id
+                ) {
+                  mappedItem.inventoryDetail = {
+                    quantity: parseFloat(item.inventoryDetail.quantity) || 0,
+                    itemDescription: item.inventoryDetail.itemDescription || "",
+                    ...(item.inventoryDetail.unit &&
+                      unitMapping?.[item.inventoryDetail.unit] && {
+                        unit: unitMapping[item.inventoryDetail.unit],
+                      }),
+                    item: { id: item.inventoryDetail.item.new_id },
+                    location: { id: item.inventoryDetail.location.new_id },
+                    inventoryAssignment: {
+                      items: inventoryAssignmentItems,
+                    },
+                  };
+                }
               }
-            : null,
-        })),
-      },
+
+              return mappedItem;
+            })
+            .filter((item) => item.item && item.item.id), // Only include items with valid item IDs
+        },
+      }),
     };
+
+    // const transformedData = {
+    //   tranId: recordData.tranId,
+    //   tranDate: recordData.tranDate,
+    //   subsidiary: { id: recordData.subsidiary.new_id },
+    //   status: { id: recordData.status.id },
+    //   shippingAddress_text: recordData.shippingAddress_text,
+    //   shipAddress: recordData.shipAddress,
+    //   salesRep: { id: recordData.salesRep.new_id },
+    //   salesEffectiveDate: recordData.salesEffectiveDate,
+    //   prevRep: recordData.prevRep,
+    //   orderStatus: { id: "B" },
+    //   memo: recordData.memo,
+    //   location: { id: recordData.location.new_id },
+    //   entity: { id: recordData.entity.new_id },
+    //   custbody_og_sales_discount_item:
+    //     recordData.custbody_og_sales_discount_item,
+    //   custbody_og_sales_subtotal: recordData.custbody_og_sales_subtotal,
+    //   custbody_og_sales_total: recordData.custbody_og_sales_total,
+    //   custbody_og_invoice_date: recordData.custbody_og_invoice_date,
+    //   custbody_og_invtype: { id: recordData.custbody_og_invtype.id },
+    //   currency: { id: recordData.currency.id },
+    //   billAddress: recordData.billAddress,
+    //   billingAddress_text: recordData.billingAddress_text,
+    //   custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
+    //   // postingPeriod: { id: "20" },
+    //   item: {
+    //     items: recordData.item.items.map((item) => ({
+    //       item: { id: item.item.new_id },
+    //       costEstimateType: { id: item.costEstimateType.id },
+    //       amount: parseFloat(item.amount) || 0.0,
+    //       custcol_og_item_number: item.custcol_og_item_number,
+    //       description: item.description
+    //         ? item.description.substring(0, 40)
+    //         : "",
+    //       location: { id: item.location.new_id },
+    //       price: { id: item.price.id },
+    //       quantity: item.quantity,
+    //       rate: parseFloat(item.rate) || 0.0,
+    //       units: unitMapping[item.inventoryDetail.unit],
+    //       inventoryDetail: item.inventoryDetail
+    //         ? {
+    //             item: { id: item.inventoryDetail.item.new_id },
+    //             itemDescription: item.inventoryDetail.itemDescription,
+    //             location: { id: item.inventoryDetail.location.new_id },
+    //             quantity: item.inventoryDetail.quantity,
+    //             unit: unitMapping[item.inventoryDetail.unit],
+    //             inventoryAssignment: {
+    //               items: item.inventoryDetail.inventoryAssignment.items.map(
+    //                 (ass) => {
+    //                   // Check if we have a new_id for this lot number
+    //                   if (ass.internalId && ass.new_id) {
+    //                     // Use the new_id if available
+    //                     return {
+    //                       internalId: ass.new_id,
+    //                       quantity: ass.quantity,
+    //                       receiptInventoryNumber: ass.receiptInventoryNumber,
+    //                     };
+    //                   } else if (ass.internalId) {
+    //                     // If no new_id, we'll need to create a mapping later
+    //                     lotNumbersToMap.push({
+    //                       old_id: lotNumbers[item.line].inventorynumberid, // ass.internalId
+    //                       refName: ass.receiptInventoryNumber,
+    //                       itemId: item.item.new_id,
+    //                       itemName: item.description
+    //                         ? item.description.substring(0, 40)
+    //                         : "",
+    //                       quantity: ass.quantity,
+    //                       line: item.line,
+    //                     });
+
+    //                     // Don't include internalId for new creation
+    //                     return {
+    //                       quantity: ass.quantity,
+    //                       receiptInventoryNumber: ass.receiptInventoryNumber,
+    //                     };
+    //                   }
+    //                   return {
+    //                     quantity: ass.quantity,
+    //                     receiptInventoryNumber: ass.receiptInventoryNumber,
+    //                   };
+    //                 }
+    //               ),
+    //             },
+    //           }
+    //         : null,
+    //     })),
+    //   },
+    // };
 
     console.log("Final Payload:", JSON.stringify(transformedData, null, 2));
     console.log(
