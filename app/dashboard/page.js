@@ -913,20 +913,24 @@ export default function DashboardOverview() {
               console.log("CreatedFrom Data: ", orderData);
               var orderNewId = orderData.custbody_mig_new_internal_id;
               console.log("CreatedFrom Data New Id: ", orderNewId);
-              var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/returnAuthorization/${orderNewId}/!transform/${RECORDS_TYPE[recordType]}`;
-              console.log("Transform URL: ", url);
-              createdTransactionURL = await transformTransaction(
-                oldAccountID,
-                oldToken,
-                newAccountID,
-                newToken,
-                recordType,
-                RECORDS_TYPE[recordType],
-                transactionData,
-                unitMapping,
-                lotNumbers,
-                url
-              );
+              if (orderNewId) {
+                var url = `https://${newAccountID}.suitetalk.api.netsuite.com/services/rest/record/v1/returnAuthorization/${orderNewId}/!transform/${RECORDS_TYPE[recordType]}`;
+                console.log("Transform URL: ", url);
+                createdTransactionURL = await transformTransaction(
+                  oldAccountID,
+                  oldToken,
+                  newAccountID,
+                  newToken,
+                  recordType,
+                  RECORDS_TYPE[recordType],
+                  transactionData,
+                  unitMapping,
+                  lotNumbers,
+                  url
+                );
+              } else {
+                return await processTransaction(orderData, "RtnAuth");
+              }
             }
           }
         } else if (recordType == "VendBill") {
