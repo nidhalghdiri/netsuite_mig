@@ -1242,9 +1242,20 @@ export default function DashboardOverview() {
             // );
           } else {
             console.error("Invalid purchase data structure:", purchase);
-            throw new Error(
-              "Failed to get valid purchase data for transformation"
+            createdTransactionURL = await createTransaction(
+              oldAccountID,
+              oldToken,
+              newAccountID,
+              newToken,
+              recordType,
+              RECORDS_TYPE[recordType],
+              transactionData,
+              unitMapping,
+              lotNumbers
             );
+            // throw new Error(
+            //   "Failed to get valid purchase data for transformation"
+            // );
           }
         } else {
           // Step 3 : Create New Transaction
