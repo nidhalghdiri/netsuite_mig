@@ -34,18 +34,30 @@ export async function POST(request) {
 
     const transformedData = {
       // ...(recordData.externalId && { externalId: recordData.externalId }),
-      tranId: recordData.tranId,
-      tranDate: recordData.tranDate,
+      tranId: recordData?.tranId || "",
+      tranDate: recordData?.tranDate || "",
       ...(recordData.memo && {
         memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       }),
-      subsidiary: { id: recordData.subsidiary.new_id },
-      custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
-      location: { id: recordData.location.new_id },
-      landedCostMethod: { id: recordData.landedCostMethod.id },
-      entity: { id: recordData.entity.new_id },
-      employee: { id: recordData.employee.new_id },
-      currency: { id: recordData.currency.id },
+      ...(recordData?.subsidiary?.new_id && {
+        subsidiary: { id: recordData.subsidiary.new_id },
+      }),
+      custbody_mig_old_internal_id: parseFloat(recordData?.id) || 0.0,
+      ...(recordData?.location?.new_id && {
+        location: { id: recordData.location.new_id },
+      }),
+      ...(recordData?.landedCostMethod?.id && {
+        landedCostMethod: { id: recordData.landedCostMethod.id },
+      }),
+      ...(recordData?.entity?.new_id && {
+        entity: { id: recordData.entity.new_id },
+      }),
+      ...(recordData?.employee?.new_id && {
+        employee: { id: recordData.employee.new_id },
+      }),
+      ...(recordData?.currency?.id && {
+        currency: { id: recordData.currency.id },
+      }),
       // postingPeriod: { id: "20" },
       // item: {
       //   items: recordData.item.items.map((item) => ({

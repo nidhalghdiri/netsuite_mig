@@ -102,7 +102,8 @@ export async function POST(request) {
                 ...(item.location?.new_id && {
                   location: { id: item.location.new_id },
                 }),
-                ...(item.price?.id && { price: { id: item.price.id } }),
+                // ...(item.price?.id && { price: { id: item.price.id } }),
+                ...(item.price?.id && { price: { id: "-1" } }),
                 ...(item.inventoryDetail?.unit &&
                   unitMapping[item.inventoryDetail.unit] && {
                     units: unitMapping[item.inventoryDetail.unit],
