@@ -509,8 +509,8 @@ export default function DashboardOverview() {
           },
         ]);
 
-        setAutoProcessStatus("paused");
-        break;
+        // setAutoProcessStatus("paused");
+        // break;
       }
 
       // Small delay between transactions
