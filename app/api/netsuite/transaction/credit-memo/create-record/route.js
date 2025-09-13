@@ -38,7 +38,7 @@ export async function POST(request) {
       custbody_mig_old_internal_id: parseFloat(recordData.id) || 0.0,
 
       // Conditional fields
-      ...(recordData.externalId && { externalId: recordData.externalId }),
+      // ...(recordData.externalId && { externalId: recordData.externalId }),
       ...(recordData.memo && {
         memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       }),

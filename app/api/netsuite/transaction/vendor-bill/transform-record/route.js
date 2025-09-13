@@ -33,7 +33,7 @@ export async function POST(request) {
     const lotNumbersToMap = [];
 
     const transformedData = {
-      ...(recordData.externalId && { externalId: recordData.externalId }),
+      // ...(recordData.externalId && { externalId: recordData.externalId }),
       tranId: recordData.tranId || "",
       tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
       ...(recordData.memo && {

@@ -33,7 +33,7 @@ export async function POST(request) {
 
     const transformedData = {
       // Basic fields with defaults
-      externalId: recordData.externalId || "",
+      // externalId: recordData.externalId || "",
       tranId: recordData.tranId || "",
       tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",

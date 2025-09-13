@@ -27,7 +27,7 @@ export async function POST(request) {
 
     // Add these defensive checks before accessing properties
     const transformedData = {
-      ...(recordData.externalId && { externalId: recordData.externalId }),
+      // ...(recordData.externalId && { externalId: recordData.externalId }),
       tranId: recordData.tranId || "",
       tranDate: recordData.tranDate || new Date().toISOString().split("T")[0],
       ...(recordData.memo && {
