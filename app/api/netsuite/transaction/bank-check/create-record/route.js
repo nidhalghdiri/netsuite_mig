@@ -39,9 +39,9 @@ export async function POST(request) {
       ...(recordData.entity?.new_id && {
         entity: { id: recordData.entity.new_id },
       }),
-      ...(recordData.landedCostMethod?.id && {
-        landedCostMethod: { id: recordData.landedCostMethod.id },
-      }),
+      // ...(recordData.landedCostMethod?.id && {
+      //   landedCostMethod: { id: recordData.landedCostMethod.id },
+      // }),
       memo: recordData.memo ? recordData.memo.substring(0, 4000) : "",
       ...(recordData.subsidiary?.new_id && {
         subsidiary: { id: recordData.subsidiary.new_id },
