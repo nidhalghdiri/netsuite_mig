@@ -997,7 +997,20 @@ export default function DashboardOverview() {
                     transactionData?.createdFrom?.refName +
                     "] doesn't created Yet!"
                 );
-                skipCurrentTransaction();
+                // Add to skipped transactions with reason
+                setSkippedTransactions((prev) => [
+                  ...prev,
+                  {
+                    id: transactionData.id,
+                    type: recordType,
+                    reason: "Dependency not created yet (Return Authorization)",
+                    timestamp: new Date(),
+                    missingDependency: transactionData?.createdFrom?.id,
+                  },
+                ]);
+
+                // Throw a special error to indicate this was skipped intentionally
+                throw new Error("SKIPPED: Dependency not created yet");
               }
             }
           }
@@ -1475,6 +1488,32 @@ export default function DashboardOverview() {
           },
         }));
       } catch (error) {
+        // Check if this is a skip error (starts with "SKIPPED:")
+        if (error.message.startsWith("SKIPPED:")) {
+          // This is an intentional skip, don't treat as error
+          console.log(
+            `Transaction ${transactionId} intentionally skipped: ${error.message}`
+          );
+
+          // Update step status to indicate skipped
+          setTransactionDetails((prev) => ({
+            ...prev,
+            [transactionId]: {
+              ...prev[transactionId],
+              steps: {
+                ...prev[transactionId]?.steps,
+                create: {
+                  status: "skipped",
+                  message: error.message,
+                  timestamp: new Date(),
+                },
+              },
+            },
+          }));
+
+          // Re-throw with a special prefix so the caller knows this was intentional
+          throw new Error(`INTENTIONAL_SKIP:${error.message}`);
+        }
         try {
           const errorDetails = JSON.parse(error.message);
           if (errorDetails.isInventoryError) {
@@ -1899,21 +1938,25 @@ export default function DashboardOverview() {
       }
     } catch (error) {
       console.error("Processing error:", error);
-      // Update step status with error
-      setTransactionDetails((prev) => ({
-        ...prev,
-        [transactionId]: {
-          ...prev[transactionId],
-          steps: {
-            ...prev[transactionId]?.steps,
-            create: {
-              status: "error",
-              error: error.message,
-              timestamp: new Date(),
+      if (error.message.startsWith("INTENTIONAL_SKIP:")) {
+        console.log(`Transaction ${transactionId} was intentionally skipped`);
+      } else {
+        // Update step status with error
+        setTransactionDetails((prev) => ({
+          ...prev,
+          [transactionId]: {
+            ...prev[transactionId],
+            steps: {
+              ...prev[transactionId]?.steps,
+              create: {
+                status: "error",
+                error: error.message,
+                timestamp: new Date(),
+              },
             },
           },
-        },
-      }));
+        }));
+      }
       throw error;
     } finally {
       if (retryCount === 0) {
