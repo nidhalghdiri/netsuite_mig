@@ -325,6 +325,7 @@ export default function DashboardOverview() {
   const [autoProcessStatus, setAutoProcessStatus] = useState("idle"); // idle, running, paused, completed, error
   const [processedTransactions, setProcessedTransactions] = useState([]);
   const [failedTransactions, setFailedTransactions] = useState([]);
+  const [skippedTransactions, setSkippedTransactions] = useState([]);
 
   const [error, setError] = useState(null);
   const [transactionDetails, setTransactionDetails] = useState({});
@@ -563,6 +564,65 @@ export default function DashboardOverview() {
 
     // Resume processing
     resumeAutoProcessing();
+  };
+  // Function to skip current transaction
+  const skipCurrentTransaction = () => {
+    var unprocessedTransactions = migrationData.transactions.filter(
+      (trx) => !trx.custbody_mig_new_internal_id
+    );
+    if (currentProcessingIndex < unprocessedTransactions.length) {
+      const trx = unprocessedTransactions[currentProcessingIndex];
+      setSkippedTransactions((prev) => [
+        ...prev,
+        {
+          id: trx.id,
+          type: trx.type,
+          reason: "Manually skipped",
+          timestamp: new Date(),
+        },
+      ]);
+
+      // Move to next transaction without processing
+      setCurrentProcessingIndex((prev) => prev + 1);
+    }
+  };
+
+  // Function to retry skipped transactions
+  const retrySkippedTransactions = async () => {
+    if (skippedTransactions.length === 0) return;
+
+    setAutoProcessStatus("running");
+    setIsAutoProcessing(true);
+
+    // Process all skipped transactions
+    for (const skippedTrx of skippedTransactions) {
+      // Find the original transaction data
+      const trxData = migrationData.transactions.find(
+        (t) => t.id === skippedTrx.id
+      );
+
+      if (trxData) {
+        try {
+          await processTransaction(trxData, trxData.type);
+          // Remove from skipped if successful
+          setSkippedTransactions((prev) =>
+            prev.filter((t) => t.id !== skippedTrx.id)
+          );
+        } catch (error) {
+          console.error(
+            `Failed to process skipped transaction ${skippedTrx.id}:`,
+            error
+          );
+          // Keep in skipped list if failed
+        }
+
+        // Small delay between transactions
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
+    setAutoProcessStatus("completed");
+    setIsAutoProcessing(false);
   };
 
   const RECORDS = {
@@ -930,7 +990,14 @@ export default function DashboardOverview() {
                 );
               } else {
                 // return await processTransaction(orderData, "RtnAuth");
-                return;
+                console.log(
+                  "We Will Skip this Credit memo [" +
+                    transactionData.tranId +
+                    "] because Return Authorization [" +
+                    transactionData?.createdFrom?.refName +
+                    "] doesn't created Yet!"
+                );
+                skipCurrentTransaction();
               }
             }
           }
