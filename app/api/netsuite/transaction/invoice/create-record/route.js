@@ -88,7 +88,10 @@ export async function POST(request) {
                   ? item.description.substring(0, 40)
                   : "",
                 memo: item.memo ? item.memo.substring(0, 4000) : "",
-                rate: parseFloat(item.rate) || 0.0,
+                rate:
+                  item.itemType.id == "InvtPart"
+                    ? parseFloat(item.rate)
+                    : parseFloat(item.amount),
                 amount: parseFloat(item.amount) || 0.0,
                 quantity: parseFloat(item.quantity) || 0.0,
                 ...(item.item?.new_id && { item: { id: item.item.new_id } }),
