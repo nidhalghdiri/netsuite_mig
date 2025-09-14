@@ -55,9 +55,9 @@ export async function POST(request) {
       ...(recordData?.status?.id && {
         status: { id: recordData.status.id },
       }),
-      ...(recordData?.salesRep?.new_id && {
-        salesRep: { id: recordData.salesRep.new_id },
-      }),
+      // ...(recordData?.salesRep?.new_id && {
+      //   salesRep: { id: recordData.salesRep.new_id },
+      // }),
       ...(recordData?.location?.new_id && {
         location: { id: recordData.location.new_id },
       }),
@@ -95,7 +95,8 @@ export async function POST(request) {
                 ...(item?.location?.new_id && {
                   location: { id: item.location.new_id },
                 }),
-                ...(item?.price?.id && { price: { id: item.price.id } }),
+                // ...(item?.price?.id && { price: { id: item.price.id } }),
+                ...(item?.price?.id && { price: { id: "-1" } }),
                 ...(item?.inventoryDetail?.unit &&
                   unitMapping?.[item.inventoryDetail.unit] && {
                     units: unitMapping[item.inventoryDetail.unit],

@@ -44,9 +44,9 @@ export async function POST(request) {
       ...(recordData.entity?.new_id && {
         entity: { id: recordData.entity.new_id },
       }),
-      ...(recordData.landedCostMethod?.id && {
-        landedCostMethod: { id: recordData.landedCostMethod.id },
-      }),
+      // ...(recordData.landedCostMethod?.id && {
+      //   landedCostMethod: { id: recordData.landedCostMethod.id },
+      // }),
       ...(recordData.subsidiary?.new_id && {
         subsidiary: { id: recordData.subsidiary.new_id },
       }),

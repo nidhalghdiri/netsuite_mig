@@ -44,10 +44,10 @@ export async function POST(request) {
         recordData.location.new_id && {
           location: { id: recordData.location.new_id },
         }),
-      ...(recordData.landedCostMethod &&
-        recordData.landedCostMethod.id && {
-          landedCostMethod: { id: recordData.landedCostMethod.id },
-        }),
+      // ...(recordData.landedCostMethod &&
+      //   recordData.landedCostMethod.id && {
+      //     landedCostMethod: { id: recordData.landedCostMethod.id },
+      //   }),
       ...(recordData.entity &&
         recordData.entity.new_id && {
           entity: { id: recordData.entity.new_id },
