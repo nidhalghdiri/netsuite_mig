@@ -79,7 +79,7 @@ async function fetchAllTransactions(account, token) {
                 AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY') AND TO_TIMESTAMP('31/01/2020', 'DD/MM/YYYY')
                 AND NOT (transaction.type IN ('Deposit', 'FxReval', 'Journal', 'CustPymt', 'Check'))
             )
-            ORDER BY transaction.trandate ASC;`;
+            ORDER BY transaction.createddate ASC;`;
     const response = await fetchNetSuiteData(
       account,
       token,
