@@ -127,7 +127,7 @@ export async function POST(request) {
       "Lot numbers to map:",
       JSON.stringify(lotNumbersToMap, null, 2)
     );
-    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1057&deploy=1`;
+    const url = `https://${accountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=533&deploy=1`;
     console.log("Transform Purchase To Receipt URL: ", url);
 
     const response = await fetch(url, {

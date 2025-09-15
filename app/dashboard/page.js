@@ -785,13 +785,13 @@ export default function DashboardOverview() {
         transactionData = await fetchTransaction(transactionId, recordType);
       }
 
-      await delay(1000);
+      await delay(500);
 
       // Step 1: get Unit Mapping
       const unitMapping = await getUnitMapping(oldAccountID, oldToken);
       // console.log("unitMapping", unitMapping);
 
-      await delay(1000);
+      await delay(500);
 
       // Step 2 : get Lot Numbers (Old System)
       const lotNumbers = await getLotNumbers(
@@ -801,7 +801,7 @@ export default function DashboardOverview() {
       );
       console.log("lotNumbers", lotNumbers);
 
-      await delay(1000);
+      await delay(500);
       let retryNeeded = false;
       let adjustmentInfo = null;
       try {
@@ -1021,7 +1021,7 @@ export default function DashboardOverview() {
                     lotNumbersToMapReceipt
                   );
                   if (lotNumbersToMapReceipt.length > 0) {
-                    await delay(1000);
+                    await delay(500);
 
                     // Step 5 : get Lot Numbers (New System)
                     const newLotNumbers = await getLotNumbers(
@@ -1031,7 +1031,7 @@ export default function DashboardOverview() {
                     );
                     console.log("Receipt newLotNumbers", newLotNumbers);
 
-                    await delay(1000);
+                    await delay(500);
 
                     // Step 6 : create Lot Number Mappings
 
@@ -1241,7 +1241,7 @@ export default function DashboardOverview() {
         console.log("createTransaction URL", createdTransactionURL.jobUrl);
         console.log("MSG: ", createdTransactionURL.message);
 
-        await delay(5000);
+        await delay(3000);
         console.log("Let's check Creation transaction Status.");
         const createdTransactionId = await getInternalID(
           createdTransactionURL.jobUrl,
@@ -1262,7 +1262,7 @@ export default function DashboardOverview() {
             },
           },
         }));
-        await delay(1000);
+        await delay(500);
 
         // Step 4 : Ftech New Transaction
 
@@ -1307,7 +1307,7 @@ export default function DashboardOverview() {
         const lotNumbersToMap = createdTransactionURL.lotNumbersToMap;
         console.log("lotNumbersToMap: ", lotNumbersToMap);
 
-        await delay(1000);
+        await delay(500);
 
         // Step 5 : get Lot Numbers (New System)
         const newLotNumbers = await getLotNumbers(
