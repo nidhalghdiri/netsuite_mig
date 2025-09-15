@@ -762,7 +762,7 @@ export default function DashboardOverview() {
         "Starting transaction processing..." +
           (retryCount > 0 ? ` (Retry ${retryCount})` : "")
       );
-      const newAccountID = "11661334-sb1";
+      const newAccountID = "11661334";
       const newSession = getSession("new");
       const oldAccountID = "5319757";
       const oldSession = getSession("old");
@@ -2692,7 +2692,7 @@ export default function DashboardOverview() {
                                 const newTransaction =
                                   await fetchNewTransaction(
                                     trx.type,
-                                    "11661334-sb1",
+                                    "11661334",
                                     newSession.token,
                                     details.oldData.custbody_mig_new_internal_id
                                   );
@@ -2870,7 +2870,7 @@ export default function DashboardOverview() {
                                       const newTransaction =
                                         await fetchNewTransaction(
                                           trx.type,
-                                          "11661334-sb1",
+                                          "11661334",
                                           newSession.token,
                                           details.oldData
                                             .custbody_mig_new_internal_id
