@@ -93,7 +93,7 @@ async function fetchAllTransactions(account, token) {
 
     const transactions = response.items.map((trx) => ({
       ...trx,
-      mig_status: "Pending",
+      mig_status: trx.custbody_mig_new_internal_id ? "completed" : "pending",
       steps: {
         fetch: {
           status: "completed",
@@ -193,17 +193,24 @@ function calculateStatistics(transactions) {
   }
   const byType = {};
   let total = transactions.length;
+  let processed = 0;
 
   transactions.forEach((transaction) => {
     const type = transaction.type || "unknown";
     byType[type] = (byType[type] || 0) + 1;
+    // Check if transaction is processed
+    if (transaction.custbody_mig_new_internal_id) {
+      processed++;
+    }
   });
+
+  const successRate = processed > 0 ? Math.round((processed / total) * 100) : 0;
 
   return {
     totalTransactions: total,
-    processed: 0, // Will be updated during migration
-    remaining: total,
-    successRate: 0,
+    processed: processed, // Will be updated during migration
+    remaining: total - processed,
+    successRate: successRate,
     byType,
   };
 }

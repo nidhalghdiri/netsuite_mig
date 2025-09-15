@@ -275,7 +275,9 @@ export default function DashboardOverview() {
       filters.search === "" ||
       trx.id.toLowerCase().includes(filters.search.toLowerCase()) ||
       (trx.entity &&
-        trx.entity.toLowerCase().includes(filters.search.toLowerCase()));
+        trx.entity.toLowerCase().includes(filters.search.toLowerCase())) ||
+      (trx.tranId &&
+        trx.tranId.toLowerCase().includes(filters.search.toLowerCase()));
 
     return matchesStatus && matchesType && matchesSearch;
   });
@@ -1944,7 +1946,7 @@ export default function DashboardOverview() {
           new_id: transactionData.subsidiary.new_id,
         },
         account: {
-          new_id: "3843",
+          new_id: "2115",
         },
         adjLocation: {
           id: locationId,
@@ -2054,7 +2056,7 @@ export default function DashboardOverview() {
           new_id: transactionData.subsidiary.new_id,
         },
         account: {
-          new_id: "3843",
+          new_id: "2115",
         },
         adjLocation: {
           id: locationId,
@@ -2154,7 +2156,7 @@ export default function DashboardOverview() {
           new_id: transactionData.subsidiary.new_id,
         },
         account: {
-          new_id: "3843",
+          new_id: "2115",
         },
         adjLocation: {
           id: locationId,
@@ -2275,6 +2277,21 @@ export default function DashboardOverview() {
       </div>
     );
   }
+  const calculateTokenExpiration = (session) => {
+    if (!session?.timestamp) return "Unknown";
+    const tokenDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const expirationTime =
+      new Date(session.timestamp).getTime() + tokenDuration;
+    const now = Date.now();
+    const timeLeft = expirationTime - now;
+
+    if (timeLeft <= 0) return "Expired";
+
+    const minutesLeft = Math.floor(timeLeft / (1000 * 60));
+    const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    return `${minutesLeft}m ${secondsLeft}s`;
+  };
   return (
     <div className="max-w-6xl mx-auto text-black">
       {/* Connection Status */}
@@ -2312,6 +2329,11 @@ export default function DashboardOverview() {
                 ? `Connected to ${oldSession?.account || "Old Instance"}`
                 : "Not connected. Please connect from the home page."}
             </p>
+            {isOldConnected && (
+              <p className="text-xs text-gray-500 mt-1">
+                Token expires in: {calculateTokenExpiration(oldSession)}
+              </p>
+            )}
           </div>
 
           <div
@@ -2334,6 +2356,11 @@ export default function DashboardOverview() {
                 ? `Connected to ${newSession?.account || "New Instance"}`
                 : "Not connected. Please connect from the home page."}
             </p>
+            {isNewConnected && (
+              <p className="text-xs text-gray-500 mt-1">
+                Token expires in: {calculateTokenExpiration(newSession)}
+              </p>
+            )}
           </div>
         </div>
       </div>
