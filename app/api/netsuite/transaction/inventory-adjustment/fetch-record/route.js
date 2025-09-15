@@ -13,14 +13,14 @@ const REFERENCE_FIELDS = [
 ];
 
 const REFERENCE_FIELD_NEW_ID = {
-  account: "custrecord_mig_sandbox_new_internal_id_a",
-  subsidiary: "custrecord_mig_sandbox_new_internal_id",
-  location: "custrecord_mig_sandbox_new_internal_id_l",
-  department: "custrecord_mig_sandbox_new_internal_id_d",
-  class: "custrecord_mig_sandbox_new_internal_id_c",
-  item: "custitem_mig_sandbox_new_intenral_id_i",
-  adjLocation: "custrecord_mig_sandbox_new_internal_id_l",
-  customer: "custentity_mig_sandbox_new_internal_id_e",
+  account: "custrecord_mig_new_internal_id_account",
+  subsidiary: "custrecord_mig_new_internal_id",
+  location: "custrecord_mig_new_internal_id_location",
+  department: "custrecord_mig_new_internal_id_dept",
+  class: "custrecord_mig_new_internal_id_class",
+  item: "custitem_mig_new_internal_id",
+  adjLocation: "custrecord_mig_new_internal_id_location",
+  customer: "custentity_mig_new_internal_id",
 };
 
 // List of sublists to fetch

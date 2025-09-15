@@ -20,7 +20,7 @@ const INSTANCE_CONFIG = {
   },
   new: {
     name: "New Instance",
-    description: "Sandbox environment",
+    description: "Production environment",
     sessionKey: "netsuiteSessionNEW",
   },
 };

@@ -17,7 +17,7 @@ export async function POST(request) {
       SELECT 
         BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_MIG_UNITS_OF_MEASURE_RELATI.custrecord_mig_unit_of_measure_item) AS unit_of_measure_item, 
         BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_MIG_UNITS_OF_MEASURE_RELATI.custrecord_mig_unit_of_measure_old_id) AS unit_of_measure_old_id, 
-        BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_MIG_UNITS_OF_MEASURE_RELATI.custrecord_mig_unit_of_measur_sandbox_id) AS unit_of_measur_sandbox_id
+        BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_MIG_UNITS_OF_MEASURE_RELATI.custrecord_mig_unit_of_measure_new_id) AS unit_of_measur_id
       FROM 
         CUSTOMRECORD_MIG_UNITS_OF_MEASURE_RELATI
     `;
@@ -48,8 +48,7 @@ export async function POST(request) {
     const unitMapping = {};
     if (result.items && result.items.length > 0) {
       result.items.forEach((item) => {
-        unitMapping[item.unit_of_measure_old_id] =
-          item.unit_of_measur_sandbox_id;
+        unitMapping[item.unit_of_measure_old_id] = item.unit_of_measur_id;
       });
     }
 

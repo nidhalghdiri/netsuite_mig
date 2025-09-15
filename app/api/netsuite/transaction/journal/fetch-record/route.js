@@ -15,16 +15,16 @@ const REFERENCE_FIELDS = [
 ];
 
 const REFERENCE_FIELD_NEW_ID = {
-  class: "custrecord_mig_sandbox_new_internal_id_c",
-  department: "custrecord_mig_sandbox_new_internal_id_d",
-  location: "custrecord_mig_sandbox_new_internal_id_l",
-  transferLocation: "custrecord_mig_sandbox_new_internal_id_l",
-  customer: "custentity_mig_sandbox_new_internal_id_e",
-  subsidiary: "custrecord_mig_sandbox_new_internal_id",
-  account: "custrecord_mig_sandbox_new_internal_id_a",
-  class: "custrecord_mig_sandbox_new_internal_id_c",
-  item: "custitem_mig_sandbox_new_intenral_id_i",
-  employee: "custentity_mig_sandbox_new_internal_id_e",
+  class: "custrecord_mig_new_internal_id_class",
+  department: "custrecord_mig_new_internal_id_dept",
+  location: "custrecord_mig_new_internal_id_location",
+  transferLocation: "custrecord_mig_new_internal_id_location",
+  customer: "custentity_mig_new_internal_id",
+  subsidiary: "custrecord_mig_new_internal_id",
+  account: "custrecord_mig_new_internal_id_account",
+  class: "custrecord_mig_new_internal_id_class",
+  item: "custitem_mig_new_internal_id",
+  employee: "custentity_mig_new_internal_id",
 };
 
 const MAX_PARALLEL_REQUESTS = 5; // To avoid rate limiting
