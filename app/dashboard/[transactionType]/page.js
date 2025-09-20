@@ -58,6 +58,8 @@ export default function TransactionTypePage() {
         fetchSuiteQLData(newSession, nsType, "new", "11661334"),
       ]);
 
+      console.log("oldResponse: ", oldResponse);
+      console.log("newResponse: ", newResponse);
       setOldData(oldResponse);
       setNewData(newResponse);
     } catch (err) {
@@ -94,7 +96,7 @@ export default function TransactionTypePage() {
         AND TO_DATE('2020-01-31', 'YYYY-MM-DD HH24:MI:SS') 
         AND transactionLine.mainline = 'F' 
         AND TransactionAccountingLine.account = '${stockAcct}' 
-      GROUP BY transaction.id, transaction.trandate, transaction.tranid, 
+      GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
         transaction.type, transaction.createddate, BUILTIN.DF(transactionLine.item) 
       ORDER BY transaction.createddate ASC`;
 
@@ -138,13 +140,16 @@ export default function TransactionTypePage() {
           BUILTIN.DF(transactionLine.item) AS item_name,
           transactionLine.item AS item_id,
           transactionLine.quantity,
-          transactionLine.rate,
-          TransactionAccountingLine.netamount AS amount,
-          BUILTIN.DF(transactionLine.location) AS location,
-          BUILTIN.DF(transactionLine.department) AS department
-        FROM transactionLine 
-        WHERE transactionLine.transaction = ${transactionId}
-        ORDER BY transactionLine.id`;
+          transactionLine.rate, 
+          TransactionAccountingLine.netamount AS amount, 
+          BUILTIN.DF(transactionLine.location) AS location,  
+          BUILTIN.DF(transactionLine.department) AS department 
+        FROM transaction, TransactionAccountingLine, transactionLine 
+        WHERE  
+        transactionLine.transaction = TransactionAccountingLine.transaction 
+        AND transactionLine.id = TransactionAccountingLine.transactionline 
+        AND transaction.id = transactionLine.transaction 
+        AND transaction.id = '${transactionId}'`;
 
       const response = await apiRequest(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
