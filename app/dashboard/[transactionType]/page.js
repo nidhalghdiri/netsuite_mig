@@ -43,15 +43,16 @@ export default function TransactionTypePage() {
       // Get sessions
       const oldSession = getSession("old");
       const newSession = getSession("new");
-
+      console.log("oldSession", oldSession);
+      console.log("newSession", newSession);
       if (!oldSession?.token || !newSession?.token) {
         throw new Error("Please connect to both instances first");
       }
 
       // Fetch data from both instances
       const [oldResponse, newResponse] = await Promise.all([
-        fetchSuiteQLData(oldSession, nsType, "old"),
-        fetchSuiteQLData(newSession, nsType, "new"),
+        fetchSuiteQLData(oldSession, nsType, "old", "5319757"),
+        fetchSuiteQLData(newSession, nsType, "new", "11661334"),
       ]);
 
       setOldData(oldResponse);
@@ -64,7 +65,12 @@ export default function TransactionTypePage() {
     }
   };
 
-  const fetchSuiteQLData = async (session, recordType, instanceType) => {
+  const fetchSuiteQLData = async (
+    session,
+    recordType,
+    instanceType,
+    accountId
+  ) => {
     // Build SuiteQL query based on record type
     const query = ` SELECT 
                     transaction.id AS id, 
@@ -95,7 +101,7 @@ export default function TransactionTypePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            accountId: session.accountId,
+            accountId: accountId,
             token: session.token,
             query: query,
           }),
@@ -106,7 +112,10 @@ export default function TransactionTypePage() {
         throw new Error(`Failed to fetch data from ${instanceType} instance`);
       }
 
-      return await response.json();
+      var result = await response.json();
+      console.log("fetchSuiteQLData [" + accountId + "]", result);
+
+      return result;
     } catch (error) {
       console.error(`Error fetching from ${instanceType} instance:`, error);
       throw error;
