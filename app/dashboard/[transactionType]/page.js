@@ -11,6 +11,7 @@ import {
   FiCheckCircle,
   FiXCircle,
 } from "react-icons/fi";
+import { apiRequest } from "@/lib/apiClient";
 
 export default function TransactionTypePage() {
   const params = useParams();
