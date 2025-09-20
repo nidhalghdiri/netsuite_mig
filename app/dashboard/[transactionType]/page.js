@@ -85,7 +85,6 @@ export default function TransactionTypePage() {
         transaction.tranid, 
         transaction.type, 
         transaction.createddate, 
-        BUILTIN.DF(transactionLine.item) AS item, 
         SUM(TransactionAccountingLine.netamount) AS amount 
       FROM transaction, TransactionAccountingLine, transactionLine 
       WHERE transactionLine.transaction = TransactionAccountingLine.transaction 
@@ -97,7 +96,7 @@ export default function TransactionTypePage() {
         AND transactionLine.mainline = 'F' 
         AND TransactionAccountingLine.account = '${stockAcct}' 
       GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
-        transaction.type, transaction.createddate, BUILTIN.DF(transactionLine.item) 
+        transaction.type, transaction.createddate
       ORDER BY transaction.createddate ASC`;
 
     try {
@@ -345,7 +344,7 @@ export default function TransactionTypePage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white text-black rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-100">
