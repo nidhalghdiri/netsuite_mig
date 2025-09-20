@@ -1,207 +1,346 @@
-// app/dashboard/[recordType]/page.js
+// dashboard/[transactionType]/page.js
 "use client";
-import { useState, useEffect } from "react";
-import { getSession, isSessionValid } from "@/lib/storage";
-import { fetchRecordData } from "@/lib/netsuiteAPI";
 
-export default function RecordTypePage({ params }) {
-  const { recordType } = params;
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { getSession, isSessionValid } from "@/lib/storage";
+
+import {
+  FiDatabase,
+  FiRefreshCw,
+  FiCheckCircle,
+  FiXCircle,
+} from "react-icons/fi";
+
+export default function TransactionTypePage() {
+  const params = useParams();
+  const transactionType = params.transactionType;
+
   const [oldData, setOldData] = useState([]);
   const [newData, setNewData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Format record type for display
-  const formatRecordType = (type) => {
-    return type
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+  // Map URL transaction types to NetSuite internal types
+  const typeMapping = {
+    "inventory-adjustment": "InvAdjst",
+    "transfer-order": "TrnfrOrd",
+    "inventory-transfer": "InvTrnfr",
+    "purchase-order": "PurchOrd",
+  };
+
+  const fetchTransactionData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const nsType = typeMapping[transactionType];
+      if (!nsType) {
+        throw new Error("Invalid transaction type");
+      }
+
+      // Get sessions
+      const oldSession = getSession("old");
+      const newSession = getSession("new");
+
+      if (!oldSession?.token || !newSession?.token) {
+        throw new Error("Please connect to both instances first");
+      }
+
+      // Fetch data from both instances
+      const [oldResponse, newResponse] = await Promise.all([
+        fetchSuiteQLData(oldSession, nsType, "old"),
+        fetchSuiteQLData(newSession, nsType, "new"),
+      ]);
+
+      setOldData(oldResponse);
+      setNewData(newResponse);
+    } catch (err) {
+      setError(err.message);
+      console.error("Failed to fetch transaction data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSuiteQLData = async (session, recordType, instanceType) => {
+    // Build SuiteQL query based on record type
+    const query = ` SELECT 
+                    transaction.id AS id, 
+                    transaction.trandate AS trandate, 
+                    transaction.tranid AS tranid,
+                    transaction.type AS type,
+                    transaction.createddate AS createddate,
+                    SUM(TransactionAccountingLine.netamount) AS amount
+                FROM 
+                    transaction, 
+                    TransactionAccountingLine, 
+                    transactionLine
+                WHERE 
+                    (((transactionLine.transaction = TransactionAccountingLine.transaction 
+                    AND transactionLine.id = TransactionAccountingLine.transactionline) 
+                    AND transaction.id = transactionLine.transaction))
+                    AND ((TransactionAccountingLine.account IN ('379') 
+                    AND transaction.trandate BETWEEN TO_DATE('2020-01-01', 'YYYY-MM-DD HH24:MI:SS') 
+                    AND TO_DATE('2020-01-31', 'YYYY-MM-DD HH24:MI:SS') 
+                    AND transaction.type IN ('${recordType}') 
+                GROUP BY transaction.id, transaction.tranid, transaction.trandate, transaction.type, transaction.createddate
+                ORDER BY transaction.createddate ASC`;
+
+    try {
+      const response = await apiRequest(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: session.accountId,
+            token: session.token,
+            query: query,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data from ${instanceType} instance`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching from ${instanceType} instance:`, error);
+      throw error;
+    }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (transactionType) {
+      fetchTransactionData();
+    }
+  }, [transactionType]);
 
-        const oldSession = getSession("old");
-        const newSession = getSession("new");
-        console.log("Page: oldSession: ", oldSession);
+  // Create a mapping of document numbers to match records between instances
+  const createDataMapping = () => {
+    const mappedData = [];
 
-        if (
-          !isSessionValid(oldSession) ||
-          !isSessionValid(oldSession).token ||
-          !isSessionValid(newSession) ||
-          !isSessionValid(newSession).token
-        ) {
-          throw new Error("Both instances must be connected to fetch data");
-        }
+    // Create maps for quick lookup
+    const oldMap = {};
+    oldData.forEach((item) => {
+      oldMap[item.tranid] = item;
+    });
 
-        // Fetch data from both instances in parallel
-        try {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/api/records/customer?instance=old`,
-            {
-              headers: {
-                Authorization: `Bearer ${oldSession.token}`,
-              },
-            }
-          );
-          const data = await res.json();
-          console.log("Old Customers:", data);
-        } catch (error) {
-          console.error("Fetch Old Customers error:", error);
-        }
-        try {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_URL}/api/records/customer?instance=new`,
-            {
-              headers: {
-                Authorization: `Bearer ${oldSession.token}`,
-              },
-            }
-          );
-          const data = await res.json();
-          console.log("New Customers:", data);
-        } catch (error) {
-          console.error("Fetch Old Customers error:", error);
-        }
-      } catch (err) {
-        console.error(`Error fetching ${recordType} data:`, err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const newMap = {};
+    newData.forEach((item) => {
+      newMap[item.tranid] = item;
+    });
 
-    fetchData();
-  }, [recordType]);
+    // Get all unique document numbers
+    const allDocNumbers = new Set([
+      ...oldData.map((item) => item.tranid),
+      ...newData.map((item) => item.tranid),
+    ]);
+
+    // Create paired records
+    allDocNumbers.forEach((docNumber) => {
+      mappedData.push({
+        documentNumber: docNumber,
+        oldInstance: oldMap[docNumber] || null,
+        newInstance: newMap[docNumber] || null,
+      });
+    });
+
+    return mappedData;
+  };
+
+  const mappedData = createDataMapping();
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <FiRefreshCw className="animate-spin text-2xl text-blue-500 mr-2" />
+        <span>Loading transaction data...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg
-              className="h-5 w-5 text-red-400"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="flex items-center">
+          <FiXCircle className="text-red-500 mr-2" />
+          <h3 className="text-red-800 font-medium">Error</h3>
         </div>
+        <p className="text-red-700 mt-1">{error}</p>
+        <button
+          onClick={fetchTransactionData}
+          className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-xl font-semibold mb-6">
-        {formatRecordType(recordType)} Comparison
-      </h2>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 capitalize">
+          {transactionType.replace(/-/g, " ")} Comparison
+        </h2>
+        <button
+          onClick={fetchTransactionData}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          <FiRefreshCw className="mr-2" />
+          Refresh Data
+        </button>
+      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Old Instance Data */}
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <h3 className="font-medium text-lg mb-4">Old Instance Data</h3>
-          <div className="overflow-x-auto">
-            <RecordTable data={oldData} />
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="grid grid-cols-2 divide-x">
+          {/* Old Instance Table */}
+          <div>
+            <div className="bg-gray-50 px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Old Instance
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Internal ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      New ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Document Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      GL Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {mappedData.map((item, index) => (
+                    <tr
+                      key={`old-${index}`}
+                      className={
+                        item.oldInstance &&
+                        item.newInstance &&
+                        item.oldInstance.amount === item.newInstance.amount
+                          ? "bg-green-50"
+                          : "bg-white"
+                      }
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.oldInstance ? item.oldInstance.trandate : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.oldInstance ? item.oldInstance.id : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.newInstance ? item.newInstance.id : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.documentNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.oldInstance ? `$${item.oldInstance.amount}` : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        {/* New Instance Data */}
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <h3 className="font-medium text-lg mb-4">New Instance Data</h3>
-          <div className="overflow-x-auto">
-            <RecordTable data={newData} />
+          {/* New Instance Table */}
+          <div>
+            <div className="bg-gray-50 px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">
+                New Instance
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Internal ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Old ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Document Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      GL Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {mappedData.map((item, index) => (
+                    <tr
+                      key={`new-${index}`}
+                      className={
+                        item.oldInstance &&
+                        item.newInstance &&
+                        item.oldInstance.amount === item.newInstance.amount
+                          ? "bg-green-50"
+                          : "bg-white"
+                      }
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.newInstance ? item.newInstance.trandate : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.newInstance ? item.newInstance.id : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.oldInstance ? item.oldInstance.id : "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.documentNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.newInstance ? `$${item.newInstance.amount}` : "-"}
+                        {item.oldInstance && item.newInstance && (
+                          <span className="ml-2">
+                            {item.oldInstance.amount ===
+                            item.newInstance.amount ? (
+                              <FiCheckCircle className="inline text-green-500" />
+                            ) : (
+                              <FiXCircle className="inline text-red-500" />
+                            )}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Comparison Summary */}
-      <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-        <h3 className="font-medium text-lg mb-4">Comparison Summary</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="border rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {oldData.length}
-            </div>
-            <p className="text-sm text-gray-600">Records in Old Instance</p>
-          </div>
-          <div className="border rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {newData.length}
-            </div>
-            <p className="text-sm text-gray-600">Records in New Instance</p>
-          </div>
-          <div className="border rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {Math.min(oldData.length, newData.length)}
-            </div>
-            <p className="text-sm text-gray-600">Records Migrated</p>
-          </div>
-        </div>
+      <div className="mt-4 flex items-center">
+        <div className="w-4 h-4 bg-green-100 rounded mr-2"></div>
+        <span className="text-sm text-gray-600">Matching amounts</span>
+        <div className="w-4 h-4 bg-white rounded mr-2 ml-4 border border-gray-300"></div>
+        <span className="text-sm text-gray-600">
+          Non-matching or missing records
+        </span>
       </div>
     </div>
-  );
-}
-
-// Reusable table component for displaying records
-function RecordTable({ data }) {
-  if (data.length === 0) {
-    return <p className="text-gray-500">No records found</p>;
-  }
-
-  // Extract column names from the first record
-  const columns = Object.keys(data[0]);
-
-  return (
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          {columns.map((column) => (
-            <th
-              key={column}
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              {column}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {data.slice(0, 10).map((record, index) => (
-          <tr key={index}>
-            {columns.map((column) => (
-              <td
-                key={column}
-                className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-              >
-                {record[column]}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }
