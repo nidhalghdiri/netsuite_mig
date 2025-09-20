@@ -72,27 +72,7 @@ export default function TransactionTypePage() {
     accountId
   ) => {
     // Build SuiteQL query based on record type
-    const query = ` SELECT 
-                    transaction.id AS id, 
-                    transaction.trandate AS trandate, 
-                    transaction.tranid AS tranid,
-                    transaction.type AS type,
-                    transaction.createddate AS createddate,
-                    SUM(TransactionAccountingLine.netamount) AS amount
-                FROM 
-                    transaction, 
-                    TransactionAccountingLine, 
-                    transactionLine
-                WHERE 
-                    (((transactionLine.transaction = TransactionAccountingLine.transaction 
-                    AND transactionLine.id = TransactionAccountingLine.transactionline) 
-                    AND transaction.id = transactionLine.transaction))
-                    AND ((TransactionAccountingLine.account IN ('379') 
-                    AND transaction.trandate BETWEEN TO_DATE('2020-01-01', 'YYYY-MM-DD HH24:MI:SS') 
-                    AND TO_DATE('2020-01-31', 'YYYY-MM-DD HH24:MI:SS') 
-                    AND transaction.type IN ('${recordType}') 
-                GROUP BY transaction.id, transaction.tranid, transaction.trandate, transaction.type, transaction.createddate
-                ORDER BY transaction.createddate ASC`;
+    const query = `SELECT transaction.id AS id, transaction.trandate AS trandate, transaction.tranid, transaction.type, transaction.createddate, SUM(TransactionAccountingLine.netamount) AS amount FROM  transaction, TransactionAccountingLine, transactionLine WHERE transactionLine.transaction = TransactionAccountingLine.transaction AND transactionLine.id = TransactionAccountingLine.transactionline AND transaction.id = transactionLine.transaction AND transaction.type IN ('${recordType}') AND transaction.trandate BETWEEN TO_DATE('2020-01-01', 'YYYY-MM-DD HH24:MI:SS') AND TO_DATE('2020-01-31', 'YYYY-MM-DD HH24:MI:SS')  GROUP BY transaction.id, transaction.trandate, transaction.tranid, transaction.type, transaction.createddate ORDER BY transaction.createddate ASC`;
 
     try {
       const response = await apiRequest(
@@ -112,10 +92,8 @@ export default function TransactionTypePage() {
         throw new Error(`Failed to fetch data from ${instanceType} instance`);
       }
 
-      var result = await response.json();
-      console.log("fetchSuiteQLData [" + accountId + "]", result);
-
-      return result;
+      const data = await response.json();
+      return data.result.items;
     } catch (error) {
       console.error(`Error fetching from ${instanceType} instance:`, error);
       throw error;
