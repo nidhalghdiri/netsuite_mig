@@ -28,7 +28,7 @@ export default function TransactionTypePage() {
 
   // Map URL transaction types to NetSuite internal types
   const typeMapping = {
-    invoice: "CustInvc",
+    invoices: "CustInvc",
     "inventory-adjustment": "InvAdjst",
     "transfer-order": "TrnfrOrd",
     "inventory-transfer": "InvTrnfr",
