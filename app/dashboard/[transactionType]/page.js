@@ -12,6 +12,9 @@ import {
   FiChevronDown,
   FiChevronRight,
   FiDollarSign,
+  FiFilter,
+  FiCalendar,
+  FiSearch,
 } from "react-icons/fi";
 import { apiRequest } from "@/lib/apiClient";
 
@@ -25,6 +28,18 @@ export default function TransactionTypePage() {
   const [error, setError] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [itemDetails, setItemDetails] = useState({});
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    status: "all",
+    createdDateStart: "",
+    createdDateEnd: "",
+    transactionDateStart: "",
+    transactionDateEnd: "",
+    differenceMin: "",
+    differenceMax: "",
+    search: "",
+  });
 
   // Map URL transaction types to NetSuite internal types
   const typeMapping = {
@@ -137,18 +152,21 @@ export default function TransactionTypePage() {
 
       // Query to get detailed item information for a specific transaction
       const query = `SELECT 
-          BUILTIN.DF(transactionLine.item) AS item_name,
+          BUILTIN.DF(transactionLine.item) AS item_code,
+          BUILTIN.DF(item.displayname) AS item_name,
           transactionLine.item AS item_id,
           transactionLine.quantity,
           transactionLine.rate, 
           TransactionAccountingLine.netamount AS amount, 
+          BUILTIN.DF(TransactionAccountingLine.account) AS account, 
           BUILTIN.DF(transactionLine.location) AS location,  
           BUILTIN.DF(transactionLine.department) AS department 
-        FROM transaction, TransactionAccountingLine, transactionLine 
+        FROM transaction, TransactionAccountingLine, transactionLine, item
         WHERE  
         transactionLine.transaction = TransactionAccountingLine.transaction 
         AND transactionLine.id = TransactionAccountingLine.transactionline 
-        AND transaction.id = transactionLine.transaction 
+        AND transaction.id = transactionLine.transaction
+        AND transactionLine.item = item.id
         AND transaction.id = '${transactionId}'`;
 
       const response = await apiRequest(
@@ -202,6 +220,134 @@ export default function TransactionTypePage() {
         await fetchItemDetails(newInstance.id, "new");
       }
     }
+  };
+
+  const handleFilterChange = (filterName, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterName]: value,
+    }));
+  };
+  const clearFilters = () => {
+    setFilters({
+      status: "all",
+      createdDateStart: "",
+      createdDateEnd: "",
+      transactionDateStart: "",
+      transactionDateEnd: "",
+      differenceMin: "",
+      differenceMax: "",
+      search: "",
+    });
+  };
+  // Convert DD/MM/YYYY to Date object for comparison
+  const parseDate = (dateString) => {
+    if (!dateString) return null;
+    const [day, month, year] = dateString.split("/");
+    return new Date(`${year}-${month}-${day}`);
+  };
+  // Filter the mapped data based on current filters
+  const getFilteredData = () => {
+    return mappedData.filter((item) => {
+      const oldAmount = item.oldInstance
+        ? parseFloat(item.oldInstance.amount)
+        : 0;
+      const newAmount = item.newInstance
+        ? parseFloat(item.newInstance.amount)
+        : 0;
+      const difference = oldAmount - newAmount;
+      const amountsMatch = oldAmount === newAmount;
+
+      // Status filter
+      if (filters.status !== "all") {
+        switch (filters.status) {
+          case "matched":
+            if (!amountsMatch) return false;
+            break;
+          case "unmatched":
+            if (amountsMatch) return false;
+            break;
+          case "missing_old":
+            if (item.oldInstance) return false;
+            break;
+          case "missing_new":
+            if (item.newInstance) return false;
+            break;
+        }
+      }
+
+      // Created date filter
+      const createdDate = item.oldInstance
+        ? parseDate(item.oldInstance.createddate)
+        : item.newInstance
+        ? parseDate(item.newInstance.createddate)
+        : null;
+
+      if (filters.createdDateStart && createdDate) {
+        const startDate = new Date(filters.createdDateStart);
+        if (createdDate < startDate) return false;
+      }
+
+      if (filters.createdDateEnd && createdDate) {
+        const endDate = new Date(filters.createdDateEnd);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        if (createdDate > endDate) return false;
+      }
+
+      // Transaction date filter
+      const transactionDate = item.oldInstance
+        ? parseDate(item.oldInstance.trandate)
+        : item.newInstance
+        ? parseDate(item.newInstance.trandate)
+        : null;
+
+      if (filters.transactionDateStart && transactionDate) {
+        const startDate = new Date(filters.transactionDateStart);
+        if (transactionDate < startDate) return false;
+      }
+
+      if (filters.transactionDateEnd && transactionDate) {
+        const endDate = new Date(filters.transactionDateEnd);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        if (transactionDate > endDate) return false;
+      }
+
+      // Difference filter (only for transactions with both instances)
+      if (item.oldInstance && item.newInstance) {
+        if (
+          filters.differenceMin !== "" &&
+          Math.abs(difference) < parseFloat(filters.differenceMin)
+        ) {
+          return false;
+        }
+        if (
+          filters.differenceMax !== "" &&
+          Math.abs(difference) > parseFloat(filters.differenceMax)
+        ) {
+          return false;
+        }
+      }
+
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesDocumentNumber = item.documentNumber
+          .toLowerCase()
+          .includes(searchLower);
+        const matchesOldId =
+          item.oldInstance &&
+          item.oldInstance.id.toString().includes(searchLower);
+        const matchesNewId =
+          item.newInstance &&
+          item.newInstance.id.toString().includes(searchLower);
+
+        if (!matchesDocumentNumber && !matchesOldId && !matchesNewId) {
+          return false;
+        }
+      }
+
+      return true;
+    });
   };
 
   useEffect(() => {
@@ -302,6 +448,7 @@ export default function TransactionTypePage() {
   };
 
   const mappedData = createDataMapping();
+  const filteredData = getFilteredData();
 
   if (loading) {
     return (
@@ -345,6 +492,149 @@ export default function TransactionTypePage() {
         </button>
       </div>
 
+      {/* Filters Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+            <FiFilter className="mr-2" />
+            Filters
+          </h3>
+          <button
+            onClick={clearFilters}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            Clear All
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Status Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange("status", e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="matched">Matched Amounts</option>
+              <option value="unmatched">Unmatched Amounts</option>
+              <option value="missing_old">Missing in Old Instance</option>
+              <option value="missing_new">Missing in New Instance</option>
+            </select>
+          </div>
+
+          {/* Created Date Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Created Date Range
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="date"
+                value={filters.createdDateStart}
+                onChange={(e) =>
+                  handleFilterChange("createdDateStart", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={filters.createdDateEnd}
+                onChange={(e) =>
+                  handleFilterChange("createdDateEnd", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="End Date"
+              />
+            </div>
+          </div>
+
+          {/* Transaction Date Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Transaction Date Range
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="date"
+                value={filters.transactionDateStart}
+                onChange={(e) =>
+                  handleFilterChange("transactionDateStart", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={filters.transactionDateEnd}
+                onChange={(e) =>
+                  handleFilterChange("transactionDateEnd", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="End Date"
+              />
+            </div>
+          </div>
+
+          {/* Difference Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Difference Range ($)
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="number"
+                value={filters.differenceMin}
+                onChange={(e) =>
+                  handleFilterChange("differenceMin", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Min"
+                step="0.01"
+                min="0"
+              />
+              <input
+                type="number"
+                value={filters.differenceMax}
+                onChange={(e) =>
+                  handleFilterChange("differenceMax", e.target.value)
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Max"
+                step="0.01"
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Search Filter */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => handleFilterChange("search", e.target.value)}
+              className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by document number or ID..."
+            />
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredData.length} of {mappedData.length} transactions
+        </div>
+      </div>
+
       <div className="bg-white text-black rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -380,7 +670,7 @@ export default function TransactionTypePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {mappedData.map((item, index) => {
+              {filteredData.map((item, index) => {
                 const oldAmount = item.oldInstance
                   ? parseFloat(item.oldInstance.amount)
                   : 0;
@@ -482,6 +772,9 @@ export default function TransactionTypePage() {
                                   <table className="w-full text-sm">
                                     <thead>
                                       <tr className="border-b">
+                                        <th className="text-left py-2">
+                                          Account
+                                        </th>
                                         <th className="text-left py-2">Item</th>
                                         <th className="text-right py-2">
                                           Amount
@@ -496,6 +789,10 @@ export default function TransactionTypePage() {
                                             className="border-b border-gray-100"
                                           >
                                             <td className="py-2">
+                                              {detail.account || "N/A"}
+                                            </td>
+                                            <td className="py-2">
+                                              {detail.item_code || "N/A"}{" "}
                                               {detail.item_name || "N/A"}
                                             </td>
                                             <td className="text-right py-2">
@@ -528,6 +825,9 @@ export default function TransactionTypePage() {
                                   <table className="w-full text-sm">
                                     <thead>
                                       <tr className="border-b">
+                                        <th className="text-left py-2">
+                                          Account
+                                        </th>
                                         <th className="text-left py-2">Item</th>
                                         <th className="text-right py-2">
                                           Amount
@@ -542,6 +842,10 @@ export default function TransactionTypePage() {
                                             className="border-b border-gray-100"
                                           >
                                             <td className="py-2">
+                                              {detail.account || "N/A"}
+                                            </td>
+                                            <td className="py-2">
+                                              {detail.item_code || "N/A"}{" "}
                                               {detail.item_name || "N/A"}
                                             </td>
                                             <td className="text-right py-2">
@@ -618,6 +922,12 @@ export default function TransactionTypePage() {
           </table>
         </div>
       </div>
+
+      {filteredData.length === 0 && !loading && (
+        <div className="text-center py-8 text-gray-500">
+          No transactions match the current filters
+        </div>
+      )}
 
       <div className="mt-4 flex items-center">
         <div className="w-4 h-4 bg-green-100 rounded mr-2"></div>
