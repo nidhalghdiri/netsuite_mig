@@ -112,8 +112,8 @@ export default function TransactionTypePage() {
         AND transactionLine.id = TransactionAccountingLine.transactionline 
         AND transaction.id = transactionLine.transaction 
         AND transaction.type IN ('${recordType}') 
-        AND transaction.trandate BETWEEN TO_DATE('2020-01-01', 'YYYY-MM-DD HH24:MI:SS') 
-        AND TO_DATE('2020-01-31', 'YYYY-MM-DD HH24:MI:SS') 
+        AND transaction.trandate BETWEEN TO_DATE('2020-02-01', 'YYYY-MM-DD HH24:MI:SS') 
+        AND TO_DATE('2020-02-29', 'YYYY-MM-DD HH24:MI:SS') 
         AND transactionLine.mainline = 'F' 
         AND TransactionAccountingLine.account = '${stockAcct}' 
       GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
