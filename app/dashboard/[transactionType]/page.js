@@ -48,6 +48,11 @@ export default function TransactionTypePage() {
     "transfer-order": "TrnfrOrd",
     "inventory-transfer": "InvTrnfr",
     "purchase-order": "PurchOrd",
+    "item-receipt": "ItemRcpt",
+    "return-authorization": "RtnAuth",
+    "vendor-bill": "VendBill",
+    check: "Check",
+    deposit: "Deposit",
   };
 
   const fetchTransactionData = async () => {

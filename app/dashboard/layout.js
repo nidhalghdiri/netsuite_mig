@@ -10,6 +10,7 @@ import {
   FiUser,
   FiLogOut,
   FiMove,
+  FiDollarSign,
 } from "react-icons/fi";
 import { clearSession } from "@/lib/storage";
 
@@ -19,6 +20,15 @@ const RECORD_TYPES = [
   { id: "sales-orders", name: "Sales Orders", icon: FiShoppingCart },
   { id: "purchases", name: "Purchases", icon: FiShoppingBag },
   { id: "invoices", name: "Invoices", icon: FiFileText },
+  { id: "item-receipt", name: "Item Receipts", icon: FiFileText },
+  {
+    id: "return-authorization",
+    name: "Return Authorizations",
+    icon: FiFileText,
+  },
+  { id: "vendor-bill", name: "Vendor Bills", icon: FiDollarSign },
+  { id: "check", name: "Check & Payments", icon: FiDollarSign },
+  { id: "deposit", name: "Deposits", icon: FiDollarSign },
   { id: "customers", name: "Customers", icon: FiUser },
 ];
 
