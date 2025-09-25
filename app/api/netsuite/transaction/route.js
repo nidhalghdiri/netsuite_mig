@@ -76,7 +76,7 @@ async function fetchAllTransactions(account, token) {
                 FROM transaction
                 INNER JOIN transactionLine ON transaction.ID = transactionLine.transaction
                 WHERE transactionLine.mainline = 'T'
-                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/01/2020', 'DD/MM/YYYY') AND TO_TIMESTAMP('31/01/2020', 'DD/MM/YYYY')
+                AND transaction.trandate BETWEEN TO_TIMESTAMP('01/02/2020', 'DD/MM/YYYY') AND TO_TIMESTAMP('29/02/2020', 'DD/MM/YYYY')
                 AND NOT (transaction.type IN ('Deposit', 'FxReval', 'Journal', 'CustPymt', 'Check'))
             )
             ORDER BY transaction.createddate ASC;`;
