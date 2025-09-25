@@ -354,6 +354,9 @@ export default function TransactionTypePage() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Document Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -411,6 +414,9 @@ export default function TransactionTypePage() {
                         ) : (
                           <FiXCircle className="text-red-500" />
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.oldInstance ? item.oldInstance.createddate : "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap font-medium">
                         <div className="flex items-center">
