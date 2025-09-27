@@ -16,6 +16,7 @@ import { clearSession } from "@/lib/storage";
 
 const RECORD_TYPES = [
   { id: "", name: "Overview", icon: FiHome },
+  { id: "move-transactions", name: "Move Transactions", icon: FiMove },
   { id: "inventory-adjustment", name: "Inventory Adjustment", icon: FiMove },
   { id: "sales-orders", name: "Sales Orders", icon: FiShoppingCart },
   { id: "purchases", name: "Purchases", icon: FiShoppingBag },
