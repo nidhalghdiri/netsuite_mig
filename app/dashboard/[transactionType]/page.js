@@ -933,6 +933,25 @@ export default function TransactionTypePage() {
                           "-"
                         )}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.oldInstance && item.newInstance ? (
+                          <div className="flex flex-col">
+                            <span>Old: {oldExchangeRate.toFixed(4)}</span>
+                            <span>New: {newExchangeRate.toFixed(4)}</span>
+                            {!exchangeRateMatch && (
+                              <span className="text-red-600 text-sm">
+                                Diff: {exchangeRateDifference.toFixed(4)}
+                              </span>
+                            )}
+                          </div>
+                        ) : item.oldInstance ? (
+                          `Rate: ${oldExchangeRate.toFixed(4)}`
+                        ) : item.newInstance ? (
+                          `Rate: ${newExchangeRate.toFixed(4)}`
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                     </tr>
 
                     {/* Expanded row with item details */}
