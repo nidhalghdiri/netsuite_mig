@@ -28,6 +28,7 @@ export default function TransactionTypePage() {
   const [error, setError] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [itemDetails, setItemDetails] = useState({});
+  const [itemComparison, setItemComparison] = useState({});
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -38,6 +39,8 @@ export default function TransactionTypePage() {
     transactionDateEnd: "",
     differenceMin: "",
     differenceMax: "",
+    exchangeRateDifferenceMin: "",
+    exchangeRateDifferenceMax: "",
     search: "",
   });
 
@@ -105,7 +108,8 @@ export default function TransactionTypePage() {
         transaction.trandate AS trandate, 
         transaction.tranid, 
         transaction.type, 
-        transaction.createddate, 
+        transaction.createddate,
+        transaction.exchangerate,
         SUM(TransactionAccountingLine.netamount) AS amount 
       FROM transaction, TransactionAccountingLine, transactionLine 
       WHERE transactionLine.transaction = TransactionAccountingLine.transaction 
@@ -117,7 +121,7 @@ export default function TransactionTypePage() {
         AND transactionLine.mainline = 'F' 
         AND TransactionAccountingLine.account = '${stockAcct}' 
       GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
-        transaction.type, transaction.createddate
+        transaction.type, transaction.createddate, transaction.exchangerate
       ORDER BY transaction.createddate ASC`;
 
     try {
@@ -205,6 +209,58 @@ export default function TransactionTypePage() {
     }
   };
 
+  // Function to compare items between old and new instances
+  const compareItems = (oldItems, newItems) => {
+    if (!oldItems || !newItems) return [];
+
+    const comparison = [];
+
+    // Create maps for quick lookup
+    const oldItemsMap = {};
+    oldItems.forEach((item) => {
+      const key = `${item.item_code}-${item.account}`;
+      oldItemsMap[key] = item;
+    });
+
+    const newItemsMap = {};
+    newItems.forEach((item) => {
+      const key = `${item.item_code}-${item.account}`;
+      newItemsMap[key] = item;
+    });
+
+    // Get all unique item-account combinations
+    const allKeys = new Set([
+      ...Object.keys(oldItemsMap),
+      ...Object.keys(newItemsMap),
+    ]);
+
+    // Compare each item
+    allKeys.forEach((key) => {
+      const oldItem = oldItemsMap[key];
+      const newItem = newItemsMap[key];
+      const oldAmount = oldItem ? parseFloat(oldItem.amount) : 0;
+      const newAmount = newItem ? parseFloat(newItem.amount) : 0;
+      const difference = oldAmount - newAmount;
+
+      comparison.push({
+        key,
+        itemCode: oldItem?.item_code || newItem?.item_code,
+        itemName: oldItem?.item_name || newItem?.item_name,
+        account: oldItem?.account || newItem?.account,
+        oldAmount,
+        newAmount,
+        difference,
+        status: oldAmount === newAmount ? "match" : "mismatch",
+        oldItem,
+        newItem,
+      });
+    });
+
+    return comparison.sort(
+      (a, b) => Math.abs(b.difference) - Math.abs(a.difference)
+    );
+  };
+
   const toggleRowExpansion = async (
     documentNumber,
     oldInstance,
@@ -224,6 +280,25 @@ export default function TransactionTypePage() {
       if (newInstance && newInstance.id) {
         await fetchItemDetails(newInstance.id, "new");
       }
+
+      // Compare items once both sets are loaded
+      if (oldInstance && newInstance) {
+        const comparisonKey = `${oldInstance.id}-${newInstance.id}`;
+        if (!itemComparison[comparisonKey]) {
+          // Set a timeout to ensure item details are loaded
+          setTimeout(() => {
+            const oldItems = itemDetails[oldInstance.id];
+            const newItems = itemDetails[newInstance.id];
+            if (oldItems && newItems) {
+              const comparison = compareItems(oldItems, newItems);
+              setItemComparison((prev) => ({
+                ...prev,
+                [comparisonKey]: comparison,
+              }));
+            }
+          }, 500);
+        }
+      }
     }
   };
 
@@ -242,6 +317,8 @@ export default function TransactionTypePage() {
       transactionDateEnd: "",
       differenceMin: "",
       differenceMax: "",
+      exchangeRateDifferenceMin: "",
+      exchangeRateDifferenceMax: "",
       search: "",
     });
   };
@@ -263,6 +340,16 @@ export default function TransactionTypePage() {
       const difference = oldAmount - newAmount;
       const amountsMatch = oldAmount === newAmount;
 
+      const oldExchangeRate = item.oldInstance
+        ? parseFloat(item.oldInstance.exchangerate)
+        : 1;
+      const newExchangeRate = item.newInstance
+        ? parseFloat(item.newInstance.exchangerate)
+        : 1;
+      const exchangeRateDifference = Math.abs(
+        oldExchangeRate - newExchangeRate
+      );
+
       // Status filter
       if (filters.status !== "all") {
         switch (filters.status) {
@@ -277,6 +364,9 @@ export default function TransactionTypePage() {
             break;
           case "missing_new":
             if (item.newInstance) return false;
+            break;
+          case "exchange_rate_mismatch":
+            if (exchangeRateDifference === 0) return false;
             break;
         }
       }
@@ -526,6 +616,9 @@ export default function TransactionTypePage() {
               <option value="all">All Statuses</option>
               <option value="matched">Matched Amounts</option>
               <option value="unmatched">Unmatched Amounts</option>
+              <option value="exchange_rate_mismatch">
+                Exchange Rate Mismatch
+              </option>
               <option value="missing_old">Missing in Old Instance</option>
               <option value="missing_new">Missing in New Instance</option>
             </select>
@@ -617,6 +710,44 @@ export default function TransactionTypePage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Exchange Rate Difference
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="number"
+                value={filters.exchangeRateDifferenceMin}
+                onChange={(e) =>
+                  handleFilterChange(
+                    "exchangeRateDifferenceMin",
+                    e.target.value
+                  )
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Min"
+                step="0.0001"
+                min="0"
+              />
+              <input
+                type="number"
+                value={filters.exchangeRateDifferenceMax}
+                onChange={(e) =>
+                  handleFilterChange(
+                    "exchangeRateDifferenceMax",
+                    e.target.value
+                  )
+                }
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Max"
+                step="0.0001"
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Search Filter */}
         <div className="mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -670,7 +801,10 @@ export default function TransactionTypePage() {
                   New Amount
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Difference
+                  Amount Diff
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Exchange Rate
                 </th>
               </tr>
             </thead>
@@ -684,14 +818,33 @@ export default function TransactionTypePage() {
                   : 0;
                 const difference = oldAmount - newAmount;
                 const amountsMatch = oldAmount === newAmount;
+
+                const oldExchangeRate = item.oldInstance
+                  ? parseFloat(item.oldInstance.exchangerate)
+                  : 1;
+                const newExchangeRate = item.newInstance
+                  ? parseFloat(item.newInstance.exchangerate)
+                  : 1;
+                const exchangeRateMatch = oldExchangeRate === newExchangeRate;
+                const exchangeRateDifference = Math.abs(
+                  oldExchangeRate - newExchangeRate
+                );
+
                 const isExpanded = expandedRows[item.documentNumber];
+                const comparisonKey =
+                  item.oldInstance && item.newInstance
+                    ? `${item.oldInstance.id}-${item.newInstance.id}`
+                    : null;
+                const itemsComparison = comparisonKey
+                  ? itemComparison[comparisonKey]
+                  : null;
 
                 return (
                   <>
                     <tr
                       key={index}
                       className={
-                        amountsMatch
+                        amountsMatch && exchangeRateMatch
                           ? "bg-green-50 cursor-pointer"
                           : "bg-red-50 cursor-pointer hover:bg-red-100"
                       }
@@ -704,11 +857,32 @@ export default function TransactionTypePage() {
                       }
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {amountsMatch ? (
-                          <FiCheckCircle className="text-green-500" />
-                        ) : (
-                          <FiXCircle className="text-red-500" />
-                        )}
+                        <div className="flex flex-col items-start">
+                          {amountsMatch ? (
+                            <FiCheckCircle
+                              className="text-green-500"
+                              title="Amounts Match"
+                            />
+                          ) : (
+                            <FiXCircle
+                              className="text-red-500"
+                              title="Amounts Don't Match"
+                            />
+                          )}
+                          {item.oldInstance &&
+                            item.newInstance &&
+                            (exchangeRateMatch ? (
+                              <FiCheckCircle
+                                className="text-green-500 mt-1"
+                                title="Exchange Rates Match"
+                              />
+                            ) : (
+                              <FiXCircle
+                                className="text-red-500 mt-1"
+                                title="Exchange Rates Don't Match"
+                              />
+                            ))}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.oldInstance ? item.oldInstance.createddate : "-"}
@@ -762,9 +936,140 @@ export default function TransactionTypePage() {
                     </tr>
 
                     {/* Expanded row with item details */}
-                    {isExpanded && !amountsMatch && (
+                    {isExpanded && (!amountsMatch || !exchangeRateMatch) && (
                       <tr className="bg-gray-50">
                         <td colSpan="8" className="px-6 py-4">
+                          {/* Exchange Rate Analysis */}
+                          {item.oldInstance &&
+                            item.newInstance &&
+                            !exchangeRateMatch && (
+                              <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <h4 className="font-semibold mb-2 text-yellow-800 flex items-center">
+                                  <FiDollarSign className="mr-2" />
+                                  Exchange Rate Analysis
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium">
+                                      Old Rate:
+                                    </span>{" "}
+                                    {oldExchangeRate.toFixed(6)}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">
+                                      New Rate:
+                                    </span>{" "}
+                                    {newExchangeRate.toFixed(6)}
+                                  </div>
+                                  <div className="text-red-600">
+                                    <span className="font-medium">
+                                      Difference:
+                                    </span>{" "}
+                                    {exchangeRateDifference.toFixed(6)}
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-sm text-yellow-700">
+                                  <span className="font-medium">
+                                    Impact on Amount:
+                                  </span>
+                                  $
+                                  {(
+                                    (Math.abs(difference) /
+                                      Math.min(
+                                        oldExchangeRate,
+                                        newExchangeRate
+                                      )) *
+                                    exchangeRateDifference
+                                  ).toFixed(2)}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* Item Comparison Table */}
+                          {itemsComparison && itemsComparison.length > 0 && (
+                            <div className="mb-6">
+                              <h4 className="font-semibold mb-3 text-gray-700">
+                                Item-Level Comparison
+                              </h4>
+                              <div className="bg-white rounded-md shadow-sm overflow-hidden">
+                                <table className="w-full text-sm">
+                                  <thead className="bg-gray-100">
+                                    <tr>
+                                      <th className="text-left p-3">Item</th>
+                                      <th className="text-left p-3">Account</th>
+                                      <th className="text-right p-3">
+                                        Old Amount
+                                      </th>
+                                      <th className="text-right p-3">
+                                        New Amount
+                                      </th>
+                                      <th className="text-right p-3">
+                                        Difference
+                                      </th>
+                                      <th className="text-center p-3">
+                                        Status
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {itemsComparison.map((itemComp, idx) => (
+                                      <tr
+                                        key={idx}
+                                        className="border-b border-gray-100 hover:bg-gray-50"
+                                      >
+                                        <td className="p-3">
+                                          <div>
+                                            <div className="font-medium">
+                                              {itemComp.itemCode}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              {itemComp.itemName}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="p-3">
+                                          {itemComp.account}
+                                        </td>
+                                        <td className="text-right p-3">
+                                          ${itemComp.oldAmount.toFixed(2)}
+                                        </td>
+                                        <td className="text-right p-3">
+                                          ${itemComp.newAmount.toFixed(2)}
+                                        </td>
+                                        <td className="text-right p-3">
+                                          <span
+                                            className={
+                                              itemComp.difference === 0
+                                                ? "text-green-600"
+                                                : "text-red-600"
+                                            }
+                                          >
+                                            {itemComp.difference === 0
+                                              ? ""
+                                              : itemComp.difference > 0
+                                              ? "+"
+                                              : ""}
+                                            $
+                                            {Math.abs(
+                                              itemComp.difference
+                                            ).toFixed(2)}
+                                          </span>
+                                        </td>
+                                        <td className="text-center p-3">
+                                          {itemComp.status === "match" ? (
+                                            <FiCheckCircle className="text-green-500 mx-auto" />
+                                          ) : (
+                                            <FiXCircle className="text-red-500 mx-auto" />
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                          {/* Individual Instance Item Details */}
                           <div className="grid grid-cols-2 gap-6">
                             {/* Old Instance Item Details */}
                             <div>
@@ -875,48 +1180,57 @@ export default function TransactionTypePage() {
                             </div>
                           </div>
 
-                          {/* Difference analysis */}
-                          {item.oldInstance &&
-                            item.newInstance &&
-                            itemDetails[item.oldInstance.id] &&
-                            itemDetails[item.newInstance.id] && (
-                              <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                                <h4 className="font-semibold mb-2 text-blue-800">
-                                  Difference Analysis
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4 text-sm">
-                                  <div>
-                                    <span className="font-medium">
-                                      Total Old Amount:
-                                    </span>{" "}
-                                    ${oldAmount.toFixed(2)}
-                                  </div>
-                                  <div>
-                                    <span className="font-medium">
-                                      Total New Amount:
-                                    </span>{" "}
-                                    ${newAmount.toFixed(2)}
-                                  </div>
-                                  <div
-                                    className={
-                                      difference === 0
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                    }
-                                  >
-                                    <span className="font-medium">
-                                      Difference:
-                                    </span>{" "}
-                                    ${Math.abs(difference).toFixed(2)}
-                                    {difference > 0
-                                      ? " (Old > New)"
-                                      : difference < 0
-                                      ? " (New > Old)"
-                                      : ""}
-                                  </div>
+                          {/* Overall Difference Analysis */}
+                          {item.oldInstance && item.newInstance && (
+                            <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                              <h4 className="font-semibold mb-2 text-blue-800">
+                                Overall Difference Analysis
+                              </h4>
+                              <div className="grid grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <span className="font-medium">
+                                    Total Old Amount:
+                                  </span>{" "}
+                                  ${oldAmount.toFixed(2)}
+                                </div>
+                                <div>
+                                  <span className="font-medium">
+                                    Total New Amount:
+                                  </span>{" "}
+                                  ${newAmount.toFixed(2)}
+                                </div>
+                                <div
+                                  className={
+                                    difference === 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
+                                >
+                                  <span className="font-medium">
+                                    Amount Difference:
+                                  </span>{" "}
+                                  ${Math.abs(difference).toFixed(2)}
+                                  {difference > 0
+                                    ? " (Old > New)"
+                                    : difference < 0
+                                    ? " (New > Old)"
+                                    : ""}
+                                </div>
+                                <div
+                                  className={
+                                    exchangeRateMatch
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
+                                >
+                                  <span className="font-medium">
+                                    Exchange Rate Diff:
+                                  </span>{" "}
+                                  {exchangeRateDifference.toFixed(6)}
                                 </div>
                               </div>
-                            )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
@@ -934,14 +1248,28 @@ export default function TransactionTypePage() {
         </div>
       )}
 
-      <div className="mt-4 flex items-center">
-        <div className="w-4 h-4 bg-green-100 rounded mr-2"></div>
-        <span className="text-sm text-gray-600">Matching amounts</span>
-        <div className="w-4 h-4 bg-red-100 rounded mr-2 ml-4"></div>
-        <span className="text-sm text-gray-600">Non-matching amounts</span>
-        <div className="ml-4 flex items-center text-sm text-gray-600">
+      <div className="mt-4 flex items-center flex-wrap gap-4">
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-green-100 rounded mr-2"></div>
+          <span className="text-sm text-gray-600">
+            Matching amounts & rates
+          </span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-red-100 rounded mr-2"></div>
+          <span className="text-sm text-gray-600">
+            Non-matching amounts or rates
+          </span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-yellow-100 rounded mr-2"></div>
+          <span className="text-sm text-gray-600">
+            Exchange rate differences
+          </span>
+        </div>
+        <div className="flex items-center text-sm text-gray-600">
           <FiChevronRight className="mr-1" />
-          <span>Click to expand and view item details</span>
+          <span>Click to expand and view detailed comparison</span>
         </div>
       </div>
     </div>
