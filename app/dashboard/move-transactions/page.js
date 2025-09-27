@@ -57,6 +57,8 @@ export default function MoveTransactionsPage() {
     setLoading(true);
     setError(null);
 
+    console.log("fetchTransactions", filters);
+
     try {
       const oldSession = getSession("old");
       if (!oldSession?.token) {
@@ -68,7 +70,7 @@ export default function MoveTransactionsPage() {
         transaction.trandate, transaction.createddate, transaction.amount,
         transaction.custbody_mig_new_internal_id as new_id
       FROM transaction 
-      WHERE transaction.trandate IS NOT NULL `;
+      WHERE transaction.trandate IS NOT NULL AND transaction.mainline = 'T'`;
 
       // Add date filters
       if (filters.transactionDateStart) {
@@ -91,7 +93,7 @@ export default function MoveTransactionsPage() {
 
       // Only fetch transactions that haven't been migrated yet
       query += ` AND transaction.custbody_mig_new_internal_id IS NULL `;
-      query += ` ORDER BY transaction.createddate ASC LIMIT 1000`;
+      query += ` ORDER BY transaction.createddate ASC`;
 
       // Use App Router API route
       const response = await fetch("/api/netsuite/suiteql", {
@@ -152,6 +154,7 @@ export default function MoveTransactionsPage() {
           createdDateEnd: filters.createdDateEnd,
         },
       };
+      console.log("migrationParams: ", migrationParams);
 
       // Call the App Router API route
       const response = await fetch(
