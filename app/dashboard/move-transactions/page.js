@@ -15,6 +15,7 @@ import {
   FiArrowRight,
   FiClock,
 } from "react-icons/fi";
+import { apiRequest } from "@/lib/apiClient";
 
 export default function MoveTransactionsPage() {
   const [transactions, setTransactions] = useState([]);
@@ -96,15 +97,18 @@ export default function MoveTransactionsPage() {
       query += ` ORDER BY transaction.createddate ASC`;
 
       // Use App Router API route
-      const response = await fetch("/api/netsuite/suiteql", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountId: "5319757",
-          token: oldSession.token,
-          query: query,
-        }),
-      });
+      const response = await apiRequest(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: "5319757",
+            token: oldSession.token,
+            query: query,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch transactions");
@@ -157,8 +161,8 @@ export default function MoveTransactionsPage() {
       console.log("migrationParams: ", migrationParams);
 
       // Call the App Router API route
-      const response = await fetch(
-        "/api/netsuite/restlet/migrate-transactions",
+      const response = await apiRequest(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migrate-transactions`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -211,11 +215,14 @@ export default function MoveTransactionsPage() {
       }
 
       try {
-        const response = await fetch("/api/netsuite/restlet/migration-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobId }),
-        });
+        const response = await apiRequest(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migration-status`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jobId }),
+          }
+        );
 
         if (response.ok) {
           const status = await response.json();
