@@ -38,7 +38,7 @@ export async function POST(request) {
       },
       body: JSON.stringify({
         action: "startMigration",
-        transactionIds: transactionIds,
+        // transactionIds: transactionIds,
         transactionType: transactionType,
         dateFilters: dateFilters, // Include date parameters
         newInstance: {
