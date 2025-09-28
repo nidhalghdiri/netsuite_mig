@@ -68,7 +68,7 @@ export default function MoveTransactionsPage() {
 
       // Build the SuiteQL query based on filters
       let query = `SELECT transaction.id, transaction.tranid, transaction.type, 
-        transaction.trandate, transaction.createddate, transaction.foreignamount AS amount,
+        transaction.trandate, transaction.createddate, transaction.foreigntotal AS amount,
         transaction.custbody_mig_new_internal_id as new_id
       FROM transaction 
       WHERE transaction.trandate IS NOT NULL`;
