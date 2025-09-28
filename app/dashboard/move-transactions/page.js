@@ -22,6 +22,7 @@ export default function MoveTransactionsPage() {
   const [loading, setLoading] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState("idle");
+  const [migrationPhase, setMigrationPhase] = useState(""); // old_system, new_system, updating_old
   const [progress, setProgress] = useState({
     processed: 0,
     total: 0,
@@ -31,6 +32,7 @@ export default function MoveTransactionsPage() {
   const [migrationLog, setMigrationLog] = useState([]);
   const [error, setError] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [currentTaskId, setCurrentTaskId] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -149,6 +151,7 @@ export default function MoveTransactionsPage() {
   const startMigration = async () => {
     setMigrating(true);
     setMigrationStatus("running");
+    setMigrationPhase("old_system");
     setError(null);
     setMigrationLog([]);
 
@@ -184,6 +187,10 @@ export default function MoveTransactionsPage() {
         `Starting migration for ${transactions.length} transactions...`,
         "info"
       );
+      addLogEntry(
+        "Phase 1: Starting Map/Reduce script in old system...",
+        "info"
+      );
 
       const response = await apiRequest(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migrate-transactions`,
@@ -203,8 +210,9 @@ export default function MoveTransactionsPage() {
       console.log("Migration started:", result);
 
       if (result.success) {
+        setCurrentTaskId(result.jobId);
         addLogEntry(
-          `Migration started successfully. Task ID: ${result.jobId}`,
+          `Phase 1: Map/Reduce script started in old system. Task ID: ${result.jobId}`,
           "info"
         );
 
@@ -243,6 +251,9 @@ export default function MoveTransactionsPage() {
       clearInterval(pollingInterval);
     }
 
+    let retryCount = 0;
+    const maxRetries = 10;
+
     const interval = setInterval(async () => {
       if (
         migrationStatus === "paused" ||
@@ -254,35 +265,25 @@ export default function MoveTransactionsPage() {
       }
 
       try {
-        console.log("Polling migration status for job:", jobId);
-
-        const response = await apiRequest(
-          `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migration-status`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jobId,
-              totalTransactions,
-            }),
-          }
+        console.log(
+          `Polling migration status for phase: ${migrationPhase}, job: ${jobId}`
         );
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch migration status");
+        // Check current phase and call appropriate status check
+        let status;
+        if (migrationPhase === "old_system") {
+          status = await checkOldSystemStatus(jobId);
+        } else if (migrationPhase === "new_system") {
+          status = await checkNewSystemStatus(jobId);
+        } else if (migrationPhase === "updating_old") {
+          status = await checkUpdateOldSystemStatus(jobId);
         }
 
-        const status = await response.json();
-        console.log("Migration status:", status);
+        if (status && status.success) {
+          retryCount = 0; // Reset retry count on successful status check
 
-        if (status.success) {
-          // Update progress
-          setProgress((prev) => ({
-            processed: status.processed || prev.processed,
-            total: status.total || totalTransactions,
-            success: status.success || prev.success,
-            failed: status.failed || prev.failed,
-          }));
+          // Update progress based on current phase
+          updateProgressForPhase(status, totalTransactions);
 
           // Update log with new entries
           if (status.logs && status.logs.length > 0) {
@@ -291,37 +292,23 @@ export default function MoveTransactionsPage() {
             });
           }
 
-          // Check if migration is complete
-          if (
-            status.status === "completed" ||
-            status.status === "completed_with_errors"
-          ) {
-            setMigrationStatus("completed");
-            setMigrating(false);
-            clearInterval(interval);
-
-            const successMessage =
-              status.status === "completed"
-                ? "Migration completed successfully!"
-                : "Migration completed with some errors.";
-
-            addLogEntry(
-              successMessage,
-              status.status === "completed" ? "success" : "warning"
-            );
-
-            // Refresh transactions to show updated status
-            setTimeout(() => {
-              fetchTransactions();
-            }, 2000);
-          } else if (status.status === "error") {
-            setMigrationStatus("error");
-            setMigrating(false);
-            clearInterval(interval);
-            addLogEntry(`Migration failed: ${status.error}`, "error");
-          }
+          // Handle phase transitions
+          await handlePhaseTransition(
+            status,
+            jobId,
+            totalTransactions,
+            interval
+          );
         } else {
-          throw new Error(status.error || "Failed to get migration status");
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw new Error(
+              `Failed to get migration status after ${maxRetries} attempts`
+            );
+          }
+          console.warn(
+            `Status check failed, retry ${retryCount}/${maxRetries}`
+          );
         }
       } catch (error) {
         console.error("Error polling migration status:", error);
@@ -330,17 +317,238 @@ export default function MoveTransactionsPage() {
           "error"
         );
 
-        // Don't stop polling on temporary errors, just log them
-        // You might want to implement a retry counter here
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          setMigrationStatus("error");
+          setMigrating(false);
+          clearInterval(interval);
+          addLogEntry(
+            `Migration failed: Too many failed status checks`,
+            "error"
+          );
+        }
       }
-    }, 5000); // Poll every 5 seconds
+    }, 10000); // Poll every 10 seconds
 
     setPollingInterval(interval);
   };
 
+  const checkOldSystemStatus = async (taskId) => {
+    // Check status of Map/Reduce script in old system
+    const response = await apiRequest(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migration-status`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: taskId,
+          phase: "old_system",
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch old system status");
+    }
+
+    return await response.json();
+  };
+
+  const checkNewSystemStatus = async (batchId) => {
+    // Check if new system script is running by querying for recently created transactions
+    const newSession = getSession("new");
+    if (!newSession?.token) {
+      throw new Error("New instance session expired");
+    }
+
+    // Query for transactions created in the last hour that match our criteria
+    const query = `SELECT COUNT(*) as count 
+      FROM transaction 
+      WHERE createddate >= TO_DATE('${
+        new Date(Date.now() - 60 * 60 * 1000).toISOString().split("T")[0]
+      }', 'YYYY-MM-DD')
+      AND custbody_mig_old_internal_id IS NOT NULL`;
+
+    const response = await apiRequest(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: "11661334",
+          token: newSession.token,
+          query: query,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to check new system status");
+    }
+
+    const data = await response.json();
+    const recentCount = data.result?.items[0]?.count || 0;
+
+    return {
+      success: true,
+      status: recentCount > 0 ? "processing" : "unknown",
+      processed: recentCount,
+      logs: [
+        {
+          message: `New system: ${recentCount} transactions processed recently`,
+          type: "info",
+        },
+      ],
+    };
+  };
+
+  const checkUpdateOldSystemStatus = async (batchId) => {
+    // Check how many transactions have been updated in old system
+    const oldSession = getSession("old");
+    if (!oldSession?.token) {
+      throw new Error("Old instance session expired");
+    }
+
+    // Count transactions that have been updated with new IDs
+    const query = `SELECT COUNT(*) as updatedCount
+      FROM transaction 
+      WHERE custbody_mig_new_internal_id IS NOT NULL
+      AND trandate BETWEEN TO_DATE('${
+        filters.transactionDateStart
+      }', 'YYYY-MM-DD') 
+      AND TO_DATE('${filters.transactionDateEnd}', 'YYYY-MM-DD')
+      ${
+        filters.transactionType !== "all"
+          ? `AND type = '${filters.transactionType}'`
+          : ""
+      }`;
+
+    const response = await apiRequest(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: "5319757",
+          token: oldSession.token,
+          query: query,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to check update status");
+    }
+
+    const data = await response.json();
+    const updatedCount = data.result?.items[0]?.updatedCount || 0;
+
+    return {
+      success: true,
+      status: "processing",
+      processed: updatedCount,
+      logs: [
+        {
+          message: `Update phase: ${updatedCount} transactions updated with new IDs`,
+          type: "info",
+        },
+      ],
+    };
+  };
+
+  const updateProgressForPhase = (status, totalTransactions) => {
+    setProgress((prev) => ({
+      processed: status.processed || prev.processed,
+      total: status.total || totalTransactions,
+      success: status.success || prev.success,
+      failed: status.failed || prev.failed,
+    }));
+  };
+
+  const handlePhaseTransition = async (
+    status,
+    jobId,
+    totalTransactions,
+    interval
+  ) => {
+    if (migrationPhase === "old_system" && status.status === "completed") {
+      // Old system script completed, move to new system phase
+      setMigrationPhase("new_system");
+      addLogEntry(
+        "Phase 1 completed: Old system Map/Reduce finished",
+        "success"
+      );
+      addLogEntry(
+        "Phase 2: Data sent to new system, waiting for processing...",
+        "info"
+      );
+
+      // Reset progress for new phase
+      setProgress({
+        processed: 0,
+        total: totalTransactions,
+        success: 0,
+        failed: 0,
+      });
+    } else if (
+      migrationPhase === "new_system" &&
+      status.processed >= totalTransactions * 0.8
+    ) {
+      // Assume new system processing is mostly done, move to update phase
+      setMigrationPhase("updating_old");
+      addLogEntry(
+        "Phase 2 completed: New system processing finished",
+        "success"
+      );
+      addLogEntry(
+        "Phase 3: Updating old system with new transaction IDs...",
+        "info"
+      );
+    } else if (
+      migrationPhase === "updating_old" &&
+      status.processed >= totalTransactions
+    ) {
+      // All transactions updated, migration complete
+      setMigrationStatus("completed");
+      setMigrating(false);
+      clearInterval(interval);
+
+      addLogEntry(
+        "Phase 3 completed: All transactions updated successfully!",
+        "success"
+      );
+      addLogEntry("Migration completed successfully!", "success");
+
+      // Refresh transactions to show updated status
+      setTimeout(() => {
+        fetchTransactions();
+      }, 2000);
+    }
+
+    // Check for completion or error in any phase
+    if (status.status === "completed" && migrationPhase === "updating_old") {
+      setMigrationStatus("completed");
+      setMigrating(false);
+      clearInterval(interval);
+      addLogEntry("Migration completed successfully!", "success");
+
+      setTimeout(() => {
+        fetchTransactions();
+      }, 2000);
+    } else if (status.status === "error") {
+      setMigrationStatus("error");
+      setMigrating(false);
+      clearInterval(interval);
+      addLogEntry(
+        `Migration failed in ${migrationPhase} phase: ${status.error}`,
+        "error"
+      );
+    }
+  };
+
   const pauseMigration = () => {
     setMigrationStatus("paused");
-    addLogEntry("Migration paused", "info");
+    addLogEntry(`Migration paused during ${migrationPhase} phase`, "info");
 
     if (pollingInterval) {
       clearInterval(pollingInterval);
@@ -350,14 +558,16 @@ export default function MoveTransactionsPage() {
 
   const resumeMigration = () => {
     setMigrationStatus("running");
-    addLogEntry("Migration resumed", "info");
+    addLogEntry(`Migration resumed during ${migrationPhase} phase`, "info");
 
-    // Note: You'll need to store the jobId to resume polling
-    // This is a simplified version - you might need to adjust based on your needs
+    if (currentTaskId) {
+      startProgressPolling(currentTaskId, progress.total);
+    }
   };
 
   const stopMigration = () => {
     setMigrationStatus("idle");
+    setMigrationPhase("");
     setMigrating(false);
     addLogEntry("Migration stopped", "info");
 
@@ -390,6 +600,26 @@ export default function MoveTransactionsPage() {
     pending: transactions.filter((t) => !t.new_id).length,
   };
 
+  // Calculate progress percentage
+  const progressPercentage =
+    progress.total > 0
+      ? Math.round((progress.processed / progress.total) * 100)
+      : 0;
+
+  // Get phase description for UI
+  const getPhaseDescription = () => {
+    switch (migrationPhase) {
+      case "old_system":
+        return "Running Map/Reduce in Old System";
+      case "new_system":
+        return "Processing in New System";
+      case "updating_old":
+        return "Updating Old System with New IDs";
+      default:
+        return "Ready to Start";
+    }
+  };
+
   // Cleanup on component unmount
   useEffect(() => {
     return () => {
@@ -398,12 +628,6 @@ export default function MoveTransactionsPage() {
       }
     };
   }, [pollingInterval]);
-
-  // Calculate progress percentage
-  const progressPercentage =
-    progress.total > 0
-      ? Math.round((progress.processed / progress.total) * 100)
-      : 0;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -630,6 +854,23 @@ export default function MoveTransactionsPage() {
               </div>
             </div>
 
+            {/* Current Phase Display */}
+            {migrationPhase && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-md">
+                <div className="flex items-center">
+                  <FiClock className="text-blue-500 mr-2" />
+                  <span className="font-medium text-blue-800">
+                    Current Phase: {getPhaseDescription()}
+                  </span>
+                </div>
+                {currentTaskId && (
+                  <div className="text-sm text-blue-600 mt-1">
+                    Task ID: {currentTaskId}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Progress Bar */}
             {(migrationStatus === "running" ||
               migrationStatus === "paused") && (
@@ -653,7 +894,7 @@ export default function MoveTransactionsPage() {
                 </div>
                 <div className="text-center text-sm text-gray-600 mt-2">
                   {migrationStatus === "running"
-                    ? "Migration in progress..."
+                    ? `Migration in progress - ${getPhaseDescription()}`
                     : "Migration paused"}
                 </div>
               </div>
