@@ -30,6 +30,7 @@ export default function MoveTransactionsPage() {
   });
   const [migrationLog, setMigrationLog] = useState([]);
   const [error, setError] = useState(null);
+  const [pollingInterval, setPollingInterval] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -53,6 +54,18 @@ export default function MoveTransactionsPage() {
     { value: "Check", label: "Checks" },
     { value: "Deposit", label: "Deposits" },
   ];
+
+  // Add log entry helper function
+  const addLogEntry = (message, type = "info") => {
+    setMigrationLog((prev) => [
+      ...prev,
+      {
+        timestamp: new Date(),
+        message,
+        type,
+      },
+    ]);
+  };
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -96,7 +109,6 @@ export default function MoveTransactionsPage() {
       query += ` AND transaction.custbody_mig_new_internal_id IS NULL `;
       query += ` ORDER BY transaction.createddate ASC`;
 
-      // Use App Router API route
       const response = await apiRequest(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
         {
@@ -111,15 +123,24 @@ export default function MoveTransactionsPage() {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch transactions");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch transactions");
       }
 
       const data = await response.json();
       console.log("Fetched Data: ", data);
       setTransactions(data.result?.items || []);
+
+      addLogEntry(
+        `Fetched ${
+          data.result?.items?.length || 0
+        } transactions matching filters`,
+        "info"
+      );
     } catch (err) {
       setError(err.message);
       console.error("Failed to fetch transactions:", err);
+      addLogEntry(`Failed to fetch transactions: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
@@ -150,7 +171,6 @@ export default function MoveTransactionsPage() {
           filters.transactionType === "all"
             ? "multiple"
             : filters.transactionType,
-        // Include date parameters for the RESTlet script
         dateFilters: {
           transactionDateStart: filters.transactionDateStart,
           transactionDateEnd: filters.transactionDateEnd,
@@ -158,9 +178,13 @@ export default function MoveTransactionsPage() {
           createdDateEnd: filters.createdDateEnd,
         },
       };
-      console.log("migrationParams: ", migrationParams);
 
-      // Call the App Router API route
+      console.log("migrationParams: ", migrationParams);
+      addLogEntry(
+        `Starting migration for ${transactions.length} transactions...`,
+        "info"
+      );
+
       const response = await apiRequest(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migrate-transactions`,
         {
@@ -176,138 +200,171 @@ export default function MoveTransactionsPage() {
       }
 
       const result = await response.json();
+      console.log("Migration started:", result);
 
       if (result.success) {
-        setMigrationLog((prev) => [
-          ...prev,
-          {
-            timestamp: new Date(),
-            message: `Migration started successfully. Job ID: ${result.jobId}`,
-            type: "info",
-          },
-        ]);
+        addLogEntry(
+          `Migration started successfully. Task ID: ${result.jobId}`,
+          "info"
+        );
+
+        if (result.details) {
+          addLogEntry(
+            `Processing ${result.details.transactionCount} transactions of type ${result.details.transactionType}`,
+            "info"
+          );
+        }
+
+        // Initialize progress
+        setProgress({
+          processed: 0,
+          total: transactions.length,
+          success: 0,
+          failed: 0,
+        });
 
         // Start polling for progress
-        startProgressPolling(result.jobId);
+        startProgressPolling(result.jobId, transactions.length);
       } else {
         throw new Error(result.error || "Failed to start migration");
       }
     } catch (err) {
+      console.error("Migration start error:", err);
       setError(err.message);
       setMigrationStatus("error");
-      setMigrationLog((prev) => [
-        ...prev,
-        {
-          timestamp: new Date(),
-          message: `Migration failed: ${err.message}`,
-          type: "error",
-        },
-      ]);
+      addLogEntry(`Migration failed to start: ${err.message}`, "error");
       setMigrating(false);
     }
   };
 
-  const startProgressPolling = (jobId) => {
-    const pollInterval = setInterval(async () => {
-      if (migrationStatus === "paused" || migrationStatus === "completed") {
-        clearInterval(pollInterval);
+  const startProgressPolling = (jobId, totalTransactions) => {
+    // Clear any existing interval
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    const interval = setInterval(async () => {
+      if (
+        migrationStatus === "paused" ||
+        migrationStatus === "completed" ||
+        migrationStatus === "error"
+      ) {
+        clearInterval(interval);
         return;
       }
 
       try {
+        console.log("Polling migration status for job:", jobId);
+
         const response = await apiRequest(
           `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/restlet/migration-status`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jobId }),
+            body: JSON.stringify({
+              jobId,
+              totalTransactions,
+            }),
           }
         );
 
-        if (response.ok) {
-          const status = await response.json();
+        if (!response.ok) {
+          throw new Error("Failed to fetch migration status");
+        }
 
-          setProgress({
-            processed: status.processed || 0,
-            total: status.total || transactions.length,
-            success: status.success || 0,
-            failed: status.failed || 0,
-          });
+        const status = await response.json();
+        console.log("Migration status:", status);
+
+        if (status.success) {
+          // Update progress
+          setProgress((prev) => ({
+            processed: status.processed || prev.processed,
+            total: status.total || totalTransactions,
+            success: status.success || prev.success,
+            failed: status.failed || prev.failed,
+          }));
 
           // Update log with new entries
           if (status.logs && status.logs.length > 0) {
-            setMigrationLog((prev) => [
-              ...prev,
-              ...status.logs.map((log) => ({
-                timestamp: new Date(log.timestamp),
-                message: log.message,
-                type: log.type,
-              })),
-            ]);
+            status.logs.forEach((log) => {
+              addLogEntry(log.message, log.type);
+            });
           }
 
           // Check if migration is complete
-          if (status.status === "completed") {
+          if (
+            status.status === "completed" ||
+            status.status === "completed_with_errors"
+          ) {
             setMigrationStatus("completed");
             setMigrating(false);
-            clearInterval(pollInterval);
+            clearInterval(interval);
 
-            setMigrationLog((prev) => [
-              ...prev,
-              {
-                timestamp: new Date(),
-                message: "Migration completed successfully!",
-                type: "success",
-              },
-            ]);
+            const successMessage =
+              status.status === "completed"
+                ? "Migration completed successfully!"
+                : "Migration completed with some errors.";
+
+            addLogEntry(
+              successMessage,
+              status.status === "completed" ? "success" : "warning"
+            );
 
             // Refresh transactions to show updated status
-            fetchTransactions();
+            setTimeout(() => {
+              fetchTransactions();
+            }, 2000);
           } else if (status.status === "error") {
             setMigrationStatus("error");
             setMigrating(false);
-            clearInterval(pollInterval);
-
-            setMigrationLog((prev) => [
-              ...prev,
-              {
-                timestamp: new Date(),
-                message: `Migration failed: ${status.error}`,
-                type: "error",
-              },
-            ]);
+            clearInterval(interval);
+            addLogEntry(`Migration failed: ${status.error}`, "error");
           }
+        } else {
+          throw new Error(status.error || "Failed to get migration status");
         }
       } catch (error) {
         console.error("Error polling migration status:", error);
-      }
-    }, 3000);
+        addLogEntry(
+          `Error checking migration status: ${error.message}`,
+          "error"
+        );
 
-    return pollInterval;
+        // Don't stop polling on temporary errors, just log them
+        // You might want to implement a retry counter here
+      }
+    }, 5000); // Poll every 5 seconds
+
+    setPollingInterval(interval);
   };
 
   const pauseMigration = () => {
     setMigrationStatus("paused");
-    setMigrationLog((prev) => [
-      ...prev,
-      {
-        timestamp: new Date(),
-        message: "Migration paused",
-        type: "info",
-      },
-    ]);
+    addLogEntry("Migration paused", "info");
+
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
   };
 
   const resumeMigration = () => {
     setMigrationStatus("running");
-    setMigrationLog((prev) => [
-      ...prev,
-      {
-        timestamp: new Date(),
-        message: "Migration resumed",
-        type: "info",
-      },
-    ]);
+    addLogEntry("Migration resumed", "info");
+
+    // Note: You'll need to store the jobId to resume polling
+    // This is a simplified version - you might need to adjust based on your needs
+  };
+
+  const stopMigration = () => {
+    setMigrationStatus("idle");
+    setMigrating(false);
+    addLogEntry("Migration stopped", "info");
+
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
   };
 
   const handleFilterChange = (filterName, value) => {
@@ -333,11 +390,20 @@ export default function MoveTransactionsPage() {
     pending: transactions.filter((t) => !t.new_id).length,
   };
 
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
-      // Cleanup function
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
     };
-  }, []);
+  }, [pollingInterval]);
+
+  // Calculate progress percentage
+  const progressPercentage =
+    progress.total > 0
+      ? Math.round((progress.processed / progress.total) * 100)
+      : 0;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -347,7 +413,7 @@ export default function MoveTransactionsPage() {
         </h2>
         <button
           onClick={fetchTransactions}
-          disabled={loading}
+          disabled={loading || migrating}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
           <FiRefreshCw className={`mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -448,7 +514,7 @@ export default function MoveTransactionsPage() {
           </div>
           <button
             onClick={fetchTransactions}
-            disabled={loading}
+            disabled={loading || migrating}
             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
           >
             <FiDatabase className="mr-2" />
@@ -518,7 +584,7 @@ export default function MoveTransactionsPage() {
                 Migration Controls
               </h3>
               <div className="flex items-center space-x-2">
-                {migrationStatus === "running" ? (
+                {migrationStatus === "running" && (
                   <button
                     onClick={pauseMigration}
                     className="flex items-center px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
@@ -526,7 +592,9 @@ export default function MoveTransactionsPage() {
                     <FiPause className="mr-2" />
                     Pause Migration
                   </button>
-                ) : migrationStatus === "paused" ? (
+                )}
+
+                {migrationStatus === "paused" && (
                   <button
                     onClick={resumeMigration}
                     className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
@@ -534,18 +602,31 @@ export default function MoveTransactionsPage() {
                     <FiPlay className="mr-2" />
                     Resume Migration
                   </button>
-                ) : null}
+                )}
 
-                <button
-                  onClick={startMigration}
-                  disabled={migrating || stats.pending === 0}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <FiArrowRight className="mr-2" />
-                  {migrating
-                    ? "Migrating..."
-                    : `Start Migration (${stats.pending} transactions)`}
-                </button>
+                {(migrationStatus === "running" ||
+                  migrationStatus === "paused") && (
+                  <button
+                    onClick={stopMigration}
+                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    <FiXCircle className="mr-2" />
+                    Stop Migration
+                  </button>
+                )}
+
+                {migrationStatus === "idle" && (
+                  <button
+                    onClick={startMigration}
+                    disabled={migrating || stats.pending === 0}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <FiArrowRight className="mr-2" />
+                    {migrating
+                      ? "Starting..."
+                      : `Start Migration (${stats.pending} transactions)`}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -560,16 +641,13 @@ export default function MoveTransactionsPage() {
                   <span>
                     Success: {progress.success} | Failed: {progress.failed}
                   </span>
+                  <span>Progress: {progressPercentage}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
                   <div
                     className="bg-blue-600 h-4 rounded-full transition-all duration-300"
                     style={{
-                      width: `${
-                        progress.total > 0
-                          ? (progress.processed / progress.total) * 100
-                          : 0
-                      }%`,
+                      width: `${progressPercentage}%`,
                     }}
                   ></div>
                 </div>
@@ -586,9 +664,17 @@ export default function MoveTransactionsPage() {
         {/* Migration Log */}
         {(migrationLog.length > 0 || migrating) && (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Migration Log
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Migration Log
+              </h3>
+              <button
+                onClick={() => setMigrationLog([])}
+                className="text-sm text-gray-600 hover:text-gray-800"
+              >
+                Clear Log
+              </button>
+            </div>
             <div className="bg-gray-50 rounded-md p-4 max-h-64 overflow-y-auto">
               {migrationLog.length === 0 ? (
                 <div className="text-center text-gray-500 py-4">
@@ -605,6 +691,8 @@ export default function MoveTransactionsPage() {
                             ? "text-red-500"
                             : log.type === "success"
                             ? "text-green-500"
+                            : log.type === "warning"
+                            ? "text-yellow-500"
                             : "text-blue-500"
                         }`}
                       >
@@ -626,6 +714,8 @@ export default function MoveTransactionsPage() {
                               ? "text-red-700"
                               : log.type === "success"
                               ? "text-green-700"
+                              : log.type === "warning"
+                              ? "text-yellow-700"
                               : "text-gray-700"
                           }`}
                         >
@@ -729,6 +819,12 @@ export default function MoveTransactionsPage() {
             <h3 className="text-red-800 font-medium">Error</h3>
           </div>
           <p className="text-red-700 mt-1">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="mt-2 text-sm text-red-600 hover:text-red-800"
+          >
+            Dismiss
+          </button>
         </div>
       )}
     </div>
