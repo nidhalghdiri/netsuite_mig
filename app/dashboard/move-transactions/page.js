@@ -71,7 +71,7 @@ export default function MoveTransactionsPage() {
         transaction.trandate, transaction.createddate, transaction.amount,
         transaction.custbody_mig_new_internal_id as new_id
       FROM transaction 
-      WHERE transaction.trandate IS NOT NULL AND transaction.mainline = 'T'`;
+      WHERE transaction.trandate IS NOT NULL`;
 
       // Add date filters
       if (filters.transactionDateStart) {
