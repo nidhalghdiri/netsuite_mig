@@ -39,8 +39,6 @@ export default function TransactionTypePage() {
     transactionDateEnd: "",
     differenceMin: "",
     differenceMax: "",
-    exchangeRateDifferenceMin: "",
-    exchangeRateDifferenceMax: "",
     search: "",
   });
 
@@ -326,8 +324,6 @@ export default function TransactionTypePage() {
       transactionDateEnd: "",
       differenceMin: "",
       differenceMax: "",
-      exchangeRateDifferenceMin: "",
-      exchangeRateDifferenceMax: "",
       search: "",
     });
   };
@@ -349,16 +345,6 @@ export default function TransactionTypePage() {
       const difference = oldAmount - newAmount;
       const amountsMatch = oldAmount === newAmount;
 
-      const oldExchangeRate = item.oldInstance
-        ? parseFloat(item.oldInstance.exchangerate)
-        : 1;
-      const newExchangeRate = item.newInstance
-        ? parseFloat(item.newInstance.exchangerate)
-        : 1;
-      const exchangeRateDifference = Math.abs(
-        oldExchangeRate - newExchangeRate
-      );
-
       // Status filter
       if (filters.status !== "all") {
         switch (filters.status) {
@@ -373,9 +359,6 @@ export default function TransactionTypePage() {
             break;
           case "missing_new":
             if (item.newInstance) return false;
-            break;
-          case "exchange_rate_mismatch":
-            if (exchangeRateDifference === 0) return false;
             break;
         }
       }
@@ -394,7 +377,7 @@ export default function TransactionTypePage() {
 
       if (filters.createdDateEnd && createdDate) {
         const endDate = new Date(filters.createdDateEnd);
-        endDate.setHours(23, 59, 59, 999); // End of day
+        endDate.setHours(23, 59, 59, 999);
         if (createdDate > endDate) return false;
       }
 
@@ -412,7 +395,7 @@ export default function TransactionTypePage() {
 
       if (filters.transactionDateEnd && transactionDate) {
         const endDate = new Date(filters.transactionDateEnd);
-        endDate.setHours(23, 59, 59, 999); // End of day
+        endDate.setHours(23, 59, 59, 999);
         if (transactionDate > endDate) return false;
       }
 
@@ -461,89 +444,95 @@ export default function TransactionTypePage() {
   }, [transactionType]);
 
   // Create a mapping using the old_id and new_id fields to properly relate transactions
+  // Create a mapping using the old_id and new_id fields to properly relate transactions
   const createDataMapping = () => {
     const mappedData = [];
 
-    // Create maps for lookup by ID
+    // Create maps for lookup
     const oldById = {};
+    const oldByNewId = {};
+
     oldData.forEach((item) => {
       oldById[item.id] = item;
-    });
-
-    const newById = {};
-    newData.forEach((item) => {
-      newById[item.id] = item;
-    });
-
-    // Create maps for lookup by cross-reference IDs
-    const oldByNewId = {};
-    oldData.forEach((item) => {
       if (item.new_id) {
         oldByNewId[item.new_id] = item;
       }
     });
 
+    const newById = {};
     const newByOldId = {};
+
     newData.forEach((item) => {
+      newById[item.id] = item;
       if (item.old_id) {
         newByOldId[item.old_id] = item;
       }
     });
 
-    // First, match transactions that have direct references
-    const matchedIds = new Set();
+    // First, match transactions that have direct cross-references
+    const matchedOldIds = new Set();
+    const matchedNewIds = new Set();
 
-    // Match using old_id -> new_id references
+    // Match old transactions with new transactions using new_id -> old_id
     oldData.forEach((oldItem) => {
       if (oldItem.new_id && newById[oldItem.new_id]) {
-        mappedData.push({
-          documentNumber: oldItem.tranid,
-          oldInstance: oldItem,
-          newInstance: newById[oldItem.new_id],
-          matchType: "direct",
-        });
-        matchedIds.add(oldItem.id);
-        matchedIds.add(oldItem.new_id);
+        const newItem = newById[oldItem.new_id];
+        // Verify the relationship is bidirectional
+        if (newItem.old_id === oldItem.id) {
+          mappedData.push({
+            documentNumber: oldItem.tranid,
+            oldInstance: oldItem,
+            newInstance: newItem,
+            matchType: "direct",
+          });
+          matchedOldIds.add(oldItem.id);
+          matchedNewIds.add(newItem.id);
+        }
       }
     });
 
-    // Match using new_id -> old_id references
+    // Match new transactions with old transactions using old_id -> new_id
     newData.forEach((newItem) => {
       if (
         newItem.old_id &&
         oldById[newItem.old_id] &&
-        !matchedIds.has(newItem.id)
+        !matchedNewIds.has(newItem.id)
       ) {
-        mappedData.push({
-          documentNumber: newItem.tranid,
-          oldInstance: oldById[newItem.old_id],
-          newInstance: newItem,
-          matchType: "direct",
-        });
-        matchedIds.add(newItem.id);
-        matchedIds.add(newItem.old_id);
+        const oldItem = oldById[newItem.old_id];
+        // Verify the relationship is bidirectional
+        if (oldItem.new_id === newItem.id) {
+          mappedData.push({
+            documentNumber: newItem.tranid,
+            oldInstance: oldItem,
+            newInstance: newItem,
+            matchType: "direct",
+          });
+          matchedOldIds.add(oldItem.id);
+          matchedNewIds.add(newItem.id);
+        }
       }
     });
 
-    // Add unmatched transactions
+    // Add unmatched old transactions (those with new_id but no matching new transaction)
     oldData.forEach((oldItem) => {
-      if (!matchedIds.has(oldItem.id)) {
+      if (!matchedOldIds.has(oldItem.id) && oldItem.new_id) {
         mappedData.push({
           documentNumber: oldItem.tranid,
           oldInstance: oldItem,
           newInstance: null,
-          matchType: "unmatched",
+          matchType: "unmatched_old",
         });
       }
     });
 
+    // Add unmatched new transactions (those with old_id but no matching old transaction)
     newData.forEach((newItem) => {
-      if (!matchedIds.has(newItem.id)) {
+      if (!matchedNewIds.has(newItem.id) && newItem.old_id) {
         mappedData.push({
           documentNumber: newItem.tranid,
           oldInstance: null,
           newInstance: newItem,
-          matchType: "unmatched",
+          matchType: "unmatched_new",
         });
       }
     });
@@ -625,9 +614,6 @@ export default function TransactionTypePage() {
               <option value="all">All Statuses</option>
               <option value="matched">Matched Amounts</option>
               <option value="unmatched">Unmatched Amounts</option>
-              <option value="exchange_rate_mismatch">
-                Exchange Rate Mismatch
-              </option>
               <option value="missing_old">Missing in Old Instance</option>
               <option value="missing_new">Missing in New Instance</option>
             </select>
@@ -719,7 +705,7 @@ export default function TransactionTypePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Exchange Rate Difference
@@ -755,7 +741,7 @@ export default function TransactionTypePage() {
               />
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Search Filter */}
         <div className="mt-4">
@@ -812,9 +798,6 @@ export default function TransactionTypePage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount Diff
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exchange Rate
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -853,7 +836,7 @@ export default function TransactionTypePage() {
                     <tr
                       key={index}
                       className={
-                        amountsMatch && exchangeRateMatch
+                        amountsMatch
                           ? "bg-green-50 cursor-pointer"
                           : "bg-red-50 cursor-pointer hover:bg-red-100"
                       }
@@ -866,32 +849,17 @@ export default function TransactionTypePage() {
                       }
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col items-start">
-                          {amountsMatch ? (
-                            <FiCheckCircle
-                              className="text-green-500"
-                              title="Amounts Match"
-                            />
-                          ) : (
-                            <FiXCircle
-                              className="text-red-500"
-                              title="Amounts Don't Match"
-                            />
-                          )}
-                          {item.oldInstance &&
-                            item.newInstance &&
-                            (exchangeRateMatch ? (
-                              <FiCheckCircle
-                                className="text-green-500 mt-1"
-                                title="Exchange Rates Match"
-                              />
-                            ) : (
-                              <FiXCircle
-                                className="text-red-500 mt-1"
-                                title="Exchange Rates Don't Match"
-                              />
-                            ))}
-                        </div>
+                        {amountsMatch ? (
+                          <FiCheckCircle
+                            className="text-green-500"
+                            title="Amounts Match"
+                          />
+                        ) : (
+                          <FiXCircle
+                            className="text-red-500"
+                            title="Amounts Don't Match"
+                          />
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.oldInstance ? item.oldInstance.createddate : "-"}
@@ -942,77 +910,12 @@ export default function TransactionTypePage() {
                           "-"
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {item.oldInstance && item.newInstance ? (
-                          <div className="flex flex-col">
-                            <span>Old: {oldExchangeRate.toFixed(4)}</span>
-                            <span>New: {newExchangeRate.toFixed(4)}</span>
-                            {!exchangeRateMatch && (
-                              <span className="text-red-600 text-sm">
-                                Diff: {exchangeRateDifference.toFixed(4)}
-                              </span>
-                            )}
-                          </div>
-                        ) : item.oldInstance ? (
-                          `Rate: ${oldExchangeRate.toFixed(4)}`
-                        ) : item.newInstance ? (
-                          `Rate: ${newExchangeRate.toFixed(4)}`
-                        ) : (
-                          "-"
-                        )}
-                      </td>
                     </tr>
 
                     {/* Expanded row with item details */}
-                    {isExpanded && (!amountsMatch || !exchangeRateMatch) && (
+                    {isExpanded && !amountsMatch && (
                       <tr className="bg-gray-50">
-                        <td colSpan="8" className="px-6 py-4">
-                          {/* Exchange Rate Analysis */}
-                          {item.oldInstance &&
-                            item.newInstance &&
-                            !exchangeRateMatch && (
-                              <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <h4 className="font-semibold mb-2 text-yellow-800 flex items-center">
-                                  <FiDollarSign className="mr-2" />
-                                  Exchange Rate Analysis
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4 text-sm">
-                                  <div>
-                                    <span className="font-medium">
-                                      Old Rate:
-                                    </span>{" "}
-                                    {oldExchangeRate.toFixed(6)}
-                                  </div>
-                                  <div>
-                                    <span className="font-medium">
-                                      New Rate:
-                                    </span>{" "}
-                                    {newExchangeRate.toFixed(6)}
-                                  </div>
-                                  <div className="text-red-600">
-                                    <span className="font-medium">
-                                      Difference:
-                                    </span>{" "}
-                                    {exchangeRateDifference.toFixed(6)}
-                                  </div>
-                                </div>
-                                <div className="mt-2 text-sm text-yellow-700">
-                                  <span className="font-medium">
-                                    Impact on Amount:
-                                  </span>
-                                  $
-                                  {(
-                                    (Math.abs(difference) /
-                                      Math.min(
-                                        oldExchangeRate,
-                                        newExchangeRate
-                                      )) *
-                                    exchangeRateDifference
-                                  ).toFixed(2)}
-                                </div>
-                              </div>
-                            )}
-
+                        <td colSpan="9" className="px-6 py-4">
                           {/* Item Comparison Table */}
                           {itemsComparison && itemsComparison.length > 0 && (
                             <div className="mb-6">
