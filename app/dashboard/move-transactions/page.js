@@ -103,9 +103,9 @@ export default function MoveTransactionsPage() {
       }
 
       // Add transaction type filter
-      if (filters.transactionType !== "all") {
-        query += ` AND transaction.type = '${filters.transactionType}' `;
-      }
+      // if (filters.transactionType !== "all") {
+      //   query += ` AND transaction.type = '${filters.transactionType}' `;
+      // }
 
       // Only fetch transactions that haven't been migrated yet
       query += ` AND transaction.custbody_mig_new_internal_id IS NULL `;
