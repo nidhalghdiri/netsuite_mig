@@ -104,7 +104,7 @@ export default function TransactionTypePage() {
     var subsidiries = instanceType == "old" ? "('12', '10')" : "('4', '6')";
     var newIdCondition =
       instanceType == "old"
-        ? `AND transaction.custbody_mig_new_internal_id NOT NULL`
+        ? `AND NOT(transaction.custbody_mig_new_internal_id IS NULL)`
         : "";
     // Build SuiteQL query based on record type
     const query = `SELECT transaction.id AS id, 
