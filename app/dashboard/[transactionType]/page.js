@@ -101,6 +101,11 @@ export default function TransactionTypePage() {
     accountId
   ) => {
     var stockAcct = instanceType == "old" ? "379" : "319";
+    var subsidiries = instanceType == "old" ? "('12', '10')" : "('4', '6')";
+    var newIdCondition =
+      instanceType == "old"
+        ? `AND transaction.custbody_mig_new_internal_id NOT NULL`
+        : "";
     // Build SuiteQL query based on record type
     const query = `SELECT transaction.id AS id, 
         transaction.custbody_mig_old_internal_id AS old_id, 
@@ -117,7 +122,9 @@ export default function TransactionTypePage() {
         AND transaction.id = transactionLine.transaction 
         AND transaction.trandate BETWEEN TO_DATE('2025-01-01', 'YYYY-MM-DD HH24:MI:SS') 
         AND TO_DATE('2025-01-31', 'YYYY-MM-DD HH24:MI:SS') 
-        AND transactionLine.mainline = 'F' 
+        AND transactionLine.mainline = 'F'
+        AND transactionLine.subsidiary IN ${subsidiries}
+        ${newIdCondition}
       GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
         transaction.type, transaction.createddate, transaction.exchangerate
       ORDER BY transaction.createddate ASC`;
@@ -159,22 +166,26 @@ export default function TransactionTypePage() {
 
       // Query to get detailed item information for a specific transaction
       const query = `SELECT 
-          BUILTIN.DF(transactionLine.item) AS item_code,
-          BUILTIN.DF(item.displayname) AS item_name,
-          transactionLine.item AS item_id,
-          transactionLine.quantity,
-          transactionLine.rate, 
-          TransactionAccountingLine.netamount AS amount, 
-          BUILTIN.DF(TransactionAccountingLine.account) AS account, 
-          BUILTIN.DF(transactionLine.location) AS location,  
-          BUILTIN.DF(transactionLine.department) AS department 
-        FROM transaction, TransactionAccountingLine, transactionLine, item
-        WHERE  
+        BUILTIN.DF(transactionLine.item) AS item_code,
+        BUILTIN.DF(item.displayname) AS item_name,
+        transactionLine.item AS item_id,
+        transactionLine.quantity,
+        transactionLine.rate, 
+        TransactionAccountingLine.netamount AS amount, 
+        BUILTIN.DF(TransactionAccountingLine.account) AS account, 
+        BUILTIN.DF(transactionLine.location) AS location,  
+        BUILTIN.DF(transactionLine.department) AS department,
+        transactionLine.sublistid AS sublist_type
+      FROM 
+        transaction
+      INNER JOIN TransactionAccountingLine ON transaction.id = TransactionAccountingLine.transaction
+      INNER JOIN transactionLine ON (
         transactionLine.transaction = TransactionAccountingLine.transaction 
-        AND transactionLine.id = TransactionAccountingLine.transactionline 
-        AND transaction.id = transactionLine.transaction
-        AND transactionLine.item = item.id
-        AND transaction.id = '${transactionId}'`;
+        AND transactionLine.id = TransactionAccountingLine.transactionline
+      )
+      LEFT JOIN item ON transactionLine.item = item.id
+      WHERE 
+        transaction.id = '${transactionId}'`;
 
       const response = await apiRequest(
         `${process.env.NEXT_PUBLIC_BASE_URL}/api/netsuite/suiteql`,
