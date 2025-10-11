@@ -103,7 +103,7 @@ export default function TransactionTypePage() {
     var newIdCondition =
       instanceType == "old"
         ? `AND NOT(transaction.custbody_mig_new_internal_id IS NULL)`
-        : "";
+        : `AND NOT(transaction.custbody_mig_old_internal_id IS NULL)`;
     // Build SuiteQL query based on record type
     const query = `SELECT transaction.id AS id, 
         transaction.custbody_mig_old_internal_id AS old_id, 
