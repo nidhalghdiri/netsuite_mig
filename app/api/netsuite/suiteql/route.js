@@ -24,13 +24,13 @@ export async function POST(request) {
         `https://${accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql`;
 
       const response = await fetch(url, {
-        method: nextLink ? "GET" : "POST", // Use GET for pagination, POST for initial
+        method: "POST", // Use GET for pagination, POST for initial
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Prefer: "transient",
         },
-        body: nextLink ? null : JSON.stringify({ q: query }), // Only include body for initial request
+        body: JSON.stringify({ q: query }), // Only include body for initial request
       });
 
       if (!response.ok) {
