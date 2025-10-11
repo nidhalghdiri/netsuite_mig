@@ -172,8 +172,7 @@ export default function TransactionTypePage() {
         TransactionAccountingLine.netamount AS amount, 
         BUILTIN.DF(TransactionAccountingLine.account) AS account, 
         BUILTIN.DF(transactionLine.location) AS location,  
-        BUILTIN.DF(transactionLine.department) AS department,
-        transactionLine.sublistid AS sublist_type
+        BUILTIN.DF(transactionLine.department) AS department
       FROM 
         transaction
       INNER JOIN TransactionAccountingLine ON transaction.id = TransactionAccountingLine.transaction
@@ -445,45 +444,41 @@ export default function TransactionTypePage() {
 
   // Create a mapping using the old_id and new_id fields to properly relate transactions
   // Create a mapping using the old_id and new_id fields to properly relate transactions
+  // Create a mapping using the old_id and new_id fields to properly relate transactions
   const createDataMapping = () => {
     const mappedData = [];
 
-    // Create maps for lookup
-    const oldById = {};
-    const oldByNewId = {};
+    // Create maps for efficient lookup
+    const oldDataMap = new Map();
+    const newDataMap = new Map();
 
+    // Map old data by internal ID and new_id
     oldData.forEach((item) => {
-      oldById[item.id] = item;
-      if (item.new_id) {
-        oldByNewId[item.new_id] = item;
-      }
+      oldDataMap.set(item.id, item);
     });
 
-    const newById = {};
-    const newByOldId = {};
-
+    // Map new data by internal ID and old_id
     newData.forEach((item) => {
-      newById[item.id] = item;
-      if (item.old_id) {
-        newByOldId[item.old_id] = item;
-      }
+      newDataMap.set(item.id, item);
     });
 
-    // First, match transactions that have direct cross-references
+    // Create sets to track matched transactions
     const matchedOldIds = new Set();
     const matchedNewIds = new Set();
 
-    // Match old transactions with new transactions using new_id -> old_id
+    // First pass: Match using bidirectional relationship
+    // Old internal ID = New old_id AND New internal ID = Old new_id
     oldData.forEach((oldItem) => {
-      if (oldItem.new_id && newById[oldItem.new_id]) {
-        const newItem = newById[oldItem.new_id];
-        // Verify the relationship is bidirectional
+      if (oldItem.new_id && newDataMap.has(oldItem.new_id)) {
+        const newItem = newDataMap.get(oldItem.new_id);
+
+        // Verify bidirectional relationship
         if (newItem.old_id === oldItem.id) {
           mappedData.push({
             documentNumber: oldItem.tranid,
             oldInstance: oldItem,
             newInstance: newItem,
-            matchType: "direct",
+            matchType: "direct_bidirectional",
           });
           matchedOldIds.add(oldItem.id);
           matchedNewIds.add(newItem.id);
@@ -491,21 +486,36 @@ export default function TransactionTypePage() {
       }
     });
 
-    // Match new transactions with old transactions using old_id -> new_id
+    // Second pass: Match transactions that only have one-way references
+    // This handles cases where the relationship might not be perfectly bidirectional
+
+    // Match old transactions with new_id that weren't matched yet
+    oldData.forEach((oldItem) => {
+      if (!matchedOldIds.has(oldItem.id) && oldItem.new_id) {
+        const newItem = newDataMap.get(oldItem.new_id);
+        if (newItem) {
+          mappedData.push({
+            documentNumber: oldItem.tranid,
+            oldInstance: oldItem,
+            newInstance: newItem,
+            matchType: "direct_old_reference",
+          });
+          matchedOldIds.add(oldItem.id);
+          matchedNewIds.add(newItem.id);
+        }
+      }
+    });
+
+    // Match new transactions with old_id that weren't matched yet
     newData.forEach((newItem) => {
-      if (
-        newItem.old_id &&
-        oldById[newItem.old_id] &&
-        !matchedNewIds.has(newItem.id)
-      ) {
-        const oldItem = oldById[newItem.old_id];
-        // Verify the relationship is bidirectional
-        if (oldItem.new_id === newItem.id) {
+      if (!matchedNewIds.has(newItem.id) && newItem.old_id) {
+        const oldItem = oldDataMap.get(newItem.old_id);
+        if (oldItem) {
           mappedData.push({
             documentNumber: newItem.tranid,
             oldInstance: oldItem,
             newInstance: newItem,
-            matchType: "direct",
+            matchType: "direct_new_reference",
           });
           matchedOldIds.add(oldItem.id);
           matchedNewIds.add(newItem.id);
@@ -515,27 +525,58 @@ export default function TransactionTypePage() {
 
     // Add unmatched old transactions (those with new_id but no matching new transaction)
     oldData.forEach((oldItem) => {
-      if (!matchedOldIds.has(oldItem.id) && oldItem.new_id) {
+      if (!matchedOldIds.has(oldItem.id)) {
         mappedData.push({
           documentNumber: oldItem.tranid,
           oldInstance: oldItem,
           newInstance: null,
-          matchType: "unmatched_old",
+          matchType: oldItem.new_id
+            ? "unmatched_with_reference"
+            : "unmatched_without_reference",
         });
       }
     });
 
     // Add unmatched new transactions (those with old_id but no matching old transaction)
     newData.forEach((newItem) => {
-      if (!matchedNewIds.has(newItem.id) && newItem.old_id) {
+      if (!matchedNewIds.has(newItem.id)) {
         mappedData.push({
           documentNumber: newItem.tranid,
           oldInstance: null,
           newInstance: newItem,
-          matchType: "unmatched_new",
+          matchType: newItem.old_id
+            ? "unmatched_with_reference"
+            : "unmatched_without_reference",
         });
       }
     });
+
+    // Log for debugging
+    console.log("Mapping Results:");
+    console.log("Total mapped records:", mappedData.length);
+    console.log(
+      "Bidirectional matches:",
+      mappedData.filter((item) => item.matchType === "direct_bidirectional")
+        .length
+    );
+    console.log(
+      "Old reference matches:",
+      mappedData.filter((item) => item.matchType === "direct_old_reference")
+        .length
+    );
+    console.log(
+      "New reference matches:",
+      mappedData.filter((item) => item.matchType === "direct_new_reference")
+        .length
+    );
+    console.log(
+      "Unmatched old:",
+      mappedData.filter((item) => item.oldInstance && !item.newInstance).length
+    );
+    console.log(
+      "Unmatched new:",
+      mappedData.filter((item) => !item.oldInstance && item.newInstance).length
+    );
 
     return mappedData;
   };
