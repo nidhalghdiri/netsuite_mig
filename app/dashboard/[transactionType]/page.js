@@ -118,9 +118,10 @@ export default function TransactionTypePage() {
       WHERE transactionLine.transaction = TransactionAccountingLine.transaction 
         AND transactionLine.id = TransactionAccountingLine.transactionline 
         AND transaction.id = transactionLine.transaction 
-        AND transaction.trandate BETWEEN TO_DATE('2025-01-01', 'YYYY-MM-DD HH24:MI:SS') 
-        AND TO_DATE('2025-01-31', 'YYYY-MM-DD HH24:MI:SS') 
+        AND transaction.trandate BETWEEN TO_DATE('2025-05-01', 'YYYY-MM-DD HH24:MI:SS') 
+        AND TO_DATE('2025-06-30', 'YYYY-MM-DD HH24:MI:SS')
         AND transactionLine.mainline = 'F'
+        AND transaction.type IN ('InvAdjst', 'InvTrnfr', 'ItemShip', 'ItemRcpt', 'PurchOrd', 'RtnAuth', 'SalesOrd', 'TrnfrOrd')
         AND transactionLine.subsidiary IN ${subsidiries}
         ${newIdCondition}
       GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
