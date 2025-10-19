@@ -123,7 +123,6 @@ export default function TransactionTypePage() {
         AND transactionLine.mainline = 'F'
         AND transaction.type IN ('InvAdjst', 'InvTrnfr', 'ItemShip', 'ItemRcpt', 'PurchOrd', 'RtnAuth', 'SalesOrd', 'TrnfrOrd')
         AND transactionLine.subsidiary IN ${subsidiries}
-        ${newIdCondition}
       GROUP BY transaction.id, transaction.custbody_mig_old_internal_id, transaction.custbody_mig_new_internal_id, transaction.trandate, transaction.tranid, 
         transaction.type, transaction.createddate, transaction.exchangerate
       ORDER BY transaction.createddate ASC`;
